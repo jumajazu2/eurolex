@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:eurolex/preparehtml.dart';
+import 'package:html/parser.dart' as html_parser;
 
 void main() {
   runApp(const MyApp());
@@ -55,10 +56,11 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
   @override
   Widget build(BuildContext context) {
+    print("running build method");
+    
+    // List<Element>
     // This method is rerun every time setState is called, for instance as done
     // by the _incrementCounter method above.
     //
@@ -93,7 +95,32 @@ class _MyHomePageState extends State<MyHomePage> {
           // action in the IDE, or press "p" in the console), to see the
           // wireframe for each widget.
           mainAxisAlignment: MainAxisAlignment.start,
-          children: <Widget>[const Text('Select files:'), FilePickerButton()],
+          children: <Widget>[
+            const Text('Select files:'),
+            Row(
+              children: [
+                FilePickerButton(),
+                FilePickerButton(),
+                FilePickerButton(),
+              ],
+            ),
+
+            // Add more widgets here if needed
+            if (fileContentSK.isNotEmpty && fileContentEN.isNotEmpty)
+              Text('SK and EN File Content Loaded: fileContentSK: ')
+            else
+              Text('No file content loaded yet. fileContentSK: '),
+
+            // Add more widgets here if needed
+            if (fileEN_DOM != null)
+              ElevatedButton(
+                onPressed: () {
+                  // Start processing the DOM
+                  // TODO: Replace print with logging if needed
+                },
+                child: const Text('Process DOM'),
+              ),
+          ],
         ),
       ),
       // This trailing comma makes auto-formatting nicer for build methods.
