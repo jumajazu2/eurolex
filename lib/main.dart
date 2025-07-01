@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:eurolex/preparehtml.dart';
+import 'package:eurolex/browseFiles.dart';
 import 'package:html/parser.dart' as html_parser;
 
 void main() {
@@ -59,7 +60,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     print("running build method");
-    
+
     // List<Element>
     // This method is rerun every time setState is called, for instance as done
     // by the _incrementCounter method above.
@@ -120,6 +121,19 @@ class _MyHomePageState extends State<MyHomePage> {
                 },
                 child: const Text('Process DOM'),
               ),
+
+            ElevatedButton(
+              onPressed: () {
+                listFilesInDirEN();
+                // print(jsonOutput);
+              },
+              child: Text('List dirs'),
+            ),
+
+
+
+
+
           ],
         ),
       ),

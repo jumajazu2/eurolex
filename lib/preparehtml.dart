@@ -63,6 +63,9 @@ class _FilePickerButtonState extends State<FilePickerButton> {
           } else if (fileName.contains('CZ')) {
             // If the file name contains 'CZ', save it to a specific location
             fileContentCZ = "$fileName + @@@ + $content";
+          } else if (fileName.contains('.rdf')) {
+            // If the file name contains 'CZ', save it to a specific location
+            metadata = content;
           } else {
             print("File does not match SK, EN, or CZ criteria.");
           }
@@ -74,13 +77,13 @@ class _FilePickerButtonState extends State<FilePickerButton> {
             print('Files EN SK parsed successfully.');
 
             var paragraphsEN = fileEN_DOM.getElementsByTagName('p');
-
+            /*
             for (var index = 0; index < paragraphsEN.length; index++) {
               print(paragraphsEN[index].text);
             }
             var resultPen = paragraphsEN[9].attributes;
             print("resultPen: $resultPen");
-
+*/
             //insert button that starts processing of DOM on press
           } else {
             fileContent = 'No valid SK or EN file content loaded.';
@@ -129,9 +132,10 @@ class _FilePickerButtonState extends State<FilePickerButton> {
                             var paragraphs = extractParagraphs(
                               fileContentEN,
                               fileContentSK,
+                              fileContentCZ,
                               metadata,
                             );
-                            print(jsonOutput);
+                            // print(jsonOutput);
                           },
                           child: Text('Extract Paragraphs'),
                         ),
