@@ -7,6 +7,8 @@ import 'package:eurolex/logger.dart';
 
 import 'preparehtml.dart';
 
+var dirPointer = 0; // Pointer for directory processing
+
 class DomProcessor {
   // Function to parse HTML content and extract text
   static String parseHtmlString(String htmlString) {
@@ -24,19 +26,21 @@ List<Map<String, dynamic>> extractParagraphs(
   String htmlSK,
   String htmlCZ,
   String metadata,
+  String dirID, // Directory ID for logging purposes
 ) {
   //check if files names match expect lang
 
-  logger.log("$DateTime()  Process started");
-
   if (htmlEN.isEmpty || htmlSK.isEmpty || htmlCZ.isEmpty) {
     print('One or more input strings are empty.');
+    logger.log(
+      "$dirPointer, $dirID, NotProcessed, One or more input strings are empty",
+    );
     return [];
   }
 
   if (metadata.isNotEmpty) {
     String metadataRDF = metadata;
-    print('Metadata RDF: ${metadataRDF.substring(0, 50)} ...');
+    // print('Metadata RDF: ${metadataRDF.substring(0, 50)} ...');
 
     //getmetadata()
   }
@@ -51,6 +55,10 @@ List<Map<String, dynamic>> extractParagraphs(
   print('CZ File Name: $htmlCZFileName');
   print('Metadata File Name: $metadataFileName');
 
+  /* logger.log(
+    "$DateTime()  Process started for files: $htmlENFileName, $htmlSKFileName, $htmlCZFileName",
+  );
+*/
   String htmlSKFileNameMod =
       htmlSKFileName.substring(0, 8) + htmlSKFileName.split('.')[1].trim();
   String htmlENFileNameMod =
@@ -62,6 +70,8 @@ List<Map<String, dynamic>> extractParagraphs(
       htmlSKFileNameMod != htmlCZFileNameMod ||
       htmlENFileNameMod != htmlCZFileNameMod) {
     print('File names do not match!');
+
+    logger.log("$dirPointer, $dirID, NotProcessed, File names do not match");
     return [];
   }
 
@@ -98,6 +108,9 @@ List<Map<String, dynamic>> extractParagraphs(
     print(
       'Paragraphs in EN and SK do not match in length, files not identical!',
     );
+    logger.log(
+      "$dirPointer, $dirID, NotProcessed, Paragraphs in EN and SK do not match in length, files not identical: EN $htmlENFileNameMod: ${paragraphsEN.length}, SK $htmlSKFileNameMod: ${paragraphsSK.length}",
+    );
     return [];
   }
 
@@ -105,7 +118,13 @@ List<Map<String, dynamic>> extractParagraphs(
 
   List<Map<String, dynamic>> jsonData = [];
 
-  for (var i = 0; i < paragraphsEN.length && i < paragraphsSK.length; i++) {
+  for (
+    var i = 0;
+    i < paragraphsEN.length &&
+        i < paragraphsSK.length &&
+        i < paragraphsCZ.length;
+    i++
+  ) {
     var enText = paragraphsEN[i].text.trim();
     var skText = paragraphsSK[i].text.trim();
     var czText = paragraphsCZ[i].text.trim();
@@ -119,6 +138,7 @@ List<Map<String, dynamic>> extractParagraphs(
         "cz_text": czText,
         "language": {"en": "English", "sk": "Slovak", "cz": "Czech"},
         "celex": celex,
+        "dir_id": dirID, // Directory ID for logging purposes
         "filename": htmlENFileName,
         "class":
             paragraphsEN[i].classes.isNotEmpty
@@ -130,6 +150,8 @@ List<Map<String, dynamic>> extractParagraphs(
   }
   jsonOutput = jsonEncode(jsonData);
   openSearchUpload(jsonData);
+
+  logger.log("$dirPointer, $dirID, Processed, $htmlENFileName");
   //JSOn ready, now turning in into NDJSON + action part
 
   return jsonData;
@@ -150,7 +172,7 @@ void openSearchUpload(json) {
   for (var sentence in bilingualData) {
     var action = {
       "index": {
-        "_index": "small1", // Your OpenSearch index name
+        "_index": "eurolex3", // Your OpenSearch index name
         // Let OpenSearch generate a unique _id
         // _id is omitted, so OpenSearch generates it automatically
       },
@@ -165,10 +187,8 @@ void openSearchUpload(json) {
 
   print("Sending data to OpenSearch at $opensearchUrl");
   print("******************************************************************");
-  print(bulkData.sublist(0, 10));
+  print(bulkData.sublist(0, bulkData.length < 10 ? bulkData.length : 9));
   print("******************************************************************");
-
-  logger.log("$DateTime()  $bulkData");
 
   sendToOpenSearch(opensearchUrl, bulkData);
 }

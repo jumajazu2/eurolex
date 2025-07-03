@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:eurolex/browseFiles.dart';
 import 'package:eurolex/processDOM.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -67,7 +68,8 @@ class _FilePickerButtonState extends State<FilePickerButton> {
             // If the file name contains 'CZ', save it to a specific location
             metadata = content;
           } else {
-            print("File does not match SK, EN, or CZ criteria.");
+            print("File does not match SK, EN, CZ or MTD criteria.")
+            ;
           }
 
           if (fileContentSK.isNotEmpty && fileContentEN.isNotEmpty) {
@@ -134,6 +136,7 @@ class _FilePickerButtonState extends State<FilePickerButton> {
                               fileContentSK,
                               fileContentCZ,
                               metadata,
+                              "dir", // Directory ID for logging purposes
                             );
                             // print(jsonOutput);
                           },

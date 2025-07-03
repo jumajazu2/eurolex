@@ -16,13 +16,13 @@ import 'package:eurolex/logger.dart';
 import 'package:path/path.dart' as path;
 
 String pathDirEN =
-    r'\\OPENMEDIAVAULT\ExtSSD\EurLexDump\SmallSample\EN'; // Windows path
+    r'\\OPENMEDIAVAULT\ExtSSD\EurLexDump\LEG_EN_HTML_20250601_00_00'; // Windows path
 String pathDirSK =
-    r'\\OPENMEDIAVAULT\ExtSSD\EurLexDump\SmallSample\SK'; // Windows path
+    r'\\OPENMEDIAVAULT\ExtSSD\EurLexDump\LEG_SK_HTML_20250601_00_00'; // Windows path
 String pathDirCZ =
-    r'\\OPENMEDIAVAULT\ExtSSD\EurLexDump\SmallSample\CZ'; // Windows path
+    r'\\OPENMEDIAVAULT\ExtSSD\EurLexDump\LEG_CS_HTML_20250601_00_00'; // Windows path
 String pathDirMTD =
-    r'\\OPENMEDIAVAULT\ExtSSD\EurLexDump\SmallSample\MTD'; // Windows path
+    r'\\OPENMEDIAVAULT\ExtSSD\EurLexDump\LEG_MTD_HTML_20250601_00_00'; // Windows path
 
 final logger = LogManager();
 
@@ -34,34 +34,55 @@ final dirMTD = Directory(pathDirMTD);
 void listFilesInDirEN() async {
   print('Checking directory: ${dirEN.path}');
 
+  logger.log("******Process started for directory: ${dirEN.path}");
+
+  int pointer = 0;
+
   if (await dirEN.exists()) {
     try {
       List<FileSystemEntity> files = dirEN.listSync();
+      files.sort((a, b) => a.path.compareTo(b.path));
+
       if (files.isEmpty) {
         print('Directory is accessible but contains no files.');
       } else {
-        for (var file in files) {
+        int startIndex = 0;
+        for (int i = startIndex; i < files.length; i++) {
+          dirPointer = i; // Update the global pointer for directory processing
+          var file = files[i]; //first level of subfolders
           print(file.path);
 
+          print(
+            'PROGRESS: Total folders: ${files.length}, processed folders: $pointer',
+          );
+          pointer++;
           var currentDir = file.path;
           print('Current directory: $currentDir');
 
           //create localised directory paths
 
-          var skDir = currentDir.replaceFirst(r"\EN", r"\SK");
+          var skDir = currentDir.replaceFirst(r"_EN_", r"_SK_");
           print(skDir);
           var skFile = await getFile(Directory(skDir));
 
-          var czDir = currentDir.replaceFirst(r"\EN", r"\CZ");
+          var czDir = currentDir.replaceFirst(r"_EN_", r"_CS_");
           print(czDir);
           var czFile = await getFile(Directory(czDir));
-          var mtdDir = currentDir.replaceFirst(r"\EN", r"\MTD");
+          var mtdDir = currentDir.replaceFirst(r"_EN_", r"_MTD_");
           print(mtdDir);
           var mtdFile = await getFile(Directory(mtdDir));
 
           var enFile = await getFile(Directory(currentDir));
+          var dirID = currentDir.split(r"\").last;
+          print('Directory ID: $dirID');
 
-          var paragraphs = extractParagraphs(enFile, skFile, czFile, mtdFile);
+          var paragraphs = extractParagraphs(
+            enFile,
+            skFile,
+            czFile,
+            mtdFile,
+            dirID,
+          );
 
           print(
             "|*********************************************************************************************",
@@ -110,7 +131,7 @@ Future<String> getFile(dir) async {
 
   if (await dir.exists()) {
     try {
-      List<FileSystemEntity> files2 = dir.listSync();
+      List<FileSystemEntity> files2 = dir.listSync();  //second level of subfolders -html, xhtml 
       if (files2.isEmpty) {
         print('Directory is accessible but contains no files.');
       } else {
@@ -122,13 +143,13 @@ Future<String> getFile(dir) async {
             // If the subfile is a file, read it
             print(file.path);
             String readFile = await file.readAsString();
-            print('Reading file: ${readFile.substring(0, 50)}...');
+            // print('Reading file: ${readFile.substring(0, 50)}...');
 
             if (readFile.isNotEmpty) {
               var fileName = path.basename(file.path);
               print('File name: $fileName');
               readFile = '$fileName@@@$readFile';
-              print('File: ${readFile.substring(0, 50)}');
+              //   print('File: ${readFile.substring(0, 50)}');
               return readFile; // Return the read file content
             } else {
               print('File is empty, skipping...');
@@ -147,13 +168,13 @@ Future<String> getFile(dir) async {
                 // If the subfile is a file, read it
                 print(subfile.path);
                 String readFile = await subfile.readAsString();
-                print('Reading file: ${readFile.substring(0, 50)}...');
+                //  print('Reading file: ${readFile.substring(0, 50)}...');
 
                 if (readFile.isNotEmpty) {
                   var fileName = path.basename(subfile.path);
                   print('File name: $fileName');
                   readFile = '$fileName@@@$readFile';
-                  print('File: ${readFile.substring(0, 50)}...');
+                  //  print('File: ${readFile.substring(0, 50)}...');
 
                   return readFile; // Return the read file content
                 } else {
@@ -177,7 +198,7 @@ Future<String> getFile(dir) async {
                       var fileName = path.basename(readFile);
                       print('File name: $fileName');
                       readFile = '$fileName@@@$readFile';
-                      print('File: ${readFile.substring(0, 50)}...');
+                      //   print('File: ${readFile.substring(0, 50)}...');
 
                       return readFile;
                     } // Return the read file content

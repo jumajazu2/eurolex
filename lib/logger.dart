@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
 class LogManager {
-  static const int maxLogSize = 10000; // bytes (adjust as needed)
+  static const int maxLogSize = 90000000; // bytes (adjust as needed)
   static const String fileName = "OSJSON-log.txt";
 
   Future<String> get _logFilePath async {
@@ -17,7 +17,7 @@ class LogManager {
 
   Future<void> log(String message) async {
     final file = await _logFile;
-    final logEntry = "${DateTime.now().toIso8601String()} - $message\n";
+    final logEntry = "${DateTime.now().toIso8601String()}, $message\n";
 
     String currentContent = "";
     if (await file.exists()) {
