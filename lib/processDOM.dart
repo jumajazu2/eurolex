@@ -50,10 +50,12 @@ List<Map<String, dynamic>> extractParagraphs(
   String htmlCZFileName = htmlCZ.split('@@@')[0].trim();
   String metadataFileName = metadata.split('@@@')[0].trim();
 
-  print('EN File Name: $htmlENFileName');
-  print('SK File Name: $htmlSKFileName');
-  print('CZ File Name: $htmlCZFileName');
-  print('Metadata File Name: $metadataFileName');
+  bool namesNotMatched = false;
+  bool paragraphsNotMatched = false;
+
+  print(
+    'EN File Name: $htmlENFileName SK File Name: $htmlSKFileName CZ File Name: $htmlCZFileName Metadata File Name: $metadataFileName',
+  );
 
   /* logger.log(
     "$DateTime()  Process started for files: $htmlENFileName, $htmlSKFileName, $htmlCZFileName",
@@ -71,8 +73,10 @@ List<Map<String, dynamic>> extractParagraphs(
       htmlENFileNameMod != htmlCZFileNameMod) {
     print('File names do not match!');
 
-    logger.log("$dirPointer, $dirID, NotProcessed, File names do not match");
-    return [];
+    logger.log(
+      "$dirPointer, $dirID, Processed, File names do not match, set warning flag namesNotMatched ",
+    );
+    namesNotMatched = true;
   }
 
   print(
@@ -109,9 +113,9 @@ List<Map<String, dynamic>> extractParagraphs(
       'Paragraphs in EN and SK do not match in length, files not identical!',
     );
     logger.log(
-      "$dirPointer, $dirID, NotProcessed, Paragraphs in EN and SK do not match in length, files not identical: EN $htmlENFileNameMod: ${paragraphsEN.length}, SK $htmlSKFileNameMod: ${paragraphsSK.length}",
+      "$dirPointer, $dirID, Processed, set warning flag paragraphsNotMatched, files not identical: EN $htmlENFileNameMod: ${paragraphsEN.length}, SK $htmlSKFileNameMod: ${paragraphsSK.length}",
     );
-    return [];
+    paragraphsNotMatched = true;
   }
 
   int sequenceID = 0;
@@ -140,6 +144,8 @@ List<Map<String, dynamic>> extractParagraphs(
         "celex": celex,
         "dir_id": dirID, // Directory ID for logging purposes
         "filename": htmlENFileName,
+        "paragraphsNotMatched": pd,
+        "namesNotMatched": namesNotMatched,
         "class":
             paragraphsEN[i].classes.isNotEmpty
                 ? paragraphsEN[i].classes.first
@@ -196,6 +202,7 @@ void openSearchUpload(json) {
 // Function to send the NDJSON data to OpenSearch
 Future<void> sendToOpenSearch(String url, List<String> bulkData) async {
   try {
+    return; //temporary disable for testing
     final response = await http.post(
       Uri.parse(url),
       headers: {"Content-Type": "application/x-ndjson"},

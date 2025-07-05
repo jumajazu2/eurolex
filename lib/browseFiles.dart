@@ -34,7 +34,7 @@ final dirMTD = Directory(pathDirMTD);
 void listFilesInDirEN() async {
   print('Checking directory: ${dirEN.path}');
 
-  logger.log("******Process started for directory: ${dirEN.path}");
+  .log("******Process started for directory: ${dirEN.path}");
 
   int pointer = 0;
 
@@ -61,18 +61,87 @@ void listFilesInDirEN() async {
 
           //create localised directory paths
 
-          var skDir = currentDir.replaceFirst(r"_EN_", r"_SK_");
-          print(skDir);
-          var skFile = await getFile(Directory(skDir));
+          var checkEnDir = await checkDir(
+            Directory(currentDir),
+          ); //return the list of accessible directories for EN
 
+          String enDir = currentDir;
+
+          var skDir = currentDir.replaceFirst(r"_EN_", r"_SK_");
           var czDir = currentDir.replaceFirst(r"_EN_", r"_CS_");
-          print(czDir);
+
+          var checkSkDir = await checkDir(Directory(skDir));
+          print(
+            "dirpointer $i, checkSkDir.length = ${checkSkDir?.length ?? "null"},  checkSkDir = $checkSkDir",
+          ); //return the list of accessible directories for EN
+
+          var checkCzDir = await checkDir(
+            Directory(czDir),
+          ); //return the list of accessible directories for EN
+          print(
+            "dirpointer $i, checkCzDir.length = ${checkCzDir?.length ?? "null"}, checkCzDir = $checkCzDir",
+          );
+          print(
+            "dirpointer $i, checkEnDir.length = ${checkEnDir?.length ?? "null"}, checkEnDir = $checkEnDir",
+          );
+          if ((checkSkDir == null) || (checkCzDir == null))
+          //for now, later if at least one file is avaible add it and use some placeholder for the unavailable language
+          {
+            print(
+              "Directory does not exist or is not accessible for SK or CZ, skipping",
+            );
+            continue;
+          }
+
+          if (checkEnDir.length == 1 &&
+              checkSkDir.length == 1 &&
+              checkCzDir.length == 1) {
+            print(
+              "dirpointer $i EN, SK and CZ directories -one for each language- are accessible and contain files, no change in paths.",
+            );
+          } else if (checkEnDir.length == 2 &&
+              (checkSkDir.length == 1 || checkCzDir.length == 1)) {
+            print(
+              "dirpointer $i EN, SK and CZ directories differ - 2 for EN, 1 for SK or CZ, EN $checkEnDir, SK $checkSkDir, CZ $checkCzDir.",
+            );
+            if (checkSkDir[0].contains(r'\html') &&
+                checkEnDir[0].contains(r'\html') == "html") {
+              enDir = checkEnDir[0];
+              print(
+                "dirpointer $i SK contains only html $skDir, EN dir will read the file from html dir: $enDir",
+              );
+            } else if (checkSkDir[0].contains(r'\html') &&
+                checkEnDir[1].contains(r'\html')) {
+              enDir = checkEnDir[1];
+
+              print(
+                "dirpointer $i SK contains only html $skDir, EN dir will read the file from html dir: $enDir",
+              );
+            }
+          }
+
+          if (checkSkDir[0].contains(r'\xhtml') &&
+              checkEnDir[0].contains(r'\xhtml')) {
+            enDir = checkEnDir[0];
+            print(
+              "dirpointer $i SK contains only xhtml $skDir, EN dir will read the file from xhtml dir: $enDir",
+            );
+          } else if (checkSkDir[0].contains(r'\xhtml') &&
+              checkEnDir[1].contains(r'\xhtml')) {
+            enDir = checkEnDir[1];
+
+            print(
+              "dirpointer $i SK contains only xhtml $skDir, EN dir will read the file from xhtml dir: $enDir",
+            );
+          }
+
+          var enFile = await getFile(Directory(enDir));
+          var skFile = await getFile(Directory(skDir));
           var czFile = await getFile(Directory(czDir));
           var mtdDir = currentDir.replaceFirst(r"_EN_", r"_MTD_");
           print(mtdDir);
           var mtdFile = await getFile(Directory(mtdDir));
 
-          var enFile = await getFile(Directory(currentDir));
           var dirID = currentDir.split(r"\").last;
           print('Directory ID: $dirID');
 
@@ -87,34 +156,6 @@ void listFilesInDirEN() async {
           print(
             "|*********************************************************************************************",
           );
-          /*
-
-          if (file is Directory) {
-            // If the file is a directory, you can call the function recursively
-            List<FileSystemEntity> filesInDir = file.listSync();
-
-            for (var subfile in filesInDir) {
-              if (subfile is Directory) {
-                // Go even deeper
-                List<FileSystemEntity> filesInSubDir = subfile.listSync();
-
-                print('is directory and contains these files: $filesInSubDir');
-
-                for (var fileEntity in filesInSubDir) {
-                  if (fileEntity is File) {
-                    String readFile = await fileEntity.readAsString();
-                    print('Reading file: ${readFile.substring(0, 50)}...');
-                    // Do something with readFile
-                  }
-                }
-              }
-
-              // You can also call the function to list files in the subdirectory
-            }
-          }
-
-
-          */
         }
       }
     } catch (e) {
@@ -125,13 +166,63 @@ void listFilesInDirEN() async {
   }
 }
 
+//checks if the Cellar ID directory contains one or two subdirectories html and xhtml
+Future checkDir(Directory dir) async {
+  List accessibleDirs = [];
+
+  if (await dir.exists()) {
+    try {
+      List<FileSystemEntity> files2 =
+          dir.listSync(); //second level of subfolders -html, xhtml
+
+      print(
+        "checking where files are: $files2, number of items: ${files2.length}",
+      );
+
+      if (files2.isEmpty) {
+        print('Directory is accessible but contains no files.');
+        return dir;
+      } else {
+        for (var file
+            in files2) //looping through accessible directories html or xhtml
+        {
+          print('File path in level 2: $file');
+
+          if (file is Directory) {
+            // If the file is a directory, you can call the function recursively
+
+            accessibleDirs.add(file.path);
+
+            print(
+              "YYY accessible director ${file.path} in $dir",
+            ); //file is html or xhtml
+          }
+
+          // You can also call the function to list files in the subdirectory
+        }
+
+        print("returning accessible directories: $accessibleDirs");
+        return accessibleDirs; // Return the list of accessible directories
+      }
+    } catch (e) {
+      print('Error accessing directory: $e');
+    }
+  } else {
+    print('Directory does not exist or is not accessible: ${dir.path}');
+  }
+}
+
 Future<String> getFile(dir) async {
   // Function to get file from directory, first must skip one or more subdirectories then read file from the lowest level
   print('getting file from directory: $dir');
 
   if (await dir.exists()) {
     try {
-      List<FileSystemEntity> files2 = dir.listSync();  //second level of subfolders -html, xhtml 
+      List<FileSystemEntity> files2 =
+          dir.listSync(); //second level of subfolders -html, xhtml
+
+      print("second level files: $files2, number of items: ${files2.length}");
+
       if (files2.isEmpty) {
         print('Directory is accessible but contains no files.');
       } else {
@@ -161,6 +252,10 @@ Future<String> getFile(dir) async {
             // If the file is a directory, you can call the function recursively
             List<FileSystemEntity> filesInDir2 = file.listSync();
 
+            print(
+              "YYY Files inDir2: $filesInDir2, file $file",
+            ); //file is html or xhtml
+
             for (var subfile in filesInDir2) {
               if (subfile is File &&
                   (subfile.path.endsWith('.html') ||
@@ -184,10 +279,14 @@ Future<String> getFile(dir) async {
               }
 
               if (subfile is Directory) {
-                // Go even deeper
+                // Go even deeper...
                 List<FileSystemEntity> filesInSubDir = subfile.listSync();
 
                 print('is directory and contains these files: $filesInSubDir');
+
+                print(
+                  "Only one low level directory detected, the output will contain only one file",
+                );
 
                 for (var fileEntity in filesInSubDir) {
                   if (fileEntity is File) {
@@ -206,7 +305,6 @@ Future<String> getFile(dir) async {
                       print('File is empty, skipping...');
                       return '';
                     }
-                    // Do something with readFile
                   }
                 }
               }
