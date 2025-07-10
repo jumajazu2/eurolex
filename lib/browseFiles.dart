@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:eurolex/preparehtml.dart';
 import 'package:eurolex/processDOM.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -34,7 +35,7 @@ final dirMTD = Directory(pathDirMTD);
 void listFilesInDirEN() async {
   print('Checking directory: ${dirEN.path}');
 
-  .log("******Process started for directory: ${dirEN.path}");
+  logger.log("******Process started for directory: ${dirEN.path}");
 
   int pointer = 0;
 
@@ -46,7 +47,8 @@ void listFilesInDirEN() async {
       if (files.isEmpty) {
         print('Directory is accessible but contains no files.');
       } else {
-        int startIndex = 0;
+        int startIndex =
+            18410; //to restart data processing into OS after a failure
         for (int i = startIndex; i < files.length; i++) {
           dirPointer = i; // Update the global pointer for directory processing
           var file = files[i]; //first level of subfolders
@@ -90,7 +92,11 @@ void listFilesInDirEN() async {
             print(
               "Directory does not exist or is not accessible for SK or CZ, skipping",
             );
-            continue;
+
+            logger.log(
+              "$dirPointer, ${currentDir.split(r"\").last}, NotProcessed, Files for SK and/or CZ do not exist",
+            );
+            continue; //this is why not logging
           }
 
           if (checkEnDir.length == 1 &&
@@ -126,7 +132,9 @@ void listFilesInDirEN() async {
             print(
               "dirpointer $i SK contains only xhtml $skDir, EN dir will read the file from xhtml dir: $enDir",
             );
-          } else if (checkSkDir[0].contains(r'\xhtml') &&
+          } else if (checkSkDir.isNotEmpty &&
+              checkEnDir.length > 1 &&
+              checkSkDir[0].contains(r'\xhtml') &&
               checkEnDir[1].contains(r'\xhtml')) {
             enDir = checkEnDir[1];
 
@@ -139,9 +147,11 @@ void listFilesInDirEN() async {
           var skFile = await getFile(Directory(skDir));
           var czFile = await getFile(Directory(czDir));
           var mtdDir = currentDir.replaceFirst(r"_EN_", r"_MTD_");
-          print(mtdDir);
-          var mtdFile = await getFile(Directory(mtdDir));
 
+          var mtdFile = await getFile(Directory(mtdDir));
+          print(
+            "dirpointer $i Files before passing to extractParagraphs ${enFile.length}, ${skFile.length}, ${czFile.length}, ${mtdFile.length}",
+          );
           var dirID = currentDir.split(r"\").last;
           print('Directory ID: $dirID');
 
@@ -262,19 +272,25 @@ Future<String> getFile(dir) async {
                       subfile.path.endsWith('.rdf'))) {
                 // If the subfile is a file, read it
                 print(subfile.path);
-                String readFile = await subfile.readAsString();
-                //  print('Reading file: ${readFile.substring(0, 50)}...');
 
-                if (readFile.isNotEmpty) {
-                  var fileName = path.basename(subfile.path);
-                  print('File name: $fileName');
-                  readFile = '$fileName@@@$readFile';
-                  //  print('File: ${readFile.substring(0, 50)}...');
+                try {
+                  String readFile = await subfile.readAsString();
+                  //  print('Reading file: ${readFile.substring(0, 50)}...');
 
-                  return readFile; // Return the read file content
-                } else {
-                  print('File is empty, skipping...');
-                  return '';
+                  if (readFile.isNotEmpty) {
+                    var fileName = path.basename(subfile.path);
+                    print('File name: $fileName');
+                    readFile = '$fileName@@@$readFile';
+                    //  print('File: ${readFile.substring(0, 50)}...');
+
+                    return readFile; // Return the read file content
+                  } else {
+                    print('File is empty, skipping...');
+                    return '';
+                  }
+                } catch (e) {
+                  print('Error reading file as UTF-8: ${subfile.path} - $e');
+                  continue;
                 }
               }
 
@@ -322,4 +338,27 @@ Future<String> getFile(dir) async {
   }
 
   return ''; // Return empty string if no file found
+}
+
+class BrowseFilesWidget extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        ElevatedButton(
+          onPressed: listFilesInDirEN,
+          child: Text('Start Batch Processing'),
+        ),
+        VerticalDivider(
+          color: Colors.grey,
+          thickness: 1,
+          indent: 20,
+          endIndent: 20,
+        ),
+        FilePickerButton(),
+      ],
+
+      // Replace with your actual UI for data processing
+    );
+  }
 }

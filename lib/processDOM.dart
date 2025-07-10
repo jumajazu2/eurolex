@@ -68,13 +68,19 @@ List<Map<String, dynamic>> extractParagraphs(
   String htmlCZFileNameMod =
       htmlCZFileName.substring(0, 8) + htmlCZFileName.split('.')[1].trim();
 
+  String celex = getmetadata(metadata);
+  if (celex.contains(".")) {
+    celex = celex.split(".").first;
+  }
+  print('$dirPointer, $dirID, $htmlENFileName, decoded CELEX: $celex');
+
   if (htmlSKFileNameMod != htmlENFileNameMod ||
       htmlSKFileNameMod != htmlCZFileNameMod ||
       htmlENFileNameMod != htmlCZFileNameMod) {
     print('File names do not match!');
 
     logger.log(
-      "$dirPointer, $dirID, Processed, File names do not match, set warning flag namesNotMatched ",
+      "$dirPointer, $dirID, Processed, Celex: $celex, File names do not match-set warning flag namesNotMatched",
     );
     namesNotMatched = true;
   }
@@ -99,22 +105,18 @@ List<Map<String, dynamic>> extractParagraphs(
               : dateElements.first.text.trim())
           : 'unknown';
 
-  ;
   print('date: $date');
 
-  String celex = getmetadata(metadata);
-  if (celex.contains(".")) {
-    celex = celex.split(".").first;
-  }
-  print('CELEX: $celex');
   //check if paragraps in SK and EN are the same length
   if (paragraphsEN.length != paragraphsSK.length) {
     print(
-      'Paragraphs in EN and SK do not match in length, files not identical!',
+      'Paragraphs in EN and SK do not match in length, files not identical! $dirPointer, $dirID',
     );
+
     logger.log(
-      "$dirPointer, $dirID, Processed, set warning flag paragraphsNotMatched, files not identical: EN $htmlENFileNameMod: ${paragraphsEN.length}, SK $htmlSKFileNameMod: ${paragraphsSK.length}",
+      "$dirPointer, $dirID, Processed, Celex: $celex, parNotMatched, EN $htmlENFileNameMod ${paragraphsEN.length} SK $htmlSKFileNameMod ${paragraphsSK.length}",
     );
+
     paragraphsNotMatched = true;
   }
 
@@ -144,7 +146,7 @@ List<Map<String, dynamic>> extractParagraphs(
         "celex": celex,
         "dir_id": dirID, // Directory ID for logging purposes
         "filename": htmlENFileName,
-        "paragraphsNotMatched": pd,
+        "paragraphsNotMatched": paragraphsNotMatched,
         "namesNotMatched": namesNotMatched,
         "class":
             paragraphsEN[i].classes.isNotEmpty
@@ -157,7 +159,9 @@ List<Map<String, dynamic>> extractParagraphs(
   jsonOutput = jsonEncode(jsonData);
   openSearchUpload(jsonData);
 
-  logger.log("$dirPointer, $dirID, Processed, $htmlENFileName");
+  logger.log(
+    "$dirPointer, $dirID, Processed, Celex: $celex, status_ok, $htmlENFileName",
+  );
   //JSOn ready, now turning in into NDJSON + action part
 
   return jsonData;
@@ -178,7 +182,7 @@ void openSearchUpload(json) {
   for (var sentence in bilingualData) {
     var action = {
       "index": {
-        "_index": "eurolex3", // Your OpenSearch index name
+        "_index": "eurolex4", // Your OpenSearch index name
         // Let OpenSearch generate a unique _id
         // _id is omitted, so OpenSearch generates it automatically
       },
@@ -200,9 +204,9 @@ void openSearchUpload(json) {
 }
 
 // Function to send the NDJSON data to OpenSearch
-Future<void> sendToOpenSearch(String url, List<String> bulkData) async {
+Future<String> sendToOpenSearch(String url, List<String> bulkData) async {
   try {
-    return; //temporary disable for testing
+    //return; //temporary disable for testing
     final response = await http.post(
       Uri.parse(url),
       headers: {"Content-Type": "application/x-ndjson"},
@@ -210,14 +214,16 @@ Future<void> sendToOpenSearch(String url, List<String> bulkData) async {
     );
 
     if (response.statusCode == 200) {
-      print("Data successfully indexed!");
+      print("Data successfully processed!");
       print(response.body);
+      return response.body; // Return the response body
     } else {
       print("Error: ${response.statusCode} - ${response.body}");
+      return response.body;
     }
   } on Exception catch (e) {
     print("Error sending data to OpenSearch: $e");
-    return;
+    return "Error with OpenSearch: $e";
   }
 }
 
@@ -225,7 +231,7 @@ String getmetadata(metadataRDF) //get celex and cellar info from RDF metadata
 // find rdf:resource="http://publications.europa.eu/resource/celex/  data follows
 {
   final regex = RegExp(
-    r'rdf:resource="http://publications\.europa\.eu/resource/celex/([^"/]+)',
+    r'owl:sameAs rdf:resource="http://publications\.europa\.eu/resource/celex/([^"/]+)',
   );
   final match = regex.firstMatch(metadataRDF);
   if (match != null && match.groupCount >= 1) {

@@ -2,142 +2,60 @@ import 'package:flutter/material.dart';
 import 'package:eurolex/preparehtml.dart';
 import 'package:eurolex/browseFiles.dart';
 import 'package:html/parser.dart' as html_parser;
+import 'package:eurolex/browseFiles.dart';
+import 'package:eurolex/search.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(MaterialApp(home: MainTabbedApp()));
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  // This widget is the root of your application.
+class MainTabbedApp extends StatefulWidget {
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Eurolex',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Eurolex EU LAW Search'),
-    );
+  _MainTabbedAppState createState() => _MainTabbedAppState();
+}
+
+class _MainTabbedAppState extends State<MainTabbedApp>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: 0,
+    ); // Search tab first
   }
-}
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
-class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
-    print("running build method");
-
-    // List<Element>
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: <Widget>[
-            const Text('Select files:'),
-            Row(
-              children: [
-                FilePickerButton(),
-                FilePickerButton(),
-                FilePickerButton(),
-              ],
-            ),
-
-            // Add more widgets here if needed
-            if (fileContentSK.isNotEmpty && fileContentEN.isNotEmpty)
-              Text('SK and EN File Content Loaded: fileContentSK: ')
-            else
-              Text('No file content loaded yet. fileContentSK: '),
-
-            // Add more widgets here if needed
-            if (fileEN_DOM != null)
-              ElevatedButton(
-                onPressed: () {
-                  // Start processing the DOM
-                  // TODO: Replace print with logging if needed
-                },
-                child: const Text('Process DOM'),
-              ),
-
-            ElevatedButton(
-              onPressed: () {
-                listFilesInDirEN();
-                // print(jsonOutput);
-              },
-              child: Text('List dirs'),
-            ),
-
-
-
-
-
+        title: Text('Eurolex App'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: [
+            Tab(text: 'Search'),
+            Tab(text: 'Setup'),
+            Tab(text: 'Data Process'),
           ],
         ),
       ),
-      // This trailing comma makes auto-formatting nicer for build methods.
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          Center(child: SearchTabWidget()), // Replace with your Search widget
+          Center(child: Text('Setup Tab')), // Replace with your Setup widget
+          BrowseFilesWidget(), // Replace with your Data rocess widget
+        ],
+      ),
     );
   }
 }
