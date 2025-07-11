@@ -51,7 +51,9 @@ class _MainTabbedAppState extends State<MainTabbedApp>
       body: TabBarView(
         controller: _tabController,
         children: [
-          Center(child: SearchTabWidget()), // Replace with your Search widget
+          Center(
+            child: SearchTabWidget(queryText: "", queryName: ""),
+          ), // Replace with your Search widget
           Center(child: Text('Setup Tab')), // Replace with your Setup widget
           BrowseFilesWidget(), // Replace with your Data rocess widget
         ],

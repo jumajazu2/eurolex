@@ -8,9 +8,22 @@ var decodedResults = [];
 var skResults = [];
 var enResults = [];
 var czResults = [];
+var metaCelex = [];
+var metaCellar = [];
+var sequenceNo;
+var parNotMatched;
+var className;
+var docDate;
 
 class SearchTabWidget extends StatefulWidget {
-  const SearchTabWidget({Key? key}) : super(key: key);
+  final String queryText;
+  final String queryName;
+
+  const SearchTabWidget({
+    Key? key,
+    required this.queryText,
+    required this.queryName,
+  }) : super(key: key);
 
   @override
   _SearchTabWidgetState createState() => _SearchTabWidgetState();
@@ -54,6 +67,85 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
           hits.map((hit) => hit['_source']['en_text'].toString()).toList();
       czResults =
           hits.map((hit) => hit['_source']['cz_text'].toString()).toList();
+
+      metaCelex =
+          hits.map((hit) => hit['_source']['celex'].toString()).toList();
+      metaCellar =
+          hits.map((hit) => hit['_source']['dir_id'].toString()).toList();
+      sequenceNo =
+          hits.map((hit) => hit['_source']['sequence_id'].toString()).toList();
+      parNotMatched =
+          hits
+              .map((hit) => hit['_source']['paragraphsNotMatched'].toString())
+              .toList();
+
+      className =
+          hits.map((hit) => hit['_source']['class'].toString()).toList();
+
+      docDate = hits.map((hit) => hit['_source']['date'].toString()).toList();
+    });
+
+    print("Query: $query, Results = $skResults");
+
+    setState(() {});
+  }
+
+  void _startSearch2() async {
+    // TODO: Implement your search logic here
+    setState(() {
+      _results.clear();
+    });
+
+    var query = {
+      "query": {
+        "multi_match": {
+          "query": _searchController.text, // Search term with a typo
+          "fields": [
+            "en_text",
+            "sk_text",
+            "cz_text",
+          ], // Search across all language fields
+          "fuzziness": "0",
+          "minimum_should_match": "75%", // Allow fuzzy matching
+        },
+      },
+      "size": 50,
+      "highlight": {
+        "fields": {"en_text": {}, "sk_text": {}, "cz_text": {}},
+      },
+    }; // Increase the number of results to 50
+
+    var resultsOS = await sendToOpenSearch(
+      'http://localhost:9200/eurolex4/_search',
+      [jsonEncode(query)],
+    );
+    var decodedResults = jsonDecode(resultsOS);
+
+    var hits = decodedResults['hits']['hits'] as List;
+
+    setState(() {
+      skResults =
+          hits.map((hit) => hit['_source']['sk_text'].toString()).toList();
+      enResults =
+          hits.map((hit) => hit['_source']['en_text'].toString()).toList();
+      czResults =
+          hits.map((hit) => hit['_source']['cz_text'].toString()).toList();
+
+      metaCelex =
+          hits.map((hit) => hit['_source']['celex'].toString()).toList();
+      metaCellar =
+          hits.map((hit) => hit['_source']['dir_id'].toString()).toList();
+      sequenceNo =
+          hits.map((hit) => hit['_source']['sequence_id'].toString()).toList();
+      parNotMatched =
+          hits
+              .map((hit) => hit['_source']['paragraphsNotMatched'].toString())
+              .toList();
+
+      className =
+          hits.map((hit) => hit['_source']['class'].toString()).toList();
+
+      docDate = hits.map((hit) => hit['_source']['date'].toString()).toList();
     });
 
     print("Query: $query, Results = $skResults");
@@ -90,9 +182,24 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
         // Start Search button
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 4.0),
-          child: ElevatedButton(
-            onPressed: _startSearch,
-            child: Text('Start Search'),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              ElevatedButton(
+                onPressed: _startSearch,
+                child: Text('Start Search (match_phrase)'),
+              ),
+              ElevatedButton(
+                onPressed: _startSearch2,
+                child: Text('Start Search (multi_match)'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  // TODO: Add your third button functionality
+                },
+                child: Text('Button 3'),
+              ),
+            ],
           ),
         ),
         // Quick settings checkboxes
@@ -126,18 +233,83 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
                 title: Row(
                   children: [
                     Expanded(
-                      child: Text(
+                      child: SelectableText(
                         enResults.length > index ? enResults[index] : '',
                       ),
                     ),
                     Expanded(
-                      child: Text(
+                      child: SelectableText(
                         skResults.length > index ? skResults[index] : '',
                       ),
                     ),
                     Expanded(
-                      child: Text(
+                      child: SelectableText(
                         czResults.length > index ? czResults[index] : '',
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Text("Celex: "),
+                              SelectableText(
+                                metaCelex.length > index
+                                    ? metaCelex[index]
+                                    : '',
+                              ),
+                            ],
+                          ),
+                          // If you want to show czResults here as well, add another widget:
+                          Row(
+                            children: [
+                              Text("Cellar: "),
+                              SelectableText(
+                                metaCellar.length > index
+                                    ? metaCellar[index]
+                                    : '',
+                              ),
+                            ],
+                          ),
+
+                          Row(
+                            children: [
+                              Text("Date: "),
+                              SelectableText(
+                                docDate.length > index ? docDate[index] : '',
+                              ),
+                            ],
+                          ),
+
+                          Row(
+                            children: [
+                              Text("Class: "),
+                              SelectableText(
+                                className.length > index
+                                    ? className[index]
+                                    : '',
+                              ),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              Text("Unmatched paragraphs: "),
+                              SelectableText(
+                                parNotMatched.length > index
+                                    ? parNotMatched[index]
+                                    : '',
+                              ),
+                            ],
+                          ),
+
+                          Row(
+                            children: [
+                              Text("Open full document: EN-SK, EN-CZ"),
+                            ],
+                          ),
+
+                          Row(children: [Text("Open content (dropdown)")]),
+                        ],
                       ),
                     ),
                   ],
