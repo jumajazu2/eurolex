@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:eurolex/processDOM.dart'; // Assuming this is your data processing widget
+import 'package:eurolex/processDOM.dart';
+import 'package:eurolex/display.dart';
 
 var resultsOS = [];
 var decodedResults = [];
@@ -14,6 +16,7 @@ var sequenceNo;
 var parNotMatched;
 var className;
 var docDate;
+List enHighlightedResults = [];
 
 class SearchTabWidget extends StatefulWidget {
   final String queryText;
@@ -38,6 +41,8 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
     // TODO: Implement your search logic here
     setState(() {
       _results.clear();
+
+      enHighlightedResults.clear();
     });
     var query = {
       "query": {
@@ -51,6 +56,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
       },
       "size": 50,
     };
+    var queryText = _searchController.text;
 
     var resultsOS = await sendToOpenSearch(
       'http://localhost:9200/eurolex4/_search',
@@ -94,6 +100,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
     // TODO: Implement your search logic here
     setState(() {
       _results.clear();
+      enHighlightedResults.clear();
     });
 
     var query = {
@@ -148,7 +155,30 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
       docDate = hits.map((hit) => hit['_source']['date'].toString()).toList();
     });
 
-    print("Query: $query, Results = $skResults");
+    print("Query: $query, Results = ${skResults.length}");
+
+    var queryText = _searchController.text;
+    //converting the results to TextSpans for highlighting
+    var queryWords =
+        queryText
+            .replaceAll(RegExp(r'[^\w\s]'), '') // remove punctuation
+            .split(RegExp(r'\s+')) // split by whitespace
+            .where((word) => word.isNotEmpty) // remove empty entries
+            .toList();
+
+    print("Query Words: $queryWords");
+
+    for (var hit in enResults) {
+      var enHighlight = highlightFoundWords(hit, queryWords);
+
+      // You can store these highlights in a list or map if needed
+      print("EN Highlight: $enHighlight");
+      enHighlightedResults.add(enHighlight);
+      print("EN Highlight: $enHighlight, $enHighlightedResults");
+    }
+    print(
+      "EN Highlight all: ${enHighlightedResults.length}, $enHighlightedResults",
+    );
 
     setState(() {});
   }
@@ -227,14 +257,16 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
         // Results list
         Expanded(
           child: ListView.builder(
-            itemCount: enResults.length,
+            itemCount: enHighlightedResults.length,
             itemBuilder: (context, index) {
               return ListTile(
                 title: Row(
                   children: [
                     Expanded(
-                      child: SelectableText(
-                        enResults.length > index ? enResults[index] : '',
+                      child: SelectableText.rich(
+                        enHighlightedResults.length > index
+                            ? enHighlightedResults[index]
+                            : '',
                       ),
                     ),
                     Expanded(
