@@ -16,6 +16,8 @@ var sequenceNo;
 var parNotMatched;
 var className;
 var docDate;
+var pointerPar;
+var contextEnSkCz;
 List enHighlightedResults = [];
 
 class SearchTabWidget extends StatefulWidget {
@@ -148,6 +150,8 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
           hits
               .map((hit) => hit['_source']['paragraphsNotMatched'].toString())
               .toList();
+      pointerPar =
+          hits.map((hit) => hit['_source']['sequence_id'].toString()).toList();
 
       className =
           hits.map((hit) => hit['_source']['class'].toString()).toList();
@@ -169,7 +173,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
     print("Query Words: $queryWords");
 
     for (var hit in enResults) {
-      var enHighlight = highlightFoundWords(hit, queryWords);
+      var enHighlight = highlightFoundWords2(hit, queryWords);
 
       // You can store these highlights in a list or map if needed
       print("EN Highlight: $enHighlight");
@@ -259,90 +263,129 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
           child: ListView.builder(
             itemCount: enHighlightedResults.length,
             itemBuilder: (context, index) {
-              return ListTile(
-                title: Row(
+              return Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8.0,
+                  vertical: 4.0,
+                ),
+                child: Column(
                   children: [
-                    Expanded(
-                      child: SelectableText.rich(
-                        enHighlightedResults.length > index
-                            ? enHighlightedResults[index]
-                            : '',
-                      ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: SelectableText.rich(
+                            style: TextStyle(fontSize: 18.0),
+                            enHighlightedResults.length > index
+                                ? enHighlightedResults[index]
+                                : '',
+                          ),
+                        ),
+                        Expanded(
+                          child: SelectableText(
+                            style: TextStyle(fontSize: 18.0),
+                            skResults.length > index ? skResults[index] : '',
+                          ),
+                        ),
+                        Expanded(
+                          child: SelectableText(
+                            style: TextStyle(fontSize: 18.0),
+                            czResults.length > index ? czResults[index] : '',
+                          ),
+                        ),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Text("Celex: "),
+                                  SelectableText(
+                                    metaCelex.length > index
+                                        ? metaCelex[index]
+                                        : '',
+                                  ),
+                                ],
+                              ),
+                              // If you want to show czResults here as well, add another widget:
+                              Row(
+                                children: [
+                                  Text("Cellar: "),
+                                  SelectableText(
+                                    metaCellar.length > index
+                                        ? metaCellar[index]
+                                        : '',
+                                  ),
+                                ],
+                              ),
+
+                              Row(
+                                children: [
+                                  Text("Date: "),
+                                  SelectableText(
+                                    docDate.length > index
+                                        ? docDate[index]
+                                        : '',
+                                  ),
+                                ],
+                              ),
+
+                              Row(
+                                children: [
+                                  Text("Class: "),
+                                  SelectableText(
+                                    className.length > index
+                                        ? className[index]
+                                        : '',
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                children: [
+                                  Text("Unmatched paragraphs: "),
+                                  SelectableText(
+                                    parNotMatched.length > index
+                                        ? parNotMatched[index]
+                                        : '',
+                                  ),
+                                ],
+                              ),
+
+                              Row(
+                                children: [
+                                  Text("Open full document: EN-SK, EN-CZ"),
+                                ],
+                              ),
+
+                              Row(children: [Text("Open content (dropdown)")]),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    Expanded(
-                      child: SelectableText(
-                        skResults.length > index ? skResults[index] : '',
-                      ),
-                    ),
-                    Expanded(
-                      child: SelectableText(
-                        czResults.length > index ? czResults[index] : '',
-                      ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              Text("Celex: "),
-                              SelectableText(
-                                metaCelex.length > index
-                                    ? metaCelex[index]
-                                    : '',
-                              ),
-                            ],
-                          ),
-                          // If you want to show czResults here as well, add another widget:
-                          Row(
-                            children: [
-                              Text("Cellar: "),
-                              SelectableText(
-                                metaCellar.length > index
-                                    ? metaCellar[index]
-                                    : '',
-                              ),
-                            ],
-                          ),
 
-                          Row(
-                            children: [
-                              Text("Date: "),
-                              SelectableText(
-                                docDate.length > index ? docDate[index] : '',
-                              ),
-                            ],
+                    ExpansionTile(
+                      title: const Text("Open content"),
+                      onExpansionChanged: (bool expanded) {
+                        if (expanded) {
+                          contextEnSkCz = getContext(
+                            metaCellar[index],
+                            pointerPar[index],
+                          ); // Run your code here when the tile is opened
+                          print('Tile was expanded');
+                          // You can also call setState or trigger a fetch, etc.
+                        } else {
+                          print('Tile was collapsed');
+                        }
+                      },
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(
+                            contextEnSkCz[0].toString(),
+                            style: const TextStyle(fontStyle: FontStyle.italic),
                           ),
-
-                          Row(
-                            children: [
-                              Text("Class: "),
-                              SelectableText(
-                                className.length > index
-                                    ? className[index]
-                                    : '',
-                              ),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              Text("Unmatched paragraphs: "),
-                              SelectableText(
-                                parNotMatched.length > index
-                                    ? parNotMatched[index]
-                                    : '',
-                              ),
-                            ],
-                          ),
-
-                          Row(
-                            children: [
-                              Text("Open full document: EN-SK, EN-CZ"),
-                            ],
-                          ),
-
-                          Row(children: [Text("Open content (dropdown)")]),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

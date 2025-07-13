@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 
+import 'package:eurolex/processDOM.dart';
+import 'package:http/http.dart' as http;
+import 'package:html/parser.dart' as html_parser;
+import 'dart:convert';
+
 TextSpan highlightFoundWords(returnedResult, foundWords) {
   List<TextSpan> spans = [];
 
@@ -27,4 +32,75 @@ TextSpan highlightFoundWords(returnedResult, foundWords) {
   print("TextSpan created for: \"$returnedResult\" highlighting: $foundWords");
   print(spans);
   return TextSpan(children: spans);
+}
+
+TextSpan highlightFoundWords2(String returnedResult, List<String> foundWords) {
+  List<TextSpan> spans = [];
+
+  RegExp exp = RegExp(r"\b\w+[-.,!?;:/()`]*\s*");
+  var matches = exp.allMatches(returnedResult);
+
+  for (final match in matches) {
+    String wordWithPunctuation = match.group(0)!;
+
+    // Extract just the word part (for comparison)
+    String wordOnly = wordWithPunctuation.trim().replaceAll(
+      RegExp(r'[-.,!?;:/()`]+$'),
+      '',
+    );
+
+    bool isBold = foundWords
+        .map((e) => e.toLowerCase())
+        .contains(wordOnly.toLowerCase());
+
+    spans.add(
+      TextSpan(
+        text: wordWithPunctuation,
+        style: TextStyle(
+          fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+    );
+  }
+
+  return TextSpan(children: spans);
+}
+
+Future getContext(cellarID, pointer) async {
+  // Simulate fetching context from a database or API
+  var query = {
+    "query": {
+      "bool": {
+        "must": [
+          {
+            "term": {"dir_id": cellarID},
+          },
+          {
+            "range": {
+              "sequence_id": {"gte": pointer - 10, "lte": pointer + 10},
+            },
+          },
+        ],
+      },
+    },
+  };
+
+  var resultsContext = await sendToOpenSearch(
+    'http://localhost:9200/eurolex4/_search',
+    [jsonEncode(query)],
+  );
+  var decodedResults = jsonDecode(resultsContext);
+
+  var hits = decodedResults['hits']['hits'] as List;
+
+  {
+    var contextEN =
+        hits.map((hit) => hit['_source']['en_text'].toString()).toList();
+    var contextSK =
+        hits.map((hit) => hit['_source']['sk_text'].toString()).toList();
+    var contextCZ =
+        hits.map((hit) => hit['_source']['cz_text'].toString()).toList();
+
+    return [contextEN, contextSK, contextCZ];
+  }
 }
