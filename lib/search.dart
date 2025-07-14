@@ -95,6 +95,8 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
 
     print("Query: $query, Results = $skResults");
 
+    enHighlightedResults = enResults; //add highlighting
+
     setState(() {});
   }
 
@@ -265,8 +267,8 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
             itemBuilder: (context, index) {
               return Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 8.0,
-                  vertical: 4.0,
+                  horizontal: 10.0,
+                  vertical: 5.0,
                 ),
                 child: Column(
                   children: [
@@ -363,47 +365,114 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
                       ],
                     ),
 
-                    ExpansionTile(
-                      title: const Text("Open content"),
-                      onExpansionChanged: (bool expanded) {
-                        if (expanded) {
-                          contextEnSkCz = getContext(
-                            metaCellar[index],
-                            pointerPar[index],
-                          ); // Run your code here when the tile is opened
-                          print('Tile was expanded');
-                          // You can also call setState or trigger a fetch, etc.
-                        } else {
-                          print('Tile was collapsed');
-                        }
-                      },
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Text(
-                            contextEnSkCz[0].toString(),
-                            style: const TextStyle(fontStyle: FontStyle.italic),
+                    Container(
+                      color: const Color.fromARGB(200, 210, 238, 241),
+                      child: ExpansionTile(
+                        title: const Text("Open content"),
+                        onExpansionChanged: (bool expanded) {
+                          if (expanded) {
+                            // Wrap the async call in an anonymous async function
+                            () async {
+                              final result = await getContext(
+                                metaCellar[index],
+                                pointerPar[index],
+                              );
+                              setState(() {
+                                contextEnSkCz = result;
+                              });
+                              print('Tile was expanded');
+                            }(); // Immediately invoke the async function
+                          } else {
+                            print('Tile was collapsed');
+                          }
+                        },
+
+                        children: [
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: NeverScrollableScrollPhysics(),
+                            itemCount:
+                                (contextEnSkCz != null &&
+                                        contextEnSkCz[0] != null)
+                                    ? contextEnSkCz[0].length
+                                    : 0,
+                            itemBuilder: (context, index) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10.0,
+                                  vertical: 5.0,
+                                ),
+                                child: Column(
+                                  children: [
+                                    Container(
+                                      color:
+                                          (index == 10)
+                                              ? Colors.grey[200]
+                                              : null,
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+
+                                        children: [
+                                          Expanded(
+                                            child: SelectableText(
+                                              style: TextStyle(fontSize: 18.0),
+                                              contextEnSkCz[0].length > index
+                                                  ? contextEnSkCz[0][index]
+                                                  : '',
+                                            ),
+                                          ),
+                                          Expanded(
+                                            child: SelectableText(
+                                              style: TextStyle(fontSize: 18.0),
+                                              contextEnSkCz[1].length > index
+                                                  ? contextEnSkCz[1][index]
+                                                  : '',
+                                            ),
+                                          ),
+                                          Expanded(
+                                            child: SelectableText(
+                                              style: TextStyle(fontSize: 18.0),
+                                              contextEnSkCz[2].length > index
+                                                  ? contextEnSkCz[2][index]
+                                                  : '',
+                                            ),
+                                          ),
+
+                                          Expanded(
+                                            child: SelectableText(
+                                              style: TextStyle(fontSize: 18.0),
+                                              '',
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
+                    ),
+                    // Bottom buttons
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: List.generate(5, (index) {
+                          return ElevatedButton(
+                            onPressed: () {},
+                            child: Text('B${index + 1}'),
+                          );
+                        }),
+                      ),
                     ),
                   ],
                 ),
               );
             },
-          ),
-        ),
-        // Bottom buttons
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: List.generate(5, (index) {
-              return ElevatedButton(
-                onPressed: () {},
-                child: Text('B${index + 1}'),
-              );
-            }),
           ),
         ),
       ],

@@ -68,6 +68,13 @@ TextSpan highlightFoundWords2(String returnedResult, List<String> foundWords) {
 
 Future getContext(cellarID, pointer) async {
   // Simulate fetching context from a database or API
+
+  int gte = int.tryParse(pointer) != null ? int.parse(pointer) - 10 : 0;
+  int lte = int.tryParse(pointer) != null ? int.parse(pointer) + 10 : 0;
+
+  print(
+    "getting context for cellarID: $cellarID, pointer: $pointer, gte: $gte, lte: $lte",
+  );
   var query = {
     "query": {
       "bool": {
@@ -77,12 +84,13 @@ Future getContext(cellarID, pointer) async {
           },
           {
             "range": {
-              "sequence_id": {"gte": pointer - 10, "lte": pointer + 10},
+              "sequence_id": {"gte": gte, "lte": lte},
             },
           },
         ],
       },
     },
+    "size": 50,
   };
 
   var resultsContext = await sendToOpenSearch(
@@ -100,6 +108,8 @@ Future getContext(cellarID, pointer) async {
         hits.map((hit) => hit['_source']['sk_text'].toString()).toList();
     var contextCZ =
         hits.map((hit) => hit['_source']['cz_text'].toString()).toList();
+
+    print("Get context: $contextEN, $contextSK, $contextCZ");
 
     return [contextEN, contextSK, contextCZ];
   }
