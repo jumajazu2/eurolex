@@ -18,6 +18,8 @@ var className;
 var docDate;
 var pointerPar;
 var contextEnSkCz;
+var queryText;
+var queryPattern;
 List enHighlightedResults = [];
 
 class SearchTabWidget extends StatefulWidget {
@@ -36,8 +38,95 @@ class SearchTabWidget extends StatefulWidget {
 
 class _SearchTabWidgetState extends State<SearchTabWidget> {
   final TextEditingController _searchController = TextEditingController();
-  final List<bool> _quickSettings = List.generate(5, (_) => false);
+  final List<bool> _quickSettings = List.generate(5, (_) => true);
   final List<String> _results = [];
+
+  void processQuery(query, searchTerm) async {
+    queryPattern = query;
+
+    var resultsOS = await sendToOpenSearch(
+      'http://localhost:9200/eurolex4/_search',
+      [jsonEncode(query)],
+    );
+    var decodedResults = jsonDecode(resultsOS);
+
+    //if query returns error, stop processing, display error
+    if (decodedResults['error'] != null) {
+      print("Error in OpenSearch response: ${decodedResults['error']}");
+
+      setState(() {
+        enHighlightedResults = [
+          TextSpan(
+            children:
+                ([decodedResults['error'].toString()]).map((text) {
+                  return TextSpan(
+                    text: text,
+                    style: TextStyle(color: Colors.black),
+                  );
+                }).toList(),
+          ),
+        ];
+      });
+
+      return;
+    }
+
+    var hits = decodedResults['hits']['hits'] as List;
+
+    setState(() {
+      skResults =
+          hits.map((hit) => hit['_source']['sk_text'].toString()).toList();
+      enResults =
+          hits.map((hit) => hit['_source']['en_text'].toString()).toList();
+      czResults =
+          hits.map((hit) => hit['_source']['cz_text'].toString()).toList();
+
+      metaCelex =
+          hits.map((hit) => hit['_source']['celex'].toString()).toList();
+      metaCellar =
+          hits.map((hit) => hit['_source']['dir_id'].toString()).toList();
+      sequenceNo =
+          hits.map((hit) => hit['_source']['sequence_id'].toString()).toList();
+      parNotMatched =
+          hits
+              .map((hit) => hit['_source']['paragraphsNotMatched'].toString())
+              .toList();
+      pointerPar =
+          hits.map((hit) => hit['_source']['sequence_id'].toString()).toList();
+
+      className =
+          hits.map((hit) => hit['_source']['class'].toString()).toList();
+
+      docDate = hits.map((hit) => hit['_source']['date'].toString()).toList();
+    });
+
+    print("Query: $query, Results = $skResults");
+
+    queryText = _searchController.text;
+    //converting the results to TextSpans for highlighting
+    var queryWords =
+        queryText
+            .replaceAll(RegExp(r'[^\w\s]'), '') // remove punctuation
+            .split(RegExp(r'\s+')) // split by whitespace
+            .where((String word) => word.isNotEmpty) // remove empty entries
+            .toList();
+
+    print("Query Words: $queryWords");
+
+    for (var hit in enResults) {
+      var enHighlight = highlightFoundWords2(hit, queryWords);
+
+      // You can store these highlights in a list or map if needed
+      print("EN Highlight: $enHighlight");
+      enHighlightedResults.add(enHighlight);
+      print("EN Highlight: $enHighlight, $enHighlightedResults");
+    }
+    print(
+      "EN Highlight all: ${enHighlightedResults.length}, $enHighlightedResults",
+    );
+
+    setState(() {});
+  }
 
   void _startSearch() async {
     // TODO: Implement your search logic here
@@ -58,8 +147,11 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
       },
       "size": 50,
     };
-    var queryText = _searchController.text;
+    //var queryText = _searchController.text;
 
+    processQuery(query, _searchController.text);
+
+    /*
     var resultsOS = await sendToOpenSearch(
       'http://localhost:9200/eurolex4/_search',
       [jsonEncode(query)],
@@ -86,6 +178,8 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
           hits
               .map((hit) => hit['_source']['paragraphsNotMatched'].toString())
               .toList();
+      pointerPar =
+          hits.map((hit) => hit['_source']['sequence_id'].toString()).toList();
 
       className =
           hits.map((hit) => hit['_source']['class'].toString()).toList();
@@ -95,9 +189,32 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
 
     print("Query: $query, Results = $skResults");
 
-    enHighlightedResults = enResults; //add highlighting
+    queryText = _searchController.text;
+    //converting the results to TextSpans for highlighting
+    var queryWords =
+        queryText
+            .replaceAll(RegExp(r'[^\w\s]'), '') // remove punctuation
+            .split(RegExp(r'\s+')) // split by whitespace
+            .where((word) => word.isNotEmpty) // remove empty entries
+            .toList();
+
+    print("Query Words: $queryWords");
+
+    for (var hit in enResults) {
+      var enHighlight = highlightFoundWords2(hit, queryWords);
+
+      // You can store these highlights in a list or map if needed
+      print("EN Highlight: $enHighlight");
+      enHighlightedResults.add(enHighlight);
+      print("EN Highlight: $enHighlight, $enHighlightedResults");
+    }
+    print(
+      "EN Highlight all: ${enHighlightedResults.length}, $enHighlightedResults",
+    );
 
     setState(() {});
+  }
+*/
   }
 
   void _startSearch2() async {
@@ -126,6 +243,33 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
       },
     }; // Increase the number of results to 50
 
+    var query2 = {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "multi_match": {
+                "query": _searchController.text,
+                "fields": ["en_text", "sk_text", "cz_text"],
+                "fuzziness": "0",
+                "minimum_should_match": "75%",
+              },
+            },
+            {
+              "term": {"paragraphsNotMatched": false},
+            },
+          ],
+        },
+      },
+      "size": 50,
+      "highlight": {
+        "fields": {"en_text": {}, "sk_text": {}, "cz_text": {}},
+      },
+    };
+
+    processQuery(query2, _searchController.text);
+
+    /*
     var resultsOS = await sendToOpenSearch(
       'http://localhost:9200/eurolex4/_search',
       [jsonEncode(query)],
@@ -187,6 +331,88 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
     );
 
     setState(() {});
+
+
+    */
+  }
+
+  void _startSearch3() async {
+    // TODO: Implement your search logic here
+    setState(() {
+      _results.clear();
+
+      enHighlightedResults.clear();
+    });
+    var query = {
+      "query": {
+        "bool": {
+          "should": [
+            {
+              "match_phrase": {
+                "en_text": {
+                  "query": _searchController.text,
+                  "slop": 2,
+                  "boost": 3.0,
+                },
+              },
+            },
+            {
+              "match": {
+                "en_text": {
+                  "query": _searchController.text,
+                  "fuzziness": "AUTO",
+                  "operator": "and",
+                  "boost": 1.0,
+                },
+              },
+            },
+            {
+              "match_phrase": {
+                "sk_text": {
+                  "query": _searchController.text,
+                  "slop": 2,
+                  "boost": 3.0,
+                },
+              },
+            },
+            {
+              "match": {
+                "sk_text": {
+                  "query": _searchController.text,
+                  "fuzziness": "AUTO",
+                  "operator": "and",
+                  "boost": 1.0,
+                },
+              },
+            },
+            {
+              "match_phrase": {
+                "cz_text": {
+                  "query": _searchController.text,
+                  "slop": 2,
+                  "boost": 3.0,
+                },
+              },
+            },
+            {
+              "match": {
+                "cz_text": {
+                  "query": _searchController.text,
+                  "fuzziness": "AUTO",
+                  "operator": "and",
+                  "boost": 1.0,
+                },
+              },
+            },
+          ],
+          "minimum_should_match": 1,
+        },
+      },
+      "size": 25,
+    };
+    //var queryText = _searchController.text;
+
+    processQuery(query, _searchController.text);
   }
 
   @override
@@ -230,10 +456,8 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
                 child: Text('Start Search (multi_match)'),
               ),
               ElevatedButton(
-                onPressed: () {
-                  // TODO: Add your third button functionality
-                },
-                child: Text('Button 3'),
+                onPressed: _startSearch3,
+                child: Text('Start Search (match+matchphrase)'),
               ),
             ],
           ),
@@ -254,12 +478,60 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
                       });
                     },
                   ),
-                  Text('Q${index + 1}'),
+                  index == 0 ? Text('EN') : SizedBox.shrink(),
+                  index == 1 ? Text('SK') : SizedBox.shrink(),
+                  index == 2 ? Text('CZ') : SizedBox.shrink(),
+                  index == 3 ? Text('Metadata') : SizedBox.shrink(),
                 ],
               );
             }),
           ),
         ),
+
+        Container(
+          color: const Color.fromARGB(200, 210, 238, 241),
+          child: ExpansionTile(
+            title: const Text("Query Details"),
+            onExpansionChanged: (bool expanded) {
+              if (expanded) {
+                // Wrap the async call in an anonymous async function
+                () {
+                  setState(() {});
+                  print('Tile -query details- was expanded');
+                }(); // Immediately invoke the async function
+              } else {
+                print('Tile -query details- was collapsed');
+              }
+            },
+
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(
+                  'Query: $queryText',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(
+                  'Query Text: $queryPattern',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(
+                  'Results Count: ${enResults.length}',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        SizedBox(height: 10),
+        Divider(color: Colors.grey[300], thickness: 5),
         // Results list
         Expanded(
           child: ListView.builder(
@@ -275,93 +547,108 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: SelectableText.rich(
-                            style: TextStyle(fontSize: 18.0),
-                            enHighlightedResults.length > index
-                                ? enHighlightedResults[index]
-                                : '',
-                          ),
-                        ),
-                        Expanded(
-                          child: SelectableText(
-                            style: TextStyle(fontSize: 18.0),
-                            skResults.length > index ? skResults[index] : '',
-                          ),
-                        ),
-                        Expanded(
-                          child: SelectableText(
-                            style: TextStyle(fontSize: 18.0),
-                            czResults.length > index ? czResults[index] : '',
-                          ),
-                        ),
-                        Expanded(
-                          child: Column(
-                            children: [
-                              Row(
-                                children: [
-                                  Text("Celex: "),
-                                  SelectableText(
-                                    metaCelex.length > index
-                                        ? metaCelex[index]
-                                        : '',
-                                  ),
-                                ],
+                        _quickSettings[0]
+                            ? Expanded(
+                              child: SelectableText.rich(
+                                style: TextStyle(fontSize: 18.0),
+                                enHighlightedResults.length > index
+                                    ? enHighlightedResults[index]
+                                    : '',
                               ),
-                              // If you want to show czResults here as well, add another widget:
-                              Row(
-                                children: [
-                                  Text("Cellar: "),
-                                  SelectableText(
-                                    metaCellar.length > index
-                                        ? metaCellar[index]
-                                        : '',
-                                  ),
-                                ],
-                              ),
+                            )
+                            : SizedBox.shrink(),
 
-                              Row(
+                        _quickSettings[1]
+                            ? Expanded(
+                              child: SelectableText(
+                                style: TextStyle(fontSize: 18.0),
+                                skResults.length > index
+                                    ? skResults[index]
+                                    : '',
+                              ),
+                            )
+                            : SizedBox.shrink(),
+                        _quickSettings[2]
+                            ? Expanded(
+                              child: SelectableText(
+                                style: TextStyle(fontSize: 18.0),
+                                czResults.length > index
+                                    ? czResults[index]
+                                    : '',
+                              ),
+                            )
+                            : SizedBox.shrink(),
+                        _quickSettings[3]
+                            ? Expanded(
+                              child: Column(
                                 children: [
-                                  Text("Date: "),
-                                  SelectableText(
-                                    docDate.length > index
-                                        ? docDate[index]
-                                        : '',
+                                  Row(
+                                    children: [
+                                      Text("Celex: "),
+                                      SelectableText(
+                                        metaCelex.length > index
+                                            ? metaCelex[index]
+                                            : '',
+                                      ),
+                                    ],
+                                  ),
+                                  // If you want to show czResults here as well, add another widget:
+                                  Row(
+                                    children: [
+                                      Text("Cellar: "),
+                                      SelectableText(
+                                        metaCellar.length > index
+                                            ? metaCellar[index]
+                                            : '',
+                                      ),
+                                    ],
+                                  ),
+
+                                  Row(
+                                    children: [
+                                      Text("Date: "),
+                                      SelectableText(
+                                        docDate.length > index
+                                            ? docDate[index]
+                                            : '',
+                                      ),
+                                    ],
+                                  ),
+
+                                  Row(
+                                    children: [
+                                      Text("Class: "),
+                                      SelectableText(
+                                        className.length > index
+                                            ? className[index]
+                                            : '',
+                                      ),
+                                    ],
+                                  ),
+                                  Row(
+                                    children: [
+                                      Text("Unmatched paragraphs: "),
+                                      SelectableText(
+                                        parNotMatched.length > index
+                                            ? parNotMatched[index]
+                                            : '',
+                                      ),
+                                    ],
+                                  ),
+
+                                  Row(
+                                    children: [
+                                      Text("Open full document: EN-SK, EN-CZ"),
+                                    ],
+                                  ),
+
+                                  Row(
+                                    children: [Text("Open content (dropdown)")],
                                   ),
                                 ],
                               ),
-
-                              Row(
-                                children: [
-                                  Text("Class: "),
-                                  SelectableText(
-                                    className.length > index
-                                        ? className[index]
-                                        : '',
-                                  ),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  Text("Unmatched paragraphs: "),
-                                  SelectableText(
-                                    parNotMatched.length > index
-                                        ? parNotMatched[index]
-                                        : '',
-                                  ),
-                                ],
-                              ),
-
-                              Row(
-                                children: [
-                                  Text("Open full document: EN-SK, EN-CZ"),
-                                ],
-                              ),
-
-                              Row(children: [Text("Open content (dropdown)")]),
-                            ],
-                          ),
-                        ),
+                            )
+                            : SizedBox.shrink(),
                       ],
                     ),
 

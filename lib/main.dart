@@ -4,6 +4,7 @@ import 'package:eurolex/browseFiles.dart';
 import 'package:html/parser.dart' as html_parser;
 import 'package:eurolex/browseFiles.dart';
 import 'package:eurolex/search.dart';
+import 'package:eurolex/analyser.dart';
 
 void main() {
   runApp(MaterialApp(home: MainTabbedApp()));
@@ -22,7 +23,7 @@ class _MainTabbedAppState extends State<MainTabbedApp>
   void initState() {
     super.initState();
     _tabController = TabController(
-      length: 3,
+      length: 4,
       vsync: this,
       initialIndex: 0,
     ); // Search tab first
@@ -38,11 +39,13 @@ class _MainTabbedAppState extends State<MainTabbedApp>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Eurolex App'),
+        toolbarHeight: 1,
+
         bottom: TabBar(
           controller: _tabController,
           tabs: [
             Tab(text: 'Search'),
+            Tab(text: 'Auto Analyser'),
             Tab(text: 'Setup'),
             Tab(text: 'Data Process'),
           ],
@@ -54,6 +57,9 @@ class _MainTabbedAppState extends State<MainTabbedApp>
           Center(
             child: SearchTabWidget(queryText: "", queryName: ""),
           ), // Replace with your Search widget
+          Center(
+            child: AnalyserWidget(),
+          ), // Replace with your Auto Analyser widget
           Center(child: Text('Setup Tab')), // Replace with your Setup widget
           BrowseFilesWidget(), // Replace with your Data rocess widget
         ],
