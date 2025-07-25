@@ -4,7 +4,7 @@ import 'package:eurolex/preparehtml.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:eurolex/search.dart';
-
+import 'dart:math';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -55,12 +55,16 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
   void _updateState() async {
     setState(() {
       lastFileContent = _fileContent;
-      List subsegments = subsegmentFile(_fileContent);
+      //   List subsegments = subsegmentFile(_fileContent);
 
       nGrams = generateNGrams(_fileContent, 5);
       nGrams.addAll(generateNGrams(_fileContent, 4));
-      //nGrams.addAll(generateNGrams(_fileContent, 3));
-      //nGrams.addAll(generateNGrams(_fileContent, 2));
+      if (_fileContent.split(RegExp(r'[^\w\s]')).length <= 3)
+        nGrams.addAll(generateNGrams(_fileContent, 3));
+      if (_fileContent.split(RegExp(r'[^\w\s]')).length <= 2)
+        nGrams.addAll(generateNGrams(_fileContent, 2));
+      if (_fileContent.split(RegExp(r'[^\w\s]')).length <= 2)
+        nGrams.addAll(_fileContent.split(RegExp(r'[^\w\s]')));
 
       print("NGrams: ${nGrams.length}");
     });
@@ -151,6 +155,7 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
         SizedBox(height: 16),
         Row(
           children: [
+            /*
             Expanded(
               child: Container(
                 height: 500,
@@ -174,6 +179,7 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
               ),
             ),
             SizedBox(width: 8),
+            */
             Expanded(
               child: Container(
                 height: 500,
@@ -220,12 +226,26 @@ Future<Map> searchNGrams(List<dynamic> ngrams) async {
     buffer.writeln(
       jsonEncode({
         "query": {
-          "match_phrase": {
-            "en_text": {
-              "query": ngram,
-              // Allow some flexibility in word order
-              // Boost the phrase match
-            },
+          "bool": {
+            "must": [
+              {
+                "match_phrase": {
+                  "en_text": {
+                    "query": ngram,
+                    // Allow some flexibility in word order
+                    // Boost the phrase match
+                  },
+                },
+              },
+              {
+                "term": {"paragraphsNotMatched": false},
+              },
+            ],
+          },
+        },
+        "highlight": {
+          "fields": {
+            "en_text": {"type": "plain"},
           },
         },
         "size": 1, // Only top result
@@ -247,7 +267,7 @@ Future<Map> searchNGrams(List<dynamic> ngrams) async {
   }
 
   final jsonResponse = jsonDecode(response.body);
-
+  print("JSON Response: $jsonResponse");
   // Step 3: Map responses to original ngrams
   final results = <String, String>{};
 
@@ -256,8 +276,15 @@ Future<Map> searchNGrams(List<dynamic> ngrams) async {
     final ngram = ngrams[i];
     final hits = responses[i]['hits']['hits'] as List;
     if (hits.isNotEmpty) {
-      final bestMatch = hits[0]['_source']['sk_text'];
-      results[ngram] = bestMatch;
+      var bestMatch = hits[0]['_source']['sk_text'];
+      var highlightedString = hits[0]['highlight']['en_text']?.first ?? '';
+      var highlightedStartOffset = highlightedString.split('<em>')[0].length;
+      var bestMatchSub = bestMatch.substring(
+        max(highlightedStartOffset - 30, 0),
+        min(highlightedStartOffset + 80, bestMatch.length),
+      );
+
+      results[ngram] = bestMatchSub;
     } else {
       results[ngram] = "<no match>";
     }
