@@ -38,7 +38,7 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
   }
 
   void _startPolling() async {
-    _pollingTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+    _pollingTimer = Timer.periodic(Duration(milliseconds: 500), (timer) {
       if (_isVisible || !_isVisible) {
         print("Timer triggered");
         _readFile();
@@ -254,6 +254,11 @@ Future<Map> searchNGrams(List<dynamic> ngrams) async {
   }
   print("Buffer content: ${buffer.toString()}");
   // Step 2: Send request
+
+  if (buffer.isEmpty) {
+    print("No ngrams to search, returning empty results.");
+    return {};
+  }
   final response = await http.post(
     opensearchUrl,
     headers: headers,
@@ -273,18 +278,42 @@ Future<Map> searchNGrams(List<dynamic> ngrams) async {
 
   final responses = jsonResponse['responses'] as List;
   for (int i = 0; i < responses.length; i++) {
-    final ngram = ngrams[i];
+    final ngram = ngrams[i] + " ";
     final hits = responses[i]['hits']['hits'] as List;
     if (hits.isNotEmpty) {
       var bestMatch = hits[0]['_source']['sk_text'];
+      var bestMatchEN = hits[0]['_source']['en_text'];
       var highlightedString = hits[0]['highlight']['en_text']?.first ?? '';
-      var highlightedStartOffset = highlightedString.split('<em>')[0].length;
+
+      print("Highlighted string: $highlightedString, best match: $bestMatch");
+      var highlightedStartOffset =
+          (highlightedString.split('<em>')[0].length) - 30;
+      if (highlightedStartOffset < 0) {
+        highlightedStartOffset = 0;
+      }
+      var highlightedEndOffset = (highlightedString.lastIndexOf('</em>')) + 50;
+      while (bestMatch[highlightedStartOffset] != " " &&
+          highlightedStartOffset > 1) {
+        print("Highlighted start offset: $highlightedStartOffset");
+        highlightedStartOffset -= 1;
+      }
+
+      while (highlightedEndOffset < bestMatch.length &&
+          bestMatch[highlightedEndOffset] != " ") {
+        highlightedEndOffset += 1;
+      }
+
       var bestMatchSub = bestMatch.substring(
-        max(highlightedStartOffset - 30, 0),
-        min(highlightedStartOffset + 80, bestMatch.length),
+        max(highlightedStartOffset, 0),
+        min(highlightedEndOffset, (bestMatch.length)),
       );
 
-      results[ngram] = bestMatchSub;
+      var bestMatchEnSub = bestMatchEN.substring(
+        max(highlightedStartOffset, 0),
+        min(highlightedEndOffset, (bestMatchEN.length)),
+      );
+
+      results[ngram] = bestMatchEnSub + " /// " + bestMatchSub;
     } else {
       results[ngram] = "<no match>";
     }

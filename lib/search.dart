@@ -251,8 +251,8 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
               "multi_match": {
                 "query": _searchController.text,
                 "fields": ["en_text", "sk_text", "cz_text"],
-                "fuzziness": "0",
-                "minimum_should_match": "75%",
+                "fuzziness": "AUTO",
+                "minimum_should_match": "80%",
               },
             },
             {
