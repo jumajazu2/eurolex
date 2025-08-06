@@ -20,10 +20,14 @@ String fileContentEN = '';
 String fileContentCZ = '';
 String metadata = '';
 String fileContent = '';
+String fileContent2 = '';
 String fileName = '...';
 String jsonOutput = '';
 var fileSK_DOM;
 var fileEN_DOM;
+var fileCZ_DOM;
+var fileDOM2;
+var celexNumbersExtracted = [];
 
 //purpose: load File 1 containing SK in file name, then load File 2 containing EN in file name
 
@@ -48,11 +52,12 @@ class _FilePickerButtonState extends State<FilePickerButton> {
       File file = File(filePath);
       if (await file.exists()) {
         String content = await file.readAsString();
-
+        print('File content loaded successfully: $content');
         setState(()
         // Update the state with the file content
         {
           fileContent = content;
+          print('File content loaded successfully: $fileContent');
 
           if (fileName.contains('SK')) {
             // If the file name contains 'SK', save it to a specific location
@@ -68,8 +73,7 @@ class _FilePickerButtonState extends State<FilePickerButton> {
             // If the file name contains 'CZ', save it to a specific location
             metadata = content;
           } else {
-            print("File does not match SK, EN, CZ or MTD criteria.")
-            ;
+            print("File does not match SK, EN, CZ or MTD criteria.");
           }
 
           if (fileContentSK.isNotEmpty && fileContentEN.isNotEmpty) {
@@ -151,6 +155,177 @@ class _FilePickerButtonState extends State<FilePickerButton> {
         ],
       ),
     );
+  }
+}
+
+class FilePickerButton2 extends StatefulWidget {
+  @override
+  _FilePickerButtonState2 createState() => _FilePickerButtonState2();
+}
+
+class _FilePickerButtonState2 extends State<FilePickerButton2> {
+  // Function to open file picker and load the file content
+  Future<void> pickAndLoadFile2() async {
+    // Open file picker dialog
+    FilePickerResult? result = await FilePicker.platform.pickFiles();
+    print(result);
+
+    if (result != null) {
+      // Get the file path
+      String filePath = result.files.single.path!;
+      fileName = path.basename(filePath);
+
+      // Read the content of the file
+      File file = File(filePath);
+      if (await file.exists()) {
+        String content = await file.readAsString();
+
+        setState(()
+        // Update the state with the file content
+        {
+          fileContent2 = content;
+          print('File content loaded successfully: $fileContent2');
+
+          if (fileContent2.isNotEmpty) {
+            setState(() {
+              fileDOM2 = html_parser.parse(fileContent2);
+              var tdElements = fileDOM2.getElementsByTagName('td');
+              for (var td in tdElements) {
+                if (td.text.contains('Celex number:')) {
+                  var celexNumberTd =
+                      td.nextElementSibling; // Get the next TD element
+                  var celexNumber = celexNumberTd.text.trim();
+                  print('Celex number: $celexNumber');
+                  celexNumbersExtracted.add(celexNumber); // Store the number
+                }
+
+                print(celexNumbersExtracted);
+              }
+            });
+          } else {
+            print('File content is empty.');
+          }
+
+          for (var i in celexNumbersExtracted) {
+            print('Processing Celex number: $i');
+            // Call the function to load HTML from the Celex number
+            loadHtmtFromCelex(celexNumbersExtracted[i], 'SK').then((
+              htmlSK,
+            ) async {
+              fileSK_DOM = html_parser.parse(htmlSK);
+              print('Loaded SK HTML for Celex: $i');
+            });
+
+            loadHtmtFromCelex(celexNumbersExtracted[i], 'EN').then((
+              htmlEN,
+            ) async {
+              fileEN_DOM = html_parser.parse(htmlEN);
+              print('Loaded EN HTML for Celex: $i');
+            });
+
+            loadHtmtFromCelex(celexNumbersExtracted[i], 'CZ').then((
+              htmlCZ,
+            ) async {
+              fileCZ_DOM = html_parser.parse(htmlCZ);
+              print('Loaded CZ HTML for Celex: $i');
+            });
+metadata = "URI_List"; // Placeholder for metadata
+            extractParagraphs(fileEN_DOM, fileSK_DOM, fileCZ_DOM, metadata, celexNumbersExtracted[i],
+            );
+          }
+          // Process the HTML content as needed
+          // For example, you can extract specific elements or text from the HTML
+        });
+      } else {
+        print("File does not exist!");
+      }
+    } else {
+      print("No file selected.");
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Button to open file picker
+          ElevatedButton(
+            onPressed: pickAndLoadFile2,
+            child: Text('Pick File with References'),
+          ),
+          SizedBox(height: 20), // Space between the button and content box
+          // Box to display file content
+          fileContent2.isEmpty
+              ? Text('No file loaded.')
+              : Container(
+                constraints: BoxConstraints(
+                  maxHeight: 200,
+                  maxWidth: 200, // Limit the maximum height
+                ),
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
+                      children: [
+                        Text(
+                          fileContent2,
+                          style: TextStyle(fontFamily: 'monospace'),
+                        ),
+
+                        SizedBox(height: 10),
+
+                        ElevatedButton(
+                          onPressed: () {
+                            var paragraphs = extractParagraphs(
+                              fileContentEN,
+                              fileContentSK,
+                              fileContentCZ,
+                              metadata,
+                              "dir", // Directory ID for logging purposes
+                            );
+                            // print(jsonOutput);
+                          },
+                          child: Text('Extract Paragraphs'),
+                        ),
+                      ],
+                    ),
+                    // Space between file name and content
+                  ),
+                ),
+              ),
+        ],
+      ),
+    );
+  }
+}
+
+Future<String> loadHtmtFromCelex(
+  celex,
+  lang,
+) async //based on Celex, language create a link and download any lang file, //eur-lex.europa.eu/legal-content/SK/TXT/HTML/?uri=CELEX:32017D0502
+{
+  String url =
+      'http://eur-lex.europa.eu/legal-content/$lang/TXT/?uri=CELEX:$celex';
+  print('Loading HTML from URL: $url');
+
+  try {
+    final response = await http.get(Uri.parse(url));
+    if (response.statusCode == 200) {
+      String htmlContent = response.body;
+      print('HTML content loaded successfully.');
+
+      return htmlContent; // Return the HTML content as a string
+      // Process the HTML content as needed
+    } else {
+      print('Failed to load HTML. Status code: ${response.statusCode}');
+      return 'Error loading HTML: ${response.statusCode}';
+    }
+  } catch (e) {
+    print('Error loading HTML: $e');
+    return 'Error loading HTML: $e';
   }
 }
 

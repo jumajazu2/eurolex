@@ -351,11 +351,12 @@ class BrowseFilesWidget extends StatelessWidget {
         ),
         VerticalDivider(
           color: Colors.grey,
-          thickness: 1,
+          thickness: 10,
           indent: 20,
           endIndent: 20,
         ),
         FilePickerButton(),
+        FilePickerButton2(),
       ],
 
       // Replace with your actual UI for data processing
