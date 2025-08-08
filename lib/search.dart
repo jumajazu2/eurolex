@@ -21,6 +21,7 @@ var contextEnSkCz;
 var queryText;
 var queryPattern;
 List enHighlightedResults = [];
+var activeIndex = 'imported';
 
 class SearchTabWidget extends StatefulWidget {
   final String queryText;
@@ -45,7 +46,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
     queryPattern = query;
 
     var resultsOS = await sendToOpenSearch(
-      'http://localhost:9200/eurolex4/_search',
+      'http://localhost:9200/$activeIndex/_search',
       [jsonEncode(query)],
     );
     var decodedResults = jsonDecode(resultsOS);
@@ -422,23 +423,70 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
         // Search field with Enter key trigger
         Padding(
           padding: const EdgeInsets.all(8.0),
-          child: TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Search...',
-              prefixIcon: Icon(Icons.search),
-              filled: true,
-              fillColor: Colors.grey[200],
-              contentPadding: EdgeInsets.symmetric(
-                vertical: 20,
-                horizontal: 16,
+          child: Row(
+            children: [
+              // TextField taking most of the space
+              Expanded(
+                flex: 9, // 9/10 of the row
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search...',
+                    prefixIcon: Icon(Icons.search),
+                    filled: true,
+                    fillColor: Colors.grey[200],
+                    contentPadding: EdgeInsets.symmetric(
+                      vertical: 20,
+                      horizontal: 16,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  onSubmitted: (value) => _startSearch(),
+                ),
               ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(30),
-                borderSide: BorderSide.none,
+              SizedBox(
+                width: 30,
+              ), // Add some spacing between the TextField and the dropdown
+              // Dropdown taking about 1/10 of the space
+              Flexible(
+                flex: 1, // 1/10 of the row
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: 'Search Index', // Label embedded in the frame
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      isExpanded: true,
+                      value: activeIndex, // Default selected value
+                      items:
+                          <String>['eurolex4', 'imported'].map((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(value),
+                            );
+                          }).toList(),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          activeIndex = newValue!;
+                        });
+                        // Handle dropdown selection
+                        print('Selected: $newValue');
+                      },
+                    ),
+                  ),
+                ),
               ),
-            ),
-            onSubmitted: (value) => _startSearch(),
+            ],
           ),
         ),
         // Start Search button
@@ -508,7 +556,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Text(
-                  'Query: $queryText',
+                  'Query at $activeIndex: $queryText',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),

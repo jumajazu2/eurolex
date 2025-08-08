@@ -26,6 +26,7 @@ String pathDirMTD =
     r'\\OPENMEDIAVAULT\ExtSSD\EurLexDump\LEG_MTD_HTML_20250601_00_00'; // Windows path
 
 final logger = LogManager();
+var indexName = 'eurolex4'; // Index name for logging purposes
 
 final dirEN = Directory(pathDirEN);
 final dirSK = Directory(pathDirSK);
@@ -161,6 +162,7 @@ void listFilesInDirEN() async {
             czFile,
             mtdFile,
             dirID,
+            indexName
           );
 
           print(

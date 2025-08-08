@@ -26,7 +26,8 @@ List<Map<String, dynamic>> extractParagraphs(
   String htmlSK,
   String htmlCZ,
   String metadata,
-  String dirID, // Directory ID for logging purposes
+  String dirID,
+  String indexName, // Directory ID for logging purposes
 ) {
   //check if files names match expect lang
 
@@ -157,19 +158,19 @@ List<Map<String, dynamic>> extractParagraphs(
     }
   }
   jsonOutput = jsonEncode(jsonData);
-  openSearchUpload(jsonData);
+  openSearchUpload(jsonData, indexName);
 
   logger.log(
     "$dirPointer, $dirID, Processed, Celex: $celex, status_ok, $htmlENFileName",
   );
   //JSOn ready, now turning in into NDJSON + action part
-
+  print("Extract paragraphs uploaded to Open Search>COMPLETED");
   return jsonData;
 }
 
 //https://eur-lex.europa.eu/legal-content/EN-SK/TXT/?uri=CELEX:32022D2391
 
-void openSearchUpload(json) {
+void openSearchUpload(json, indexName) {
   // Your regular JSON data (similar to the data you uploaded)
   var bilingualData = json;
 
@@ -182,7 +183,7 @@ void openSearchUpload(json) {
   for (var sentence in bilingualData) {
     var action = {
       "index": {
-        "_index": "eurolex4", // Your OpenSearch index name
+        "_index": indexName, // Your OpenSearch index name
         // Let OpenSearch generate a unique _id
         // _id is omitted, so OpenSearch generates it automatically
       },
@@ -230,6 +231,12 @@ Future<String> sendToOpenSearch(String url, List<String> bulkData) async {
 String getmetadata(metadataRDF) //get celex and cellar info from RDF metadata
 // find rdf:resource="http://publications.europa.eu/resource/celex/  data follows
 {
+  if (metadataRDF.contains('%%%#')) {
+    metadataRDF = metadataRDF.split('%%%#')[1];
+    print('Celex Overide for Reference Upload: $metadataRDF');
+    return metadataRDF;
+  }
+
   final regex = RegExp(
     r'owl:sameAs rdf:resource="http://publications\.europa\.eu/resource/celex/([^"/]+)',
   );
