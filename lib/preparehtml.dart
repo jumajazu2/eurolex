@@ -28,7 +28,12 @@ var fileEN_DOM;
 var fileCZ_DOM;
 var fileDOM2;
 var celexNumbersExtracted = [];
-var extractedCelex = ['------'];
+var extractedCelex = [''];
+var manualEextractedCelex = [''];
+var newIndexName = '';
+var manualCelex = [];
+List<String> indices = ['*'];
+var server = 'http://localhost:9200';
 
 //purpose: load File 1 containing SK in file name, then load File 2 containing EN in file name
 
@@ -171,6 +176,10 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
     // Open file picker dialog
     FilePickerResult? result = await FilePicker.platform.pickFiles();
     print(result);
+    setState(() {
+      celexNumbersExtracted.clear();
+      extractedCelex.clear();
+    });
 
     if (result != null) {
       // Get the file path
@@ -186,6 +195,8 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
         {
           fileContent2 = content;
           print('File content loaded successfully: $fileContent2');
+
+          // Reset the list for new content
 
           if (fileContent2.isNotEmpty) {
             setState(() {
@@ -206,16 +217,17 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
           } else {
             print('File content is empty.');
           }
-          //manual overide of celex number extracted
+          /*/manual overide of celex number extracted
           celexNumbersExtracted = [
             '32018D0859', //COMMISSION DECISION (EU) 2018/859
             '62021CJ0457', // JUDGMENT OF THE COURT (Second Chamber) Case C‑457/21
             '62017TJ0816', //  JUDGMENT OF THE GENERAL COURT  Cases T‑816/17 and T‑318/18,
-          ]; // Example manual override
+          ]; */
           print('Manual override of celex numbers: $celexNumbersExtracted');
 
           //end of manual override
-          for (var i in celexNumbersExtracted) {
+          for (int index = 0; index < celexNumbersExtracted.length; index++) {
+            var i = celexNumbersExtracted[index];
             print('Processing Celex number: $i');
 
             var fileEN = await loadHtmtFromCelex(i, 'EN');
@@ -236,16 +248,23 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
               fileCZ_DOM,
               metadata,
               i,
-              "imported",
+              newIndexName,
             );
 
             setState(() {
               extractedCelex.add(
-                i,
+                '$i ${index + 1}/${celexNumbersExtracted.length}',
               ); // Add the processed Celex number to the list
               print('Processed Celex number: $i');
             });
           }
+
+          setState(() {
+            extractedCelex.add('COMPLETED');
+            getListIndices(
+              server,
+            ); // Add the processed Celex number to the list
+          });
           // Process the HTML content as needed
           // For example, you can extract specific elements or text from the HTML
         }
@@ -255,6 +274,50 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
     } else {
       print("No file selected.");
     }
+  }
+
+  Future<void> enterAndLoadCelex(celexNumbersExtracted) async {
+    // Open file picker dialog
+    for (int index = 0; index < celexNumbersExtracted.length; index++) {
+      var i = celexNumbersExtracted[index];
+      print('Processing Celex number: $i');
+
+      var fileEN = await loadHtmtFromCelex(i, 'EN');
+      fileEN_DOM = i + '.celex@@@' + fileEN;
+      print('Loaded EN HTML for Celex: $i');
+      var fileCZ = await loadHtmtFromCelex(i, 'CS');
+      fileCZ_DOM = i + '.celex@@@' + fileCZ;
+      print('Loaded CS HTML for Celex: $i');
+
+      var fileSK = await loadHtmtFromCelex(i, 'SK');
+      fileSK_DOM = i + '.celex@@@' + fileSK;
+      print('Loaded SK HTML for Celex: $i');
+
+      metadata = "%%%#$i"; // Placeholder for metadata
+      extractParagraphs(
+        fileEN_DOM,
+        fileSK_DOM,
+        fileCZ_DOM,
+        metadata,
+        i,
+        newIndexName,
+      );
+
+      setState(() {
+        extractedCelex.add(
+          '$i ${index + 1}/${celexNumbersExtracted.length}',
+        ); // Add the processed Celex number to the list
+        print('Processed Celex number: $i');
+      });
+    }
+
+    setState(() {
+      extractedCelex.add('COMPLETED');
+      getListIndices(server);
+      // Add the processed Celex number to the list
+    });
+    // Process the HTML content as needed
+    // For example, you can extract specific elements or text from the HTML
   }
 
   @override
@@ -270,10 +333,27 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // Button to open file picker
-                  ElevatedButton(
-                    onPressed: pickAndLoadFile2,
-                    child: Text('Pick File with References'),
+                  TextField(
+                    decoration: InputDecoration(
+                      labelText: 'Index Name:',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        newIndexName =
+                            "eurolex" + value; // Update the index name
+                      });
+                    },
                   ),
+
+                  (newIndexName == '')
+                      ? Text('Enter Index Name First!')
+                      : ElevatedButton(
+                        onPressed: pickAndLoadFile2,
+                        child: Text(
+                          'Pick File with References ($newIndexName)',
+                        ),
+                      ),
                   SizedBox(
                     height: 20,
                   ), // Space between the button and content box
@@ -282,8 +362,8 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
                       ? Text('No file loaded.')
                       : Container(
                         constraints: BoxConstraints(
-                          maxHeight: 200,
-                          maxWidth: 200, // Limit the maximum height
+                          maxHeight: 400,
+                          maxWidth: 500, // Limit the maximum height
                         ),
                         child: SingleChildScrollView(
                           child: Padding(
@@ -307,7 +387,7 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
                                       fileContentCZ,
                                       metadata,
                                       "dir",
-                                      indexName, // Directory ID for logging purposes
+                                      newIndexName, // Directory ID for logging purposes
                                     );
                                   },
                                   child: Text('Extract Paragraphs'),
@@ -327,12 +407,96 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
   }
 }
 
-class manualCelexList extends StatelessWidget {
+class manualCelexList extends StatefulWidget {
+  _manualCelexListState createState() => _manualCelexListState();
+}
+
+class _manualCelexListState extends State<manualCelexList> {
+  Future manualCelexListUpload(manualCelexListEntry, newIndexName) async {
+    for (int index = 0; index < manualCelexListEntry.length; index++) {
+      var i = manualCelexListEntry[index];
+      print('Processing manual Celex number: $i');
+
+      var fileEN = await loadHtmtFromCelex(i, 'EN');
+      fileEN_DOM = i + '.celex@@@' + fileEN;
+      print('Loaded EN HTML for manual Celex: $i');
+      var fileCZ = await loadHtmtFromCelex(i, 'CS');
+      fileCZ_DOM = i + '.celex@@@' + fileCZ;
+      print('Loaded CS HTML for manual Celex: $i');
+
+      var fileSK = await loadHtmtFromCelex(i, 'SK');
+      fileSK_DOM = i + '.celex@@@' + fileSK;
+      print('Loaded SK HTML for manual Celex: $i');
+
+      metadata = "%%%#$i"; // Placeholder for metadata
+      extractParagraphs(
+        fileEN_DOM,
+        fileSK_DOM,
+        fileCZ_DOM,
+        metadata,
+        i,
+        newIndexName,
+      );
+
+      setState(() {
+        extractedCelex.add(
+          '$i ${index + 1}/${celexNumbersExtracted.length}',
+        ); // Add the processed Celex number to the list
+        print('Processed Celex number: $i');
+      });
+    }
+
+    setState(() {
+      extractedCelex.add('COMPLETED');
+      getListIndices(server);
+      // Add the processed Celex number to the list
+    });
+    // Process the HTML content as needed
+    // For example, you can extract specific elements or text from the HTML
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text('This is a placeholder for manual Celex list functionality.'),
+        Text('Tool to manually enter Celex numbers to upload'),
+
+        TextField(
+          decoration: InputDecoration(
+            labelText: 'Index Name:',
+            border: OutlineInputBorder(),
+          ),
+          onChanged: (value) {
+            setState(() {
+              newIndexName = "eurolex" + value; // Update the index name
+            });
+          },
+        ),
+
+        SizedBox(height: 10),
+        TextField(
+          decoration: InputDecoration(
+            labelText: 'Enter Celex Numbers (comma separated):',
+            border: OutlineInputBorder(),
+          ),
+          onChanged: (value) {
+            setState(() {
+              manualCelex = value.split(',').map((e) => e.trim()).toList();
+            });
+          },
+        ),
+
+        SizedBox(height: 10),
+        ElevatedButton(
+          onPressed: () {
+            if (newIndexName.isNotEmpty) {
+              manualCelexListUpload(manualCelex, newIndexName);
+            } else {
+              print('Please enter an index name first.');
+            }
+          },
+          child: Text('Process Celex Numbers'),
+        ),
       ],
     );
   }
@@ -372,5 +536,34 @@ class parseHtml {
     var document = html_parser.parse(htmlString);
     // Extract text from the parsed document
     return document.body?.text ?? '';
+  }
+}
+
+Future getListIndices(server) async {
+  // Function to get the list of indices from the server
+  try {
+    final response = await http.get(Uri.parse('$server/_cat/indices?h=index'));
+    if (response.statusCode == 200) {
+      String responseBody = response.body;
+
+      // Extract the index names from the JSON response
+      indices =
+          responseBody
+              .split('\n') // Split the response into lines
+              .where(
+                (item) => item.contains('eurolex') || item.contains('imported'),
+              ) // Keep only items containing "eurolex"
+              .toList();
+      print('Indices loaded: $indices');
+
+      print('Indices loaded successfully: $responseBody');
+      return responseBody; // Return the indices as a string
+    } else {
+      print('Failed to load indices. Status code: ${response.statusCode}');
+      return 'Error loading indices: ${response.statusCode}';
+    }
+  } catch (e) {
+    print('Error loading indices: $e');
+    return 'Error loading indices: $e';
   }
 }

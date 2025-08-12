@@ -4,6 +4,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:eurolex/processDOM.dart';
 import 'package:eurolex/display.dart';
+import 'package:eurolex/preparehtml.dart';
+import 'package:http/http.dart' as http;
 
 var resultsOS = [];
 var decodedResults = [];
@@ -452,7 +454,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
               ), // Add some spacing between the TextField and the dropdown
               // Dropdown taking about 1/10 of the space
               Flexible(
-                flex: 1, // 1/10 of the row
+                flex: 2, // 1/10 of the row
                 child: InputDecorator(
                   decoration: InputDecoration(
                     labelText: 'Search Index', // Label embedded in the frame
@@ -467,14 +469,15 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       isExpanded: true,
-                      value: activeIndex, // Default selected value
+                      value: indices[0], // Default selected value
                       items:
-                          <String>['eurolex4', 'imported'].map((String value) {
+                          indices.map((String value) {
                             return DropdownMenuItem<String>(
                               value: value,
                               child: Text(value),
                             );
                           }).toList(),
+
                       onChanged: (String? newValue) {
                         setState(() {
                           activeIndex = newValue!;
