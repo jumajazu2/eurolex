@@ -1,3 +1,4 @@
+import 'package:eurolex/search.dart';
 import 'package:flutter/material.dart';
 
 import 'package:eurolex/processDOM.dart';
@@ -80,7 +81,7 @@ Future getContext(cellarID, pointer) async {
       "bool": {
         "must": [
           {
-            "term": {"dir_id": cellarID},
+            "term": {"dir_id.keyword": cellarID},
           },
           {
             "range": {
@@ -94,7 +95,7 @@ Future getContext(cellarID, pointer) async {
   };
 
   var resultsContext = await sendToOpenSearch(
-    'http://localhost:9200/eurolex4/_search',
+    'http://localhost:9200/$activeIndex/_search',
     [jsonEncode(query)],
   );
   var decodedResults = jsonDecode(resultsContext);

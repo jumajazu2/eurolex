@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:eurolex/browseFiles.dart';
 import 'package:eurolex/processDOM.dart';
+import 'package:eurolex/search.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -34,6 +35,7 @@ var newIndexName = '';
 var manualCelex = [];
 List<String> indices = ['*'];
 var server = 'http://localhost:9200';
+var manualServer;
 
 //purpose: load File 1 containing SK in file name, then load File 2 containing EN in file name
 
@@ -322,87 +324,94 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            Expanded(child: manualCelexList()),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Button to open file picker
-                  TextField(
-                    decoration: InputDecoration(
-                      labelText: 'Index Name:',
-                      border: OutlineInputBorder(),
-                    ),
-                    onChanged: (value) {
-                      setState(() {
-                        newIndexName =
-                            "eurolex" + value; // Update the index name
-                      });
-                    },
-                  ),
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: [
+        SizedBox(height: 20), // Space between the button and content box
+        Text('Tool to pick File with References containing Celex numbers'),
+        // Button to open file picker
+        SizedBox(height: 20), // Space between the button and content box
+        Text('First Enter an Index Name to store the data!'),
 
-                  (newIndexName == '')
-                      ? Text('Enter Index Name First!')
-                      : ElevatedButton(
-                        onPressed: pickAndLoadFile2,
-                        child: Text(
-                          'Pick File with References ($newIndexName)',
-                        ),
-                      ),
-                  SizedBox(
-                    height: 20,
-                  ), // Space between the button and content box
-                  // Box to display file content
-                  fileContent2.isEmpty
-                      ? Text('No file loaded.')
-                      : Container(
-                        constraints: BoxConstraints(
-                          maxHeight: 400,
-                          maxWidth: 500, // Limit the maximum height
-                        ),
-                        child: SingleChildScrollView(
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Column(
-                              children: [
-                                Text(
-                                  extractedCelex.isEmpty
-                                      ? 'No Celex Numbers Processed.' // If the list is empty
-                                      : extractedCelex.length == 1
-                                      ? 'Processed Celex Number: ${extractedCelex.first}' // If the list has one value
-                                      : 'Processed Celex Numbers: ${extractedCelex.join(', ')}', // If the list has multiple values
-                                  style: TextStyle(fontFamily: 'monospace'),
-                                ),
-                                SizedBox(height: 10),
-                                ElevatedButton(
-                                  onPressed: () {
-                                    var paragraphs = extractParagraphs(
-                                      fileContentEN,
-                                      fileContentSK,
-                                      fileContentCZ,
-                                      metadata,
-                                      "dir",
-                                      newIndexName, // Directory ID for logging purposes
-                                    );
-                                  },
-                                  child: Text('Extract Paragraphs'),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                ],
+        // Button to open file picker
+        InputDecorator(
+          decoration: InputDecoration(
+            labelText: 'Search Index', // Label embedded in the frame
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              isExpanded: true,
+              value:
+                  indices.contains(activeIndex)
+                      ? activeIndex
+                      : null, // Default selected value
+              items:
+                  indices.map((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+
+              onChanged: (String? newValue) {
+                setState(() {
+                  newIndexName = newValue!;
+                });
+                // Handle dropdown selection
+                print('Selected for manual upload: $newValue');
+              },
+            ),
+          ),
+        ),
+        TextField(
+          decoration: InputDecoration(
+            labelText: 'Index Name:',
+            border: OutlineInputBorder(),
+          ),
+          onChanged: (value) {
+            setState(() {
+              newIndexName = "eurolex_" + value; // Update the index name
+            });
+          },
+        ),
+        (newIndexName == '')
+            ? Text('Enter Index Name First!')
+            : ElevatedButton(
+              onPressed: pickAndLoadFile2,
+              child: Text(
+                'Pick File with References (Upload to $newIndexName)',
               ),
             ),
-          ],
-        ),
-      ),
+        SizedBox(height: 20), // Space between the button and content box
+        // Box to display file content
+        fileContent2.isEmpty
+            ? Text('No file loaded.')
+            : Container(
+              constraints: BoxConstraints(
+                maxHeight: 400,
+                maxWidth: 500, // Limit the maximum height
+              ),
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    children: [
+                      Text(
+                        extractedCelex.isEmpty
+                            ? 'No Celex Numbers Processed.' // If the list is empty
+                            : extractedCelex.length == 1
+                            ? 'Processed Celex Number: ${extractedCelex.first}' // If the list has one value
+                            : 'Processed Celex Numbers: ${extractedCelex.join(', ')}', // If the list has multiple values
+                        style: TextStyle(fontFamily: 'monospace'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+      ],
     );
   }
 }

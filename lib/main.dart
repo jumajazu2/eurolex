@@ -1,3 +1,4 @@
+import 'package:eurolex/dataupload.dart';
 import 'package:flutter/material.dart';
 import 'package:eurolex/preparehtml.dart';
 import 'package:eurolex/browseFiles.dart';
@@ -23,7 +24,7 @@ class _MainTabbedAppState extends State<MainTabbedApp>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this, initialIndex: 0);
+    _tabController = TabController(length: 5, vsync: this, initialIndex: 0);
 
     getListIndices(server).then((_) {
       setState(() {
@@ -53,6 +54,7 @@ class _MainTabbedAppState extends State<MainTabbedApp>
             Tab(text: 'Auto Analyser'),
             Tab(text: 'Setup'),
             Tab(text: 'Data Process'),
+            Tab(text: 'Data Upload'),
           ],
         ),
       ),
@@ -66,7 +68,8 @@ class _MainTabbedAppState extends State<MainTabbedApp>
             child: AnalyserWidget(),
           ), // Replace with your Auto Analyser widget
           Center(child: Text('Setup Tab')), // Replace with your Setup widget
-          BrowseFilesWidget(), // Replace with your Data rocess widget
+          BrowseFilesWidget(),
+          DataUploadPage(), // Replace with your Data rocess widget
         ],
       ),
     );

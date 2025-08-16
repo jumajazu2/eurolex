@@ -469,7 +469,10 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       isExpanded: true,
-                      value: indices[0], // Default selected value
+                      value:
+                          indices.contains(activeIndex)
+                              ? activeIndex
+                              : null, // Default selected value
                       items:
                           indices.map((String value) {
                             return DropdownMenuItem<String>(
