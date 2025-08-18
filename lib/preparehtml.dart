@@ -10,7 +10,7 @@ import 'package:html/parser.dart' as html_parser;
 
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
-
+import 'package:eurolex/logger.dart';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
 import 'package:eurolex/main.dart';
@@ -36,6 +36,7 @@ var manualCelex = [];
 List<String> indices = ['*'];
 var server = 'http://localhost:9200';
 var manualServer;
+var celexRefs;
 
 //purpose: load File 1 containing SK in file name, then load File 2 containing EN in file name
 
@@ -219,13 +220,6 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
           } else {
             print('File content is empty.');
           }
-          /*/manual overide of celex number extracted
-          celexNumbersExtracted = [
-            '32018D0859', //COMMISSION DECISION (EU) 2018/859
-            '62021CJ0457', // JUDGMENT OF THE COURT (Second Chamber) Case C‑457/21
-            '62017TJ0816', //  JUDGMENT OF THE GENERAL COURT  Cases T‑816/17 and T‑318/18,
-          ]; */
-          print('Manual override of celex numbers: $celexNumbersExtracted');
 
           //end of manual override
           for (int index = 0; index < celexNumbersExtracted.length; index++) {
@@ -279,6 +273,7 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
   }
 
   Future<void> enterAndLoadCelex(celexNumbersExtracted) async {
+    final logger = LogManager();
     // Open file picker dialog
     for (int index = 0; index < celexNumbersExtracted.length; index++) {
       var i = celexNumbersExtracted[index];
@@ -311,6 +306,7 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
         ); // Add the processed Celex number to the list
         print('Processed Celex number: $i');
       });
+      logger.log("$i uploaded to $activeIndex in Refs List upload.");
     }
 
     setState(() {
@@ -328,10 +324,10 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
       mainAxisAlignment: MainAxisAlignment.start,
       children: [
         SizedBox(height: 20), // Space between the button and content box
-        Text('Tool to pick File with References containing Celex numbers'),
+        Text('Tool to enter EC File with List of Celex References to Upload'),
         // Button to open file picker
         SizedBox(height: 20), // Space between the button and content box
-        Text('First Enter an Index Name to store the data!'),
+        Text('First Choose Index In Dropdown List or Enter Index Name below!'),
 
         // Button to open file picker
         InputDecorator(
@@ -344,8 +340,8 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
             child: DropdownButton<String>(
               isExpanded: true,
               value:
-                  indices.contains(activeIndex)
-                      ? activeIndex
+                  indices.contains(newIndexName)
+                      ? newIndexName
                       : null, // Default selected value
               items:
                   indices.map((String value) {
@@ -360,11 +356,12 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
                   newIndexName = newValue!;
                 });
                 // Handle dropdown selection
-                print('Selected for manual upload: $newValue');
+                print('Selected for Cexex Refs upload: $newValue');
               },
             ),
           ),
         ),
+        SizedBox(height: 10),
         TextField(
           decoration: InputDecoration(
             labelText: 'Index Name:',
@@ -376,7 +373,7 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
             });
           },
         ),
-        (newIndexName == '')
+        (newIndexName == '' || newIndexName == "eurolex_")
             ? Text('Enter Index Name First!')
             : ElevatedButton(
               onPressed: pickAndLoadFile2,
@@ -422,6 +419,11 @@ class manualCelexList extends StatefulWidget {
 
 class _manualCelexListState extends State<manualCelexList> {
   Future manualCelexListUpload(manualCelexListEntry, newIndexName) async {
+    setState(() {
+      extractedCelex.clear();
+    });
+
+    final logger = LogManager();
     for (int index = 0; index < manualCelexListEntry.length; index++) {
       var i = manualCelexListEntry[index];
       print('Processing manual Celex number: $i');
@@ -449,27 +451,66 @@ class _manualCelexListState extends State<manualCelexList> {
 
       setState(() {
         extractedCelex.add(
-          '$i ${index + 1}/${celexNumbersExtracted.length}',
+          '$i ${index + 1}/${manualCelex.length}',
         ); // Add the processed Celex number to the list
         print('Processed Celex number: $i');
       });
-    }
 
-    setState(() {
-      extractedCelex.add('COMPLETED');
-      getListIndices(server);
-      // Add the processed Celex number to the list
-    });
-    // Process the HTML content as needed
-    // For example, you can extract specific elements or text from the HTML
+      logger.log("$i uploaded to $activeIndex in manual Celex upload.");
+
+      setState(() {
+        extractedCelex.add('COMPLETED');
+        getListIndices(server);
+        // Add the processed Celex number to the list
+      });
+      // Process the HTML content as needed
+      // For example, you can extract specific elements or text from the HTML
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text('Tool to manually enter Celex numbers to upload'),
+        SizedBox(height: 10),
+        Text(
+          'Tool to Manually Enter Comma-Separated Celex References to Upload',
+        ),
+        SizedBox(height: 20), // Space between the button and content box
+        Text('First Choose Index In Dropdown List or Enter Index Name below!'),
 
+        InputDecorator(
+          decoration: InputDecoration(
+            labelText: 'Search Index', // Label embedded in the frame
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              isExpanded: true,
+              value:
+                  indices.contains(newIndexName)
+                      ? newIndexName
+                      : null, // Default selected value
+              items:
+                  indices.map((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+
+              onChanged: (String? newValue) {
+                setState(() {
+                  newIndexName = newValue!;
+                });
+                // Handle dropdown selection
+                print('Selected for manual Celex Refs upload: $newValue');
+              },
+            ),
+          ),
+        ),
+        SizedBox(height: 10),
         TextField(
           decoration: InputDecoration(
             labelText: 'Index Name:',
@@ -477,7 +518,7 @@ class _manualCelexListState extends State<manualCelexList> {
           ),
           onChanged: (value) {
             setState(() {
-              newIndexName = "eurolex" + value; // Update the index name
+              newIndexName = "eurolex_" + value; // Update the index name
             });
           },
         ),
@@ -496,16 +537,45 @@ class _manualCelexListState extends State<manualCelexList> {
         ),
 
         SizedBox(height: 10),
-        ElevatedButton(
-          onPressed: () {
-            if (newIndexName.isNotEmpty) {
-              manualCelexListUpload(manualCelex, newIndexName);
-            } else {
-              print('Please enter an index name first.');
-            }
-          },
-          child: Text('Process Celex Numbers'),
-        ),
+        (newIndexName == '' || newIndexName == "eurolex_")
+            ? Text('Enter Index Name First!')
+            : ElevatedButton(
+              onPressed: () {
+                if (newIndexName.isNotEmpty && newIndexName != "eurolex_") {
+                  manualCelexListUpload(manualCelex, newIndexName);
+                } else {
+                  print('Please enter an index name first.');
+                }
+              },
+              child: Text('Process Celex Numbers (Upload to $newIndexName)'),
+            ),
+
+        SizedBox(height: 20),
+        manualCelex.isEmpty
+            ? Text('No file loaded.')
+            : Container(
+              constraints: BoxConstraints(
+                maxHeight: 400,
+                maxWidth: 500, // Limit the maximum height
+              ),
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    children: [
+                      Text(
+                        extractedCelex.isEmpty
+                            ? 'No Celex Numbers Processed.' // If the list is empty
+                            : extractedCelex.length == 1
+                            ? 'Processed Celex Number: \n${extractedCelex.first}' // If the list has one value
+                            : 'Processed Celex Numbers: \n${extractedCelex.join(',\n')}', // If the list has multiple values
+                        style: TextStyle(fontFamily: 'monospace'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
       ],
     );
   }
