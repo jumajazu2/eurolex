@@ -24,6 +24,9 @@ var queryText;
 var queryPattern;
 List enHighlightedResults = [];
 var activeIndex = 'imported';
+var containsFilter;
+var celexFilter;
+var classFilter;
 
 class SearchTabWidget extends StatefulWidget {
   final String queryText;
@@ -513,6 +516,54 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
                 onPressed: _startSearch3,
                 child: Text('Start Search (match+matchphrase)'),
               ),
+
+              SizedBox(
+                width: 150,
+                child: TextFormField(
+                  decoration: InputDecoration(
+                    labelText: 'Filter by Celex',
+                    border: OutlineInputBorder(),
+                  ),
+                  onFieldSubmitted: (value) {
+                    _searchController.text = value;
+                    setState(() {
+                      celexFilter = value;
+                    });
+
+                    print(" Celex Filter: $celexFilter");
+                  },
+                ),
+              ),
+              SizedBox(
+                width: 150,
+                child: TextFormField(
+                  decoration: InputDecoration(
+                    labelText: 'Contains',
+                    border: OutlineInputBorder(),
+                  ),
+                  onFieldSubmitted: (value) {
+                    _searchController.text = value;
+                    setState(() {
+                      containsFilter = value;
+                    });
+
+                    print(" Contains Filter: $containsFilter");
+                  },
+                ),
+              ),
+              /*    SizedBox(
+                width: 150,
+                child: TextFormField(
+                  decoration: InputDecoration(
+                    labelText: 'Filter by Class',
+                    border: OutlineInputBorder(),
+                  ),
+                  onFieldSubmitted: (value) {
+                    _searchController.text = value;
+                    _startSearch();
+                  },
+                ),
+              ),*/
             ],
           ),
         ),
@@ -536,9 +587,14 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
                   index == 1 ? Text('SK') : SizedBox.shrink(),
                   index == 2 ? Text('CZ') : SizedBox.shrink(),
                   index == 3 ? Text('Metadata') : SizedBox.shrink(),
+                  index == 4
+                      ? Text('Matched Paragraphs Only')
+                      : SizedBox.shrink(),
                 ],
               );
             }),
+
+            //add three text fields to the right of the line with checkboxes
           ),
         ),
 
@@ -598,113 +654,121 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
                 ),
                 child: Column(
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _quickSettings[0]
-                            ? Expanded(
-                              child: SelectableText.rich(
-                                style: TextStyle(fontSize: 18.0),
-                                enHighlightedResults.length > index
-                                    ? enHighlightedResults[index]
-                                    : '',
-                              ),
-                            )
-                            : SizedBox.shrink(),
+                    (enResults.contains(containsFilter) ||
+                            containsFilter == null ||
+                            containsFilter == "")
+                        ? Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _quickSettings[0]
+                                ? Expanded(
+                                  child: SelectableText.rich(
+                                    style: TextStyle(fontSize: 18.0),
+                                    enHighlightedResults.length > index
+                                        ? enHighlightedResults[index]
+                                        : '',
+                                  ),
+                                )
+                                : SizedBox.shrink(),
 
-                        _quickSettings[1]
-                            ? Expanded(
-                              child: SelectableText(
-                                style: TextStyle(fontSize: 18.0),
-                                skResults.length > index
-                                    ? skResults[index]
-                                    : '',
-                              ),
-                            )
-                            : SizedBox.shrink(),
-                        _quickSettings[2]
-                            ? Expanded(
-                              child: SelectableText(
-                                style: TextStyle(fontSize: 18.0),
-                                czResults.length > index
-                                    ? czResults[index]
-                                    : '',
-                              ),
-                            )
-                            : SizedBox.shrink(),
-                        _quickSettings[3]
-                            ? Expanded(
-                              child: Column(
-                                children: [
-                                  Row(
+                            _quickSettings[1]
+                                ? Expanded(
+                                  child: SelectableText(
+                                    style: TextStyle(fontSize: 18.0),
+                                    skResults.length > index
+                                        ? skResults[index]
+                                        : '',
+                                  ),
+                                )
+                                : SizedBox.shrink(),
+                            _quickSettings[2]
+                                ? Expanded(
+                                  child: SelectableText(
+                                    style: TextStyle(fontSize: 18.0),
+                                    czResults.length > index
+                                        ? czResults[index]
+                                        : '',
+                                  ),
+                                )
+                                : SizedBox.shrink(),
+                            _quickSettings[3]
+                                ? Expanded(
+                                  child: Column(
                                     children: [
-                                      Text("Celex: "),
-                                      SelectableText(
-                                        metaCelex.length > index
-                                            ? metaCelex[index]
-                                            : '',
+                                      Row(
+                                        children: [
+                                          Text("Celex: "),
+                                          SelectableText(
+                                            metaCelex.length > index
+                                                ? metaCelex[index]
+                                                : '',
+                                          ),
+                                        ],
+                                      ),
+                                      // If you want to show czResults here as well, add another widget:
+                                      Row(
+                                        children: [
+                                          Text("Cellar: "),
+                                          SelectableText(
+                                            metaCellar.length > index
+                                                ? metaCellar[index]
+                                                : '',
+                                          ),
+                                        ],
+                                      ),
+
+                                      Row(
+                                        children: [
+                                          Text("Date: "),
+                                          SelectableText(
+                                            docDate.length > index
+                                                ? docDate[index]
+                                                : '',
+                                          ),
+                                        ],
+                                      ),
+
+                                      Row(
+                                        children: [
+                                          Text("Class: "),
+                                          SelectableText(
+                                            className.length > index
+                                                ? className[index]
+                                                : '',
+                                          ),
+                                        ],
+                                      ),
+                                      Row(
+                                        children: [
+                                          Text("Unmatched paragraphs: "),
+                                          SelectableText(
+                                            parNotMatched.length > index
+                                                ? parNotMatched[index]
+                                                : '',
+                                          ),
+                                        ],
+                                      ),
+
+                                      Row(
+                                        children: [
+                                          Text(
+                                            "Open full document: EN-SK, EN-CZ",
+                                          ),
+                                        ],
+                                      ),
+
+                                      Row(
+                                        children: [
+                                          Text("Open content (dropdown)"),
+                                        ],
                                       ),
                                     ],
                                   ),
-                                  // If you want to show czResults here as well, add another widget:
-                                  Row(
-                                    children: [
-                                      Text("Cellar: "),
-                                      SelectableText(
-                                        metaCellar.length > index
-                                            ? metaCellar[index]
-                                            : '',
-                                      ),
-                                    ],
-                                  ),
-
-                                  Row(
-                                    children: [
-                                      Text("Date: "),
-                                      SelectableText(
-                                        docDate.length > index
-                                            ? docDate[index]
-                                            : '',
-                                      ),
-                                    ],
-                                  ),
-
-                                  Row(
-                                    children: [
-                                      Text("Class: "),
-                                      SelectableText(
-                                        className.length > index
-                                            ? className[index]
-                                            : '',
-                                      ),
-                                    ],
-                                  ),
-                                  Row(
-                                    children: [
-                                      Text("Unmatched paragraphs: "),
-                                      SelectableText(
-                                        parNotMatched.length > index
-                                            ? parNotMatched[index]
-                                            : '',
-                                      ),
-                                    ],
-                                  ),
-
-                                  Row(
-                                    children: [
-                                      Text("Open full document: EN-SK, EN-CZ"),
-                                    ],
-                                  ),
-
-                                  Row(
-                                    children: [Text("Open content (dropdown)")],
-                                  ),
-                                ],
-                              ),
-                            )
-                            : SizedBox.shrink(),
-                      ],
-                    ),
+                                )
+                                : SizedBox.shrink(),
+                          ],
+                        )
+                        : SizedBox.shrink(),
 
                     Container(
                       color: const Color.fromARGB(200, 210, 238, 241),

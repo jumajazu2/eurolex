@@ -74,7 +74,7 @@ Future getContext(cellarID, pointer) async {
   int lte = int.tryParse(pointer) != null ? int.parse(pointer) + 10 : 0;
 
   print(
-    "getting context for cellarID: $cellarID, pointer: $pointer, gte: $gte, lte: $lte",
+    "Active index: $activeIndex, getting context for cellarID: $cellarID, pointer: $pointer, gte: $gte, lte: $lte",
   );
   var query = {
     "query": {
