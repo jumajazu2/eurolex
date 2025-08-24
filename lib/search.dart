@@ -6,6 +6,7 @@ import 'package:eurolex/processDOM.dart';
 import 'package:eurolex/display.dart';
 import 'package:eurolex/preparehtml.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 
 var resultsOS = [];
 var decodedResults = [];
@@ -24,9 +25,10 @@ var queryText;
 var queryPattern;
 List enHighlightedResults = [];
 var activeIndex = 'imported';
-var containsFilter;
-var celexFilter;
+var containsFilter = "";
+var celexFilter = "";
 var classFilter;
+Key _searchKey = UniqueKey();
 
 class SearchTabWidget extends StatefulWidget {
   final String queryText;
@@ -44,8 +46,13 @@ class SearchTabWidget extends StatefulWidget {
 
 class _SearchTabWidgetState extends State<SearchTabWidget> {
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _controller2 = TextEditingController();
+  final TextEditingController _controller3 = TextEditingController();
   final List<bool> _quickSettings = List.generate(5, (_) => true);
   final List<String> _results = [];
+
+  Color _fillColor = Colors.white30;
+  Color _fillColor2 = Colors.white30;
 
   void processQuery(query, searchTerm) async {
     queryPattern = query;
@@ -421,6 +428,8 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
     processQuery(query, _searchController.text);
   }
 
+  Color backgroundColor = Colors.white12;
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -520,14 +529,22 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
               SizedBox(
                 width: 150,
                 child: TextFormField(
+                  controller: _controller2,
+                  //key: ValueKey(_searchController.text),
                   decoration: InputDecoration(
                     labelText: 'Filter by Celex',
                     border: OutlineInputBorder(),
+                    filled: true,
+                    fillColor: _fillColor2,
                   ),
                   onFieldSubmitted: (value) {
-                    _searchController.text = value;
+                    _controller2.text = value;
                     setState(() {
                       celexFilter = value;
+                      _fillColor2 =
+                          value.isNotEmpty
+                              ? Colors.orangeAccent
+                              : Theme.of(context).canvasColor;
                     });
 
                     print(" Celex Filter: $celexFilter");
@@ -537,14 +554,23 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
               SizedBox(
                 width: 150,
                 child: TextFormField(
+                  controller: _controller3,
+                  //key: ValueKey(_searchController.text),
                   decoration: InputDecoration(
                     labelText: 'Contains',
                     border: OutlineInputBorder(),
+                    filled: true,
+                    fillColor: _fillColor,
                   ),
                   onFieldSubmitted: (value) {
-                    _searchController.text = value;
+                    _controller3.text = value;
                     setState(() {
                       containsFilter = value;
+
+                      _fillColor =
+                          value.isNotEmpty
+                              ? Colors.orangeAccent
+                              : Theme.of(context).canvasColor;
                     });
 
                     print(" Contains Filter: $containsFilter");
@@ -601,7 +627,42 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
         Container(
           color: const Color.fromARGB(200, 210, 238, 241),
           child: ExpansionTile(
-            title: const Text("Query Details"),
+            title:
+                (celexFilter.isNotEmpty || containsFilter.isNotEmpty)
+                    ? Row(
+                      children: [
+                        Icon(Icons.filter_alt, color: Colors.orange),
+                        SizedBox(width: 8),
+                        Text("Query Details: ${enResults.length} result(s)"),
+                        SizedBox(width: 8),
+
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              celexFilter = "";
+                              containsFilter = "";
+                              _fillColor = Theme.of(context).canvasColor;
+                              _fillColor2 = Theme.of(context).canvasColor;
+                              _controller2.clear();
+                              _controller3.clear();
+                              //  _searchController.text =
+                              ""; // <--- Set the text to an empty string
+                              //  _searchKey = UniqueKey();
+                            });
+
+                            setState(() {}); // handle click event here
+                          },
+                          child: Text(
+                            "Filtered Results Displayed, Click Here to Clear Filters",
+                            style: TextStyle(
+                              color: Colors.orange,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                    : Text("Query Details: ${enResults.length} result(s)"),
             onExpansionChanged: (bool expanded) {
               if (expanded) {
                 // Wrap the async call in an anonymous async function
@@ -629,13 +690,13 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
-              Padding(
+              /*   Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Text(
                   'Results Count: ${enResults.length}',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
-              ),
+              ),*/
             ],
           ),
         ),
@@ -647,17 +708,23 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
           child: ListView.builder(
             itemCount: enHighlightedResults.length,
             itemBuilder: (context, index) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10.0,
-                  vertical: 5.0,
-                ),
-                child: Column(
-                  children: [
-                    (enResults.contains(containsFilter) ||
-                            containsFilter == null ||
-                            containsFilter == "")
-                        ? Row(
+              return ((enResults[index].toLowerCase().contains(
+                            containsFilter.toLowerCase(),
+                          ) ||
+                          containsFilter == '') &&
+                      (metaCelex[index].toLowerCase().contains(
+                            celexFilter.toLowerCase(),
+                          ) ||
+                          celexFilter == '') &&
+                      (parNotMatched[index] == 'false' || !_quickSettings[4]))
+                  ? Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10.0,
+                      vertical: 5.0,
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _quickSettings[0]
@@ -751,15 +818,45 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
 
                                       Row(
                                         children: [
-                                          Text(
-                                            "Open full document: EN-SK, EN-CZ",
+                                          Text("Open URL: "),
+                                          GestureDetector(
+                                            onTap: () {
+                                              // Handle the tap event here, e.g. open the link in a browser
+                                              launchUrl(
+                                                Uri.parse(
+                                                  'http://eur-lex.europa.eu/legal-content/EN-SK/TXT/?uri=CELEX:${metaCelex[index]}',
+                                                ),
+                                              );
+                                            },
+                                            child: Text(
+                                              'EN-SK',
+                                              style: TextStyle(
+                                                decoration:
+                                                    TextDecoration.underline,
+                                                color: Colors.blue,
+                                              ),
+                                            ),
                                           ),
-                                        ],
-                                      ),
+                                          SizedBox(width: 10),
 
-                                      Row(
-                                        children: [
-                                          Text("Open content (dropdown)"),
+                                          GestureDetector(
+                                            onTap: () {
+                                              // Handle the tap event here, e.g. open the link in a browser
+                                              launchUrl(
+                                                Uri.parse(
+                                                  'http://eur-lex.europa.eu/legal-content/EN-CS/TXT/?uri=CELEX:${metaCelex[index]}',
+                                                ),
+                                              );
+                                            },
+                                            child: Text(
+                                              'EN-CZ',
+                                              style: TextStyle(
+                                                decoration:
+                                                    TextDecoration.underline,
+                                                color: Colors.blue,
+                                              ),
+                                            ),
+                                          ),
                                         ],
                                       ),
                                     ],
@@ -767,116 +864,127 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
                                 )
                                 : SizedBox.shrink(),
                           ],
-                        )
-                        : SizedBox.shrink(),
+                        ),
 
-                    Container(
-                      color: const Color.fromARGB(200, 210, 238, 241),
-                      child: ExpansionTile(
-                        title: const Text("Open content"),
-                        onExpansionChanged: (bool expanded) {
-                          if (expanded) {
-                            // Wrap the async call in an anonymous async function
-                            () async {
-                              final result = await getContext(
-                                metaCellar[index],
-                                pointerPar[index],
-                              );
-                              setState(() {
-                                contextEnSkCz = result;
-                              });
-                              print('Tile was expanded');
-                            }(); // Immediately invoke the async function
-                          } else {
-                            print('Tile was collapsed');
-                          }
-                        },
-
-                        children: [
-                          ListView.builder(
-                            shrinkWrap: true,
-                            physics: NeverScrollableScrollPhysics(),
-                            itemCount:
-                                (contextEnSkCz != null &&
-                                        contextEnSkCz[0] != null)
-                                    ? contextEnSkCz[0].length
-                                    : 0,
-                            itemBuilder: (context, index) {
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10.0,
-                                  vertical: 5.0,
-                                ),
-                                child: Column(
-                                  children: [
-                                    Container(
-                                      color:
-                                          (index == 10)
-                                              ? Colors.grey[200]
-                                              : null,
-                                      child: Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-
-                                        children: [
-                                          Expanded(
-                                            child: SelectableText(
-                                              style: TextStyle(fontSize: 18.0),
-                                              contextEnSkCz[0].length > index
-                                                  ? contextEnSkCz[0][index]
-                                                  : '',
-                                            ),
-                                          ),
-                                          Expanded(
-                                            child: SelectableText(
-                                              style: TextStyle(fontSize: 18.0),
-                                              contextEnSkCz[1].length > index
-                                                  ? contextEnSkCz[1][index]
-                                                  : '',
-                                            ),
-                                          ),
-                                          Expanded(
-                                            child: SelectableText(
-                                              style: TextStyle(fontSize: 18.0),
-                                              contextEnSkCz[2].length > index
-                                                  ? contextEnSkCz[2][index]
-                                                  : '',
-                                            ),
-                                          ),
-
-                                          Expanded(
-                                            child: SelectableText(
-                                              style: TextStyle(fontSize: 18.0),
-                                              '',
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
+                        Container(
+                          color: const Color.fromARGB(200, 210, 238, 241),
+                          child: ExpansionTile(
+                            title: const Text("Open content"),
+                            onExpansionChanged: (bool expanded) {
+                              if (expanded) {
+                                // Wrap the async call in an anonymous async function
+                                () async {
+                                  final result = await getContext(
+                                    metaCellar[index],
+                                    pointerPar[index],
+                                  );
+                                  setState(() {
+                                    contextEnSkCz = result;
+                                  });
+                                  print('Tile was expanded');
+                                }(); // Immediately invoke the async function
+                              } else {
+                                print('Tile was collapsed');
+                              }
                             },
+
+                            children: [
+                              ListView.builder(
+                                shrinkWrap: true,
+                                physics: NeverScrollableScrollPhysics(),
+                                itemCount:
+                                    (contextEnSkCz != null &&
+                                            contextEnSkCz[0] != null)
+                                        ? contextEnSkCz[0].length
+                                        : 0,
+                                itemBuilder: (context, index) {
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10.0,
+                                      vertical: 5.0,
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        Container(
+                                          color:
+                                              (index == 10)
+                                                  ? Colors.grey[200]
+                                                  : null,
+                                          child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+
+                                            children: [
+                                              Expanded(
+                                                child: SelectableText(
+                                                  style: TextStyle(
+                                                    fontSize: 18.0,
+                                                  ),
+                                                  contextEnSkCz[0].length >
+                                                          index
+                                                      ? contextEnSkCz[0][index]
+                                                      : '',
+                                                ),
+                                              ),
+                                              Expanded(
+                                                child: SelectableText(
+                                                  style: TextStyle(
+                                                    fontSize: 18.0,
+                                                  ),
+                                                  contextEnSkCz[1].length >
+                                                          index
+                                                      ? contextEnSkCz[1][index]
+                                                      : '',
+                                                ),
+                                              ),
+                                              Expanded(
+                                                child: SelectableText(
+                                                  style: TextStyle(
+                                                    fontSize: 18.0,
+                                                  ),
+                                                  contextEnSkCz[2].length >
+                                                          index
+                                                      ? contextEnSkCz[2][index]
+                                                      : '',
+                                                ),
+                                              ),
+
+                                              Expanded(
+                                                child: SelectableText(
+                                                  style: TextStyle(
+                                                    fontSize: 18.0,
+                                                  ),
+                                                  '',
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                        // Bottom buttons
+                        /* Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: List.generate(5, (index) {
+                              return ElevatedButton(
+                                onPressed: () {},
+                                child: Text('B${index + 1}'),
+                              );
+                            }),
+                          ),
+                        ),*/
+                      ],
                     ),
-                    // Bottom buttons
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: List.generate(5, (index) {
-                          return ElevatedButton(
-                            onPressed: () {},
-                            child: Text('B${index + 1}'),
-                          );
-                        }),
-                      ),
-                    ),
-                  ],
-                ),
-              );
+                  )
+                  : SizedBox.shrink();
             },
           ),
         ),

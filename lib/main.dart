@@ -7,6 +7,7 @@ import 'package:eurolex/browseFiles.dart';
 import 'package:eurolex/search.dart';
 import 'package:eurolex/analyser.dart';
 
+
 List<String> indices = ['*'];
 void main() {
   runApp(MaterialApp(home: MainTabbedApp()));
@@ -25,6 +26,7 @@ class _MainTabbedAppState extends State<MainTabbedApp>
   void initState() {
     super.initState();
     _tabController = TabController(length: 5, vsync: this, initialIndex: 0);
+    
 
     getListIndices(server).then((_) {
       setState(() {
