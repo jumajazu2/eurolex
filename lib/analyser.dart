@@ -4,6 +4,7 @@ import 'package:eurolex/preparehtml.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:eurolex/search.dart';
+import 'package:eurolex/processDOM.dart';
 import 'dart:math';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -11,6 +12,62 @@ import 'package:http/http.dart' as http;
 var nGrams = [];
 Map nGramsResults = {"N/A": "N/A"};
 var nGramResultList = [];
+
+Future<List> searchQuery(query, queryString) async {
+  queryPattern = query;
+  print("In ANALYSER searchQuery, query: $query, queryString: $queryString");
+  var resultsOS = await sendToOpenSearch(
+    'http://localhost:9200/$activeIndex/_search',
+    [jsonEncode(query)],
+  );
+  var decodedResults = jsonDecode(resultsOS);
+  print(
+    "In ANALYSER searchQuery, query: $query, queryString: $queryString, Results: $resultsOS",
+  );
+  //if query returns error, stop processing, display error
+  if (decodedResults['error'] != null) {
+    print("Error in OpenSearch response: ${decodedResults['error']}");
+
+    enHighlightedResults = [
+      TextSpan(
+        children:
+            ([decodedResults['error'].toString()]).map((text) {
+              return TextSpan(
+                text: text,
+                style: TextStyle(color: Colors.black),
+              );
+            }).toList(),
+      ),
+    ];
+
+    return ["error"];
+  }
+
+  var hits = decodedResults['hits']['hits'] as List;
+
+  skResults = hits.map((hit) => hit['_source']['sk_text'].toString()).toList();
+  enResults = hits.map((hit) => hit['_source']['en_text'].toString()).toList();
+  czResults = hits.map((hit) => hit['_source']['cz_text'].toString()).toList();
+
+  metaCelex = hits.map((hit) => hit['_source']['celex'].toString()).toList();
+  metaCellar = hits.map((hit) => hit['_source']['dir_id'].toString()).toList();
+  sequenceNo =
+      hits.map((hit) => hit['_source']['sequence_id'].toString()).toList();
+  parNotMatched =
+      hits
+          .map((hit) => hit['_source']['paragraphsNotMatched'].toString())
+          .toList();
+  pointerPar =
+      hits.map((hit) => hit['_source']['sequence_id'].toString()).toList();
+
+  className = hits.map((hit) => hit['_source']['class'].toString()).toList();
+
+  docDate = hits.map((hit) => hit['_source']['date'].toString()).toList();
+
+  print("Query: $query, Results = $skResults");
+
+  return [enResults, skResults];
+}
 
 class AnalyserWidget extends StatefulWidget {
   @override
@@ -69,6 +126,35 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
       print("NGrams: ${nGrams.length}");
     });
 
+    //
+    var queryAnalyser = {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "multi_match": {
+                "query": lastFileContent,
+                "fields": ["en_text", "sk_text", "cz_text"],
+                "fuzziness": "AUTO",
+                "minimum_should_match": "80%",
+              },
+            },
+            {
+              "term": {"paragraphsNotMatched": false},
+            },
+          ],
+        },
+      },
+      "size": 50,
+    };
+    //
+    // await searchQuery(queryAnalyser, lastFileContent); //
+    //await SearchTabWidget(queryName: "a",  queryText: "").processQuery(queryAnalyser);//
+    //
+    //
+    //
+    // var wholeSegment = search
+    nGrams.insert(0, lastFileContent);
     nGramsResults = await searchNGrams(nGrams);
     nGramResultList =
         nGramsResults.entries.map((e) => "${e.key} => ${e.value}").toList();
@@ -153,6 +239,13 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
           child: SelectableText(_fileContent, style: TextStyle(fontSize: 16)),
         ),
         SizedBox(height: 16),
+        Text(activeIndex),
+        SizedBox(height: 16),
+
+        //  Text("EN: ${enResults.isEmpty ? "N/A" : enResults[0]}"),
+        // SizedBox(height: 8),
+        // Text("SK: ${skResults.isEmpty ? "N/A" : skResults[0]}"),
+        // SizedBox(height: 8),
         Row(
           children: [
             /*
@@ -216,7 +309,9 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
 }
 
 Future<Map> searchNGrams(List<dynamic> ngrams) async {
-  final opensearchUrl = Uri.parse("http://localhost:9200/eurolex4/_msearch");
+  final opensearchUrl = Uri.parse(
+    "http://localhost:9200/$activeIndex/_msearch",
+  );
   final headers = {"Content-Type": "application/x-ndjson"};
 
   // Step 1: Build NDJSON request body

@@ -7,6 +7,10 @@ import 'package:eurolex/display.dart';
 import 'package:eurolex/preparehtml.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:async';
+import 'dart:io';
+
+import 'package:path_provider/path_provider.dart';
 
 var resultsOS = [];
 var decodedResults = [];
@@ -29,6 +33,8 @@ var containsFilter = "";
 var celexFilter = "";
 var classFilter;
 Key _searchKey = UniqueKey();
+bool _isContentExpanded = false;
+bool _autoAnalyse = false;
 
 class SearchTabWidget extends StatefulWidget {
   final String queryText;
@@ -44,15 +50,114 @@ class SearchTabWidget extends StatefulWidget {
   _SearchTabWidgetState createState() => _SearchTabWidgetState();
 }
 
-class _SearchTabWidgetState extends State<SearchTabWidget> {
+class _SearchTabWidgetState extends State<SearchTabWidget>
+    with WidgetsBindingObserver {
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _controller2 = TextEditingController();
   final TextEditingController _controller3 = TextEditingController();
-  final List<bool> _quickSettings = List.generate(5, (_) => true);
+  final List<bool> _quickSettings = List.generate(6, (_) => true);
   final List<String> _results = [];
 
   Color _fillColor = Colors.white30;
   Color _fillColor2 = Colors.white30;
+
+  //the following code is to periodically check if a file has changed and reload its content if it has, for auto lookup of new Studio segments on Search tab
+  String _fileContent = "Loading...";
+  Timer? _pollingTimer;
+  bool _isVisible = true;
+  var lastFileContent = "";
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _startPolling();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _pollingTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startPolling() async {
+    _pollingTimer = Timer.periodic(Duration(milliseconds: 500), (timer) {
+      if (_isVisible || !_isVisible) {
+        print("Timer triggered");
+        _readFile();
+        if (_fileContent != lastFileContent && _quickSettings[5] == true) {
+          print("File content changed, updating state");
+          _updateState();
+        } else {
+          print("No change in file content");
+        }
+      }
+    });
+  }
+
+  void _updateState() async {
+    setState(() {
+      lastFileContent = _fileContent;
+
+      _results.clear();
+
+      enHighlightedResults.clear();
+      //   List subsegments = subsegmentFile(_fileContent);
+    });
+
+    //
+    var queryAnalyser = {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "multi_match": {
+                "query": lastFileContent,
+                "fields": ["en_text", "sk_text", "cz_text"],
+                "fuzziness": "AUTO",
+                "minimum_should_match": "80%",
+              },
+            },
+            {
+              "term": {"paragraphsNotMatched": false},
+            },
+          ],
+        },
+      },
+      "size": 50,
+    };
+
+    processQuery(queryAnalyser, lastFileContent);
+
+    setState(() {}); // You may need to call setState again to update the UI
+  }
+
+  Future<String> _readFile() async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('C:/Temp/segment_output.txt');
+      final content = await file.readAsString();
+      if (mounted) {
+        setState(() {
+          _fileContent = content;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _fileContent = "Error reading file.";
+        });
+      }
+    }
+    return _fileContent;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _isVisible = state == AppLifecycleState.resumed;
+  }
+
+  //the end of periodi polling code
 
   void processQuery(query, searchTerm) async {
     queryPattern = query;
@@ -115,7 +220,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
 
     print("Query: $query, Results = $skResults");
 
-    queryText = _searchController.text;
+    queryText = searchTerm; //_searchController.text;
     //converting the results to TextSpans for highlighting
     var queryWords =
         queryText
@@ -163,71 +268,6 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
     //var queryText = _searchController.text;
 
     processQuery(query, _searchController.text);
-
-    /*
-    var resultsOS = await sendToOpenSearch(
-      'http://localhost:9200/eurolex4/_search',
-      [jsonEncode(query)],
-    );
-    var decodedResults = jsonDecode(resultsOS);
-
-    var hits = decodedResults['hits']['hits'] as List;
-
-    setState(() {
-      skResults =
-          hits.map((hit) => hit['_source']['sk_text'].toString()).toList();
-      enResults =
-          hits.map((hit) => hit['_source']['en_text'].toString()).toList();
-      czResults =
-          hits.map((hit) => hit['_source']['cz_text'].toString()).toList();
-
-      metaCelex =
-          hits.map((hit) => hit['_source']['celex'].toString()).toList();
-      metaCellar =
-          hits.map((hit) => hit['_source']['dir_id'].toString()).toList();
-      sequenceNo =
-          hits.map((hit) => hit['_source']['sequence_id'].toString()).toList();
-      parNotMatched =
-          hits
-              .map((hit) => hit['_source']['paragraphsNotMatched'].toString())
-              .toList();
-      pointerPar =
-          hits.map((hit) => hit['_source']['sequence_id'].toString()).toList();
-
-      className =
-          hits.map((hit) => hit['_source']['class'].toString()).toList();
-
-      docDate = hits.map((hit) => hit['_source']['date'].toString()).toList();
-    });
-
-    print("Query: $query, Results = $skResults");
-
-    queryText = _searchController.text;
-    //converting the results to TextSpans for highlighting
-    var queryWords =
-        queryText
-            .replaceAll(RegExp(r'[^\w\s]'), '') // remove punctuation
-            .split(RegExp(r'\s+')) // split by whitespace
-            .where((word) => word.isNotEmpty) // remove empty entries
-            .toList();
-
-    print("Query Words: $queryWords");
-
-    for (var hit in enResults) {
-      var enHighlight = highlightFoundWords2(hit, queryWords);
-
-      // You can store these highlights in a list or map if needed
-      print("EN Highlight: $enHighlight");
-      enHighlightedResults.add(enHighlight);
-      print("EN Highlight: $enHighlight, $enHighlightedResults");
-    }
-    print(
-      "EN Highlight all: ${enHighlightedResults.length}, $enHighlightedResults",
-    );
-
-    setState(() {});
-  }
-*/
   }
 
   void _startSearch2() async {
@@ -281,72 +321,6 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
     };
 
     processQuery(query2, _searchController.text);
-
-    /*
-    var resultsOS = await sendToOpenSearch(
-      'http://localhost:9200/eurolex4/_search',
-      [jsonEncode(query)],
-    );
-    var decodedResults = jsonDecode(resultsOS);
-
-    var hits = decodedResults['hits']['hits'] as List;
-
-    setState(() {
-      skResults =
-          hits.map((hit) => hit['_source']['sk_text'].toString()).toList();
-      enResults =
-          hits.map((hit) => hit['_source']['en_text'].toString()).toList();
-      czResults =
-          hits.map((hit) => hit['_source']['cz_text'].toString()).toList();
-
-      metaCelex =
-          hits.map((hit) => hit['_source']['celex'].toString()).toList();
-      metaCellar =
-          hits.map((hit) => hit['_source']['dir_id'].toString()).toList();
-      sequenceNo =
-          hits.map((hit) => hit['_source']['sequence_id'].toString()).toList();
-      parNotMatched =
-          hits
-              .map((hit) => hit['_source']['paragraphsNotMatched'].toString())
-              .toList();
-      pointerPar =
-          hits.map((hit) => hit['_source']['sequence_id'].toString()).toList();
-
-      className =
-          hits.map((hit) => hit['_source']['class'].toString()).toList();
-
-      docDate = hits.map((hit) => hit['_source']['date'].toString()).toList();
-    });
-
-    print("Query: $query, Results = ${skResults.length}");
-
-    var queryText = _searchController.text;
-    //converting the results to TextSpans for highlighting
-    var queryWords =
-        queryText
-            .replaceAll(RegExp(r'[^\w\s]'), '') // remove punctuation
-            .split(RegExp(r'\s+')) // split by whitespace
-            .where((word) => word.isNotEmpty) // remove empty entries
-            .toList();
-
-    print("Query Words: $queryWords");
-
-    for (var hit in enResults) {
-      var enHighlight = highlightFoundWords2(hit, queryWords);
-
-      // You can store these highlights in a list or map if needed
-      print("EN Highlight: $enHighlight");
-      enHighlightedResults.add(enHighlight);
-      print("EN Highlight: $enHighlight, $enHighlightedResults");
-    }
-    print(
-      "EN Highlight all: ${enHighlightedResults.length}, $enHighlightedResults",
-    );
-
-    setState(() {});
-
-
-    */
   }
 
   void _startSearch3() async {
@@ -458,7 +432,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
                       borderSide: BorderSide.none,
                     ),
                   ),
-                  onSubmitted: (value) => _startSearch(),
+                  onSubmitted: (value) => _startSearch2(),
                 ),
               ),
               SizedBox(
@@ -598,7 +572,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
           padding: const EdgeInsets.symmetric(horizontal: 8.0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: List.generate(5, (index) {
+            children: List.generate(6, (index) {
               return Row(
                 children: [
                   Checkbox(
@@ -616,6 +590,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
                   index == 4
                       ? Text('Matched Paragraphs Only')
                       : SizedBox.shrink(),
+                  index == 5 ? Text('Auto Analyse') : SizedBox.shrink(),
                 ],
               );
             }),
@@ -869,8 +844,16 @@ class _SearchTabWidgetState extends State<SearchTabWidget> {
                         Container(
                           color: const Color.fromARGB(200, 210, 238, 241),
                           child: ExpansionTile(
-                            title: const Text("Open content"),
+                            title: Text(
+                              _isContentExpanded
+                                  ? 'Collapse Context'
+                                  : 'Expand Context',
+                            ),
                             onExpansionChanged: (bool expanded) {
+                              setState(() {
+                                _isContentExpanded = expanded;
+                              });
+
                               if (expanded) {
                                 // Wrap the async call in an anonymous async function
                                 () async {
