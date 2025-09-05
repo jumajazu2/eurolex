@@ -1,6 +1,8 @@
 import 'package:eurolex/search.dart';
 import 'package:flutter/material.dart';
 
+import 'package:eurolex/main.dart';
+
 import 'package:eurolex/processDOM.dart';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
@@ -95,7 +97,7 @@ Future getContext(cellarID, pointer) async {
   };
 
   var resultsContext = await sendToOpenSearch(
-    'http://localhost:9200/$activeIndex/_search',
+    'http://$osServer/$activeIndex/_search',
     [jsonEncode(query)],
   );
   var decodedResults = jsonDecode(resultsContext);

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:eurolex/main.dart';
 import 'package:flutter/material.dart';
 import 'package:eurolex/processDOM.dart';
 import 'package:eurolex/display.dart';
@@ -15,7 +16,7 @@ import 'package:path_provider/path_provider.dart';
 var resultsOS = [];
 var decodedResults = [];
 var skResults = [];
-var enResults = [];
+var enResults = ["N/A"];
 var czResults = [];
 var metaCelex = [];
 var metaCellar = [];
@@ -28,7 +29,7 @@ var contextEnSkCz;
 var queryText;
 var queryPattern;
 List enHighlightedResults = [];
-var activeIndex = 'imported';
+var activeIndex = 'eurolex4';
 var containsFilter = "";
 var celexFilter = "";
 var classFilter;
@@ -118,9 +119,6 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                 "minimum_should_match": "80%",
               },
             },
-            {
-              "term": {"paragraphsNotMatched": false},
-            },
           ],
         },
       },
@@ -129,7 +127,9 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
 
     processQuery(queryAnalyser, lastFileContent);
 
-    setState(() {}); // You may need to call setState again to update the UI
+    setState(() {
+      queryText = "Auto-analyse: $lastFileContent";
+    }); // You may need to call setState again to update the UI
   }
 
   Future<String> _readFile() async {
@@ -163,7 +163,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     queryPattern = query;
 
     var resultsOS = await sendToOpenSearch(
-      'http://localhost:9200/$activeIndex/_search',
+      'http://$osServer/$activeIndex/_search',
       [jsonEncode(query)],
     );
     var decodedResults = jsonDecode(resultsOS);

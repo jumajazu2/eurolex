@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:eurolex/main.dart';
 import 'package:eurolex/preparehtml.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
@@ -17,7 +18,7 @@ Future<List> searchQuery(query, queryString) async {
   queryPattern = query;
   print("In ANALYSER searchQuery, query: $query, queryString: $queryString");
   var resultsOS = await sendToOpenSearch(
-    'http://localhost:9200/$activeIndex/_search',
+    'http://$osServer/$activeIndex/_search',
     [jsonEncode(query)],
   );
   var decodedResults = jsonDecode(resultsOS);
@@ -64,7 +65,7 @@ Future<List> searchQuery(query, queryString) async {
 
   docDate = hits.map((hit) => hit['_source']['date'].toString()).toList();
 
-  print("Query: $query, Results = $skResults");
+  print("Query: $query, Results SK = $skResults, Results EN = $enResults");
 
   return [enResults, skResults];
 }
@@ -309,9 +310,7 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
 }
 
 Future<Map> searchNGrams(List<dynamic> ngrams) async {
-  final opensearchUrl = Uri.parse(
-    "http://localhost:9200/$activeIndex/_msearch",
-  );
+  final opensearchUrl = Uri.parse("http://$osServer/$activeIndex/_msearch");
   final headers = {"Content-Type": "application/x-ndjson"};
 
   // Step 1: Build NDJSON request body

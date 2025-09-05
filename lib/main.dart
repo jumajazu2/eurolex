@@ -7,7 +7,9 @@ import 'package:eurolex/browseFiles.dart';
 import 'package:eurolex/search.dart';
 import 'package:eurolex/analyser.dart';
 
-
+//String osServer = 'localhost:9200'; // add to Settings or Autolookup
+//String osServer = '54.166.214.181:9200'; // AWS server
+String osServer = '192.168.1.14:9200';
 List<String> indices = ['*'];
 void main() {
   runApp(MaterialApp(home: MainTabbedApp()));
@@ -26,7 +28,6 @@ class _MainTabbedAppState extends State<MainTabbedApp>
   void initState() {
     super.initState();
     _tabController = TabController(length: 5, vsync: this, initialIndex: 0);
-    
 
     getListIndices(server).then((_) {
       setState(() {

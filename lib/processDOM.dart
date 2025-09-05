@@ -1,4 +1,5 @@
-import 'dart:ffi';
+//import 'dart:ffi';
+import 'package:eurolex/main.dart';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
 import 'dart:convert';
@@ -175,7 +176,7 @@ void openSearchUpload(json, indexName) {
   var bilingualData = json;
 
   // OpenSearch URL (adjust to your OpenSearch server)
-  String opensearchUrl = 'http://localhost:9200/opensearch/_bulk';
+  String opensearchUrl = 'http://$osServer/opensearch/_bulk';
 
   // Prepare the NDJSON data
   List<String> bulkData = [];

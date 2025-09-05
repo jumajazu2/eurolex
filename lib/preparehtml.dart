@@ -5,6 +5,7 @@ import 'package:eurolex/processDOM.dart';
 import 'package:eurolex/search.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'dart:convert';
 
 import 'package:html/parser.dart' as html_parser;
 
@@ -33,8 +34,8 @@ var extractedCelex = [''];
 var manualEextractedCelex = [''];
 var newIndexName = '';
 var manualCelex = [];
-List<String> indices = ['*'];
-var server = 'http://localhost:9200';
+//List<String> indices = ['*'];
+var server = 'http://$osServer';
 var manualServer;
 var celexRefs;
 
@@ -620,8 +621,16 @@ class parseHtml {
 
 Future getListIndices(server) async {
   // Function to get the list of indices from the server
+
+  final username = 'admin';
+  final password = 'admin';
+  final basicAuth = 'Basic ${base64Encode(utf8.encode('$username:$password'))}';
+
   try {
-    final response = await http.get(Uri.parse('$server/_cat/indices?h=index'));
+    final response = await http.get(
+      Uri.parse('$server/_cat/indices?h=index'),
+      headers: {'Authorization': basicAuth},
+    );
     if (response.statusCode == 200) {
       String responseBody = response.body;
 
