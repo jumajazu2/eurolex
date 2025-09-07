@@ -218,7 +218,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
       docDate = hits.map((hit) => hit['_source']['date'].toString()).toList();
     });
 
-    print("Query: $query, Results = $skResults");
+    print("Query: $query, Results SK = $skResults");
 
     queryText = searchTerm; //_searchController.text;
     //converting the results to TextSpans for highlighting
@@ -404,6 +404,15 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
 
   Color backgroundColor = Colors.white12;
 
+  void updateDropdown() async {
+    await getListIndices(server);
+    setState(() {
+      print(
+        "Dropdown tapped and indices updated from server, indices: $indices.",
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -443,7 +452,8 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                 flex: 2, // 1/10 of the row
                 child: InputDecorator(
                   decoration: InputDecoration(
-                    labelText: 'Search Index', // Label embedded in the frame
+                    labelText:
+                        'Search Index ($osServer)', // Label embedded in the frame
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -466,6 +476,11 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                               child: Text(value),
                             );
                           }).toList(),
+
+                      onTap:
+                          () => setState(() {
+                            updateDropdown();
+                          }),
 
                       onChanged: (String? newValue) {
                         setState(() {
@@ -683,13 +698,17 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
           child: ListView.builder(
             itemCount: enHighlightedResults.length,
             itemBuilder: (context, index) {
-              return ((enResults[index].toLowerCase().contains(
-                            containsFilter.toLowerCase(),
-                          ) ||
+              return ((enResults.isNotEmpty &&
+                              index < enResults.length &&
+                              enResults[index].toLowerCase().contains(
+                                containsFilter.toLowerCase(),
+                              ) ||
                           containsFilter == '') &&
-                      (metaCelex[index].toLowerCase().contains(
-                            celexFilter.toLowerCase(),
-                          ) ||
+                      (metaCelex.isNotEmpty &&
+                              index < metaCelex.length &&
+                              metaCelex[index].toLowerCase().contains(
+                                celexFilter.toLowerCase(),
+                              ) ||
                           celexFilter == '') &&
                       (parNotMatched[index] == 'false' || !_quickSettings[4]))
                   ? Padding(

@@ -65,7 +65,7 @@ Future<List> searchQuery(query, queryString) async {
 
   docDate = hits.map((hit) => hit['_source']['date'].toString()).toList();
 
-  print("Query: $query, Results SK = $skResults, Results EN = $enResults");
+  print("Query?: $query, Results SK = $skResults, Results EN = $enResults");
 
   return [enResults, skResults];
 }

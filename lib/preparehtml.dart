@@ -365,12 +365,13 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
         SizedBox(height: 10),
         TextField(
           decoration: InputDecoration(
-            labelText: 'Index Name:',
+            labelText: 'Index Name (Press Enter to Confirm):',
             border: OutlineInputBorder(),
           ),
-          onChanged: (value) {
+          onSubmitted: (value) {
             setState(() {
-              newIndexName = "eurolex_" + value; // Update the index name
+              newIndexName = "eurolex_" + value;
+              // indices.add(newIndexName); // Update the index name
             });
           },
         ),
@@ -514,12 +515,13 @@ class _manualCelexListState extends State<manualCelexList> {
         SizedBox(height: 10),
         TextField(
           decoration: InputDecoration(
-            labelText: 'Index Name:',
+            labelText: 'Index Name (Press Enter to Confirm):',
             border: OutlineInputBorder(),
           ),
-          onChanged: (value) {
+          onSubmitted: (value) {
             setState(() {
-              newIndexName = "eurolex_" + value; // Update the index name
+              newIndexName = "eurolex_" + value;
+              // indices.add(newIndexName); // Update the index name
             });
           },
         ),
@@ -645,6 +647,7 @@ Future getListIndices(server) async {
       print('Indices loaded: $indices');
 
       print('Indices loaded successfully: $responseBody');
+
       return responseBody; // Return the indices as a string
     } else {
       print('Failed to load indices. Status code: ${response.statusCode}');
