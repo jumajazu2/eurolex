@@ -69,21 +69,28 @@ TextSpan highlightFoundWords2(String returnedResult, List<String> foundWords) {
   return TextSpan(children: spans);
 }
 
-Future getContext(cellarID, pointer) async {
+Future getContext(celex, pointer) async {
   // Simulate fetching context from a database or API
 
   int gte = int.tryParse(pointer) != null ? int.parse(pointer) - 10 : 0;
   int lte = int.tryParse(pointer) != null ? int.parse(pointer) + 10 : 0;
 
-  print(
-    "Active index: $activeIndex, getting context for cellarID: $cellarID, pointer: $pointer, gte: $gte, lte: $lte",
-  );
   var query = {
     "query": {
       "bool": {
         "must": [
           {
-            "term": {"dir_id.keyword": cellarID},
+            "bool": {
+              "should": [
+                {
+                  "term": {"celex": celex},
+                },
+                {
+                  "term": {"celex.keyword": celex},
+                },
+              ],
+              "minimum_should_match": 1, // At least one condition must match
+            },
           },
           {
             "range": {
@@ -95,7 +102,9 @@ Future getContext(cellarID, pointer) async {
     },
     "size": 50,
   };
-
+  print(
+    "Active index: $activeIndex, getting context for Celex: $celex, pointer: $pointer, gte: $gte, lte: $lte, query: $query",
+  );
   var resultsContext = await sendToOpenSearch(
     'http://$osServer/$activeIndex/_search',
     [jsonEncode(query)],

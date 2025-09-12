@@ -137,7 +137,7 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
                 "query": lastFileContent,
                 "fields": ["en_text", "sk_text", "cz_text"],
                 "fuzziness": "AUTO",
-                "minimum_should_match": "80%",
+                "minimum_should_match": "65%",
               },
             },
             {

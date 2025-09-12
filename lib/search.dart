@@ -21,7 +21,7 @@ var czResults = [];
 var metaCelex = [];
 var metaCellar = [];
 var sequenceNo;
-var parNotMatched;
+var parNotMatched = ["N/A"];
 var className;
 var docDate;
 var pointerPar;
@@ -116,7 +116,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                 "query": lastFileContent,
                 "fields": ["en_text", "sk_text", "cz_text"],
                 "fuzziness": "AUTO",
-                "minimum_should_match": "80%",
+                "minimum_should_match": "70%",
               },
             },
           ],
@@ -710,7 +710,10 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                 celexFilter.toLowerCase(),
                               ) ||
                           celexFilter == '') &&
-                      (parNotMatched[index] == 'false' || !_quickSettings[4]))
+                      (parNotMatched.isNotEmpty &&
+                              index < parNotMatched.length &&
+                              parNotMatched[index] == 'false' ||
+                          !_quickSettings[4]))
                   ? Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10.0,
@@ -877,7 +880,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                 // Wrap the async call in an anonymous async function
                                 () async {
                                   final result = await getContext(
-                                    metaCellar[index],
+                                    metaCelex[index],
                                     pointerPar[index],
                                   );
                                   setState(() {
