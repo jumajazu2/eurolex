@@ -1,4 +1,5 @@
 import 'package:eurolex/dataupload.dart';
+import 'package:eurolex/file_handling.dart';
 import 'package:eurolex/setup.dart';
 import 'package:flutter/material.dart';
 import 'package:eurolex/preparehtml.dart';
@@ -12,6 +13,10 @@ import 'package:eurolex/analyser.dart';
 //String osServer = '54.166.214.181:9200'; // AWS server
 String osServer = '192.168.1.14:9200';
 List<String> indices = ['*'];
+
+Map<String, dynamic> jsonSettings = {};
+Map<String, dynamic> jsonConfig = {};
+Map<String, dynamic> jsonData = {};
 void main() {
   runApp(MaterialApp(home: MainTabbedApp()));
 }
@@ -35,6 +40,8 @@ class _MainTabbedAppState extends State<MainTabbedApp>
         // Refresh the UI after indices are loaded
       });
     });
+    loadSettingsFromFile();
+    //loadJsonFromFile();
 
     // Search tab first
   }

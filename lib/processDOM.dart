@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:xml/xml.dart' as xml;
 import 'package:eurolex/logger.dart';
 
+
 import 'preparehtml.dart';
 
 var dirPointer = 0; // Pointer for directory processing

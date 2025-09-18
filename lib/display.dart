@@ -110,6 +110,7 @@ Future getContext(celex, pointer) async {
     [jsonEncode(query)],
   );
   var decodedResults = jsonDecode(resultsContext);
+  
 
   var hits = decodedResults['hits']['hits'] as List;
 

@@ -23,23 +23,29 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Indices Maintenance')),
-      body: Center(
-        child: ListView.builder(
-          itemCount: indices.length,
-          itemBuilder: (BuildContext context, int index) {
-            return ListTile(
-              title: Text(indices[index]),
-              trailing: IconButton(
-                icon: Icon(Icons.delete),
-                onPressed: () {
-                  setState(() {
-                    indices.removeAt(index);
-                  });
-                },
-              ),
-            );
-          },
-        ),
+      body: Column(
+        children: [
+          Flexible(
+            child: ListView.builder(
+              itemCount: indices.length,
+              itemBuilder: (BuildContext context, int index) {
+                return ListTile(
+                  title: Text(indices[index]),
+                  trailing: IconButton(
+                    icon: Icon(Icons.delete),
+                    onPressed: () {
+                      setState(() {
+                        indices.removeAt(index);
+                      });
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+          SizedBox(height: 20),
+          Text(jsonSettings.toString()),
+        ],
       ),
     );
   }

@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
 import 'dart:io';
+import 'package:eurolex/file_handling.dart';
 
 import 'package:path_provider/path_provider.dart';
 
@@ -36,6 +37,7 @@ var classFilter;
 Key _searchKey = UniqueKey();
 bool _isContentExpanded = false;
 bool _autoAnalyse = false;
+bool _matchedOnly = false;
 
 class SearchTabWidget extends StatefulWidget {
   final String queryText;
@@ -86,7 +88,8 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
       if (_isVisible || !_isVisible) {
         print("Timer triggered");
         _readFile();
-        if (_fileContent != lastFileContent && _quickSettings[5] == true) {
+        if (_fileContent != lastFileContent &&
+            jsonSettings["auto_lookup"] == true) {
           print("File content changed, updating state");
           _updateState();
         } else {
@@ -504,15 +507,15 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
             children: [
               ElevatedButton(
                 onPressed: _startSearch,
-                child: Text('Start Search (match_phrase)'),
+                child: Text('Search (match_phrase)'),
               ),
               ElevatedButton(
                 onPressed: _startSearch2,
-                child: Text('Start Search (multi_match)'),
+                child: Text('Search (multi_match)'),
               ),
               ElevatedButton(
                 onPressed: _startSearch3,
-                child: Text('Start Search (match+matchphrase)'),
+                child: Text('Search (match+matchphrase)'),
               ),
 
               SizedBox(
@@ -566,6 +569,127 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                   },
                 ),
               ),
+
+              Row(
+                children: [
+                  Checkbox(
+                    tristate: true,
+                    value: jsonSettings['display_lang1'],
+                    onChanged: (bool? newValue) {
+                      setState(() {
+                        jsonSettings['display_lang1'] = newValue ?? false;
+                        writeSettingsToFile(jsonSettings);
+                        print(
+                          "checkbox" + jsonSettings['display_lang1'].toString(),
+                        );
+                      });
+                    },
+                  ),
+                  Text(
+                    jsonSettings['lang1'] ?? "N/A",
+                    style: TextStyle(
+                      fontSize: 16,
+                    ), // Optional: Adjust the font size
+                  ),
+
+                  Checkbox(
+                    tristate: true,
+                    value: jsonSettings['display_lang2'],
+                    onChanged: (bool? newValue) {
+                      setState(() {
+                        jsonSettings['display_lang2'] = newValue ?? false;
+                        writeSettingsToFile(jsonSettings);
+                        print(
+                          "checkbox" + jsonSettings['display_lang2'].toString(),
+                        );
+                      });
+                    },
+                  ),
+                  Text(
+                    jsonSettings['lang2'] ?? "N/A",
+                    style: TextStyle(
+                      fontSize: 16,
+                    ), // Optional: Adjust the font size
+                  ),
+
+                  Checkbox(
+                    tristate: true,
+                    value: jsonSettings['display_lang3'],
+                    onChanged: (bool? newValue) {
+                      setState(() {
+                        jsonSettings['display_lang3'] = newValue ?? false;
+                        writeSettingsToFile(jsonSettings);
+                        print(
+                          "checkbox" + jsonSettings['display_lang3'].toString(),
+                        );
+                      });
+                    },
+                  ),
+                  Text(
+                    jsonSettings['lang3'] ?? "N/A",
+                    style: TextStyle(
+                      fontSize: 16,
+                    ), // Optional: Adjust the font size
+                  ),
+                  Checkbox(
+                    tristate: true,
+                    value: _matchedOnly,
+                    onChanged: (bool? newValue) {
+                      setState(() {
+                        _matchedOnly = newValue ?? false;
+
+                        print("checkbox " + _matchedOnly.toString());
+                      });
+                    },
+                  ),
+                  Text(
+                    'Aligned',
+                    style: TextStyle(
+                      fontSize: 16,
+                    ), // Optional: Adjust the font size
+                  ),
+                  Checkbox(
+                    tristate: true,
+                    value: jsonSettings['display_meta'],
+                    onChanged: (bool? newValue) {
+                      setState(() {
+                        jsonSettings['display_meta'] = newValue ?? false;
+                        writeSettingsToFile(jsonSettings);
+                        print(
+                          "checkbox " + jsonSettings['display_meta'].toString(),
+                        );
+                      });
+                    },
+                  ),
+                  Text(
+                    'Meta',
+                    style: TextStyle(
+                      fontSize: 16,
+                    ), // Optional: Adjust the font size
+                  ),
+
+                  Checkbox(
+                    tristate: true,
+                    value: jsonSettings['auto_lookup'],
+                    onChanged: (bool? newValue) {
+                      setState(() {
+                        jsonSettings['auto_lookup'] = newValue ?? false;
+                        writeSettingsToFile(jsonSettings);
+                        print(
+                          "checkbox" + jsonSettings['auto_lookup'].toString(),
+                        );
+                      });
+                    },
+                  ),
+                  Text(
+                    "Auto",
+                    style: TextStyle(
+                      fontSize: 16,
+                    ), // Optional: Adjust the font size
+                  ),
+                ],
+              ),
+
               /*    SizedBox(
                 width: 150,
                 child: TextFormField(
@@ -680,6 +804,13 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(
+                  'Query Result: $decodedResults',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
               /*   Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Text(
@@ -724,7 +855,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _quickSettings[0]
+                            jsonSettings['display_lang1']
                                 ? Expanded(
                                   child: SelectableText.rich(
                                     style: TextStyle(fontSize: 18.0),
@@ -735,7 +866,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                 )
                                 : SizedBox.shrink(),
 
-                            _quickSettings[1]
+                            jsonSettings['display_lang2']
                                 ? Expanded(
                                   child: SelectableText(
                                     style: TextStyle(fontSize: 18.0),
@@ -745,7 +876,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                   ),
                                 )
                                 : SizedBox.shrink(),
-                            _quickSettings[2]
+                            jsonSettings['display_lang3']
                                 ? Expanded(
                                   child: SelectableText(
                                     style: TextStyle(fontSize: 18.0),
@@ -755,7 +886,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                   ),
                                 )
                                 : SizedBox.shrink(),
-                            _quickSettings[3]
+                            jsonSettings['display_meta']
                                 ? Expanded(
                                   child: Column(
                                     children: [
