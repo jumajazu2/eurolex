@@ -166,7 +166,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     queryPattern = query;
 
     var resultsOS = await sendToOpenSearch(
-      'http://$osServer/$activeIndex/_search',
+      'https://$osServer/$activeIndex/_search',
       [jsonEncode(query)],
     );
     var decodedResults = jsonDecode(resultsOS);

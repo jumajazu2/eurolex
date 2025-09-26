@@ -6,7 +6,6 @@ import 'dart:convert';
 import 'package:xml/xml.dart' as xml;
 import 'package:eurolex/logger.dart';
 
-
 import 'preparehtml.dart';
 
 var dirPointer = 0; // Pointer for directory processing
@@ -177,7 +176,7 @@ void openSearchUpload(json, indexName) {
   var bilingualData = json;
 
   // OpenSearch URL (adjust to your OpenSearch server)
-  String opensearchUrl = 'http://$osServer/opensearch/_bulk';
+  String opensearchUrl = 'https://$osServer/opensearch/_bulk';
 
   // Prepare the NDJSON data
   List<String> bulkData = [];
@@ -212,7 +211,7 @@ Future<String> sendToOpenSearch(String url, List<String> bulkData) async {
     //return; //temporary disable for testing
     final response = await http.post(
       Uri.parse(url),
-      headers: {"Content-Type": "application/x-ndjson"},
+      headers: {"Content-Type": "application/x-ndjson", 'x-api-key': '1234'},
       body: bulkData.join("\n") + "\n", // Join the bulk data with newlines
     );
 

@@ -35,7 +35,7 @@ var manualEextractedCelex = [''];
 var newIndexName = '';
 var manualCelex = [];
 //List<String> indices = ['*'];
-var server = 'http://$osServer';
+var server = 'https://$osServer';
 var manualServer;
 var celexRefs;
 
@@ -631,7 +631,7 @@ Future getListIndices(server) async {
   try {
     final response = await http.get(
       Uri.parse('$server/_cat/indices?h=index'),
-      headers: {'Authorization': basicAuth},
+      headers: {'Authorization': basicAuth, 'x-api-key': '1234'},
     );
     if (response.statusCode == 200) {
       String responseBody = response.body;
@@ -644,9 +644,9 @@ Future getListIndices(server) async {
                 (item) => item.contains('eurolex') || item.contains('imported'),
               ) // Keep only items containing "eurolex"
               .toList();
-      print('Indices loaded: $indices');
+      print('Indices loaded: $indices for server: $server');
 
-      print('Indices loaded successfully: $responseBody');
+      print('Indices for server $server loaded successfully: $responseBody');
 
       return responseBody; // Return the indices as a string
     } else {

@@ -10,8 +10,8 @@ import 'package:eurolex/search.dart';
 import 'package:eurolex/analyser.dart';
 
 //String osServer = 'localhost:9200'; // add to Settings or Autolookup
-//String osServer = '54.166.214.181:9200'; // AWS server
-String osServer = '192.168.1.14:9200';
+String osServer = 'search.pts-translation.sk'; // AWS server
+//String osServer = '192.168.1.14:9200';
 List<String> indices = ['*'];
 
 Map<String, dynamic> jsonSettings = {};

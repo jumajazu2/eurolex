@@ -18,7 +18,7 @@ Future<List> searchQuery(query, queryString) async {
   queryPattern = query;
   print("In ANALYSER searchQuery, query: $query, queryString: $queryString");
   var resultsOS = await sendToOpenSearch(
-    'http://$osServer/$activeIndex/_search',
+    'https://$osServer/$activeIndex/_search',
     [jsonEncode(query)],
   );
   var decodedResults = jsonDecode(resultsOS);
@@ -310,8 +310,8 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
 }
 
 Future<Map> searchNGrams(List<dynamic> ngrams) async {
-  final opensearchUrl = Uri.parse("http://$osServer/$activeIndex/_msearch");
-  final headers = {"Content-Type": "application/x-ndjson"};
+  final opensearchUrl = Uri.parse("https://$osServer/$activeIndex/_msearch");
+  final headers = {"Content-Type": "application/x-ndjson", 'x-api-key': '1234'};
 
   // Step 1: Build NDJSON request body
   final buffer = StringBuffer();

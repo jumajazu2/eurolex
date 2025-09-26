@@ -106,11 +106,10 @@ Future getContext(celex, pointer) async {
     "Active index: $activeIndex, getting context for Celex: $celex, pointer: $pointer, gte: $gte, lte: $lte, query: $query",
   );
   var resultsContext = await sendToOpenSearch(
-    'http://$osServer/$activeIndex/_search',
+    'https://$osServer/$activeIndex/_search',
     [jsonEncode(query)],
   );
   var decodedResults = jsonDecode(resultsContext);
-  
 
   var hits = decodedResults['hits']['hits'] as List;
 
