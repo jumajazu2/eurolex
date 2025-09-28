@@ -706,38 +706,8 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
             ],
           ),
         ),
+
         // Quick settings checkboxes
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: List.generate(6, (index) {
-              return Row(
-                children: [
-                  Checkbox(
-                    value: _quickSettings[index],
-                    onChanged: (val) {
-                      setState(() {
-                        _quickSettings[index] = val ?? false;
-                      });
-                    },
-                  ),
-                  index == 0 ? Text('EN') : SizedBox.shrink(),
-                  index == 1 ? Text('SK') : SizedBox.shrink(),
-                  index == 2 ? Text('CZ') : SizedBox.shrink(),
-                  index == 3 ? Text('Metadata') : SizedBox.shrink(),
-                  index == 4
-                      ? Text('Matched Paragraphs Only')
-                      : SizedBox.shrink(),
-                  index == 5 ? Text('Auto Analyse') : SizedBox.shrink(),
-                ],
-              );
-            }),
-
-            //add three text fields to the right of the line with checkboxes
-          ),
-        ),
-
         Container(
           color: const Color.fromARGB(200, 210, 238, 241),
           child: ExpansionTile(
@@ -850,6 +820,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                       horizontal: 10.0,
                       vertical: 5.0,
                     ),
+
                     child: Column(
                       children: [
                         Row(
@@ -857,137 +828,182 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                           children: [
                             jsonSettings['display_lang1']
                                 ? Expanded(
-                                  child: SelectableText.rich(
-                                    style: TextStyle(fontSize: 18.0),
-                                    enHighlightedResults.length > index
-                                        ? enHighlightedResults[index]
-                                        : '',
+                                  flex: 4, // Language columns are wider
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8.0,
+                                    ),
+                                    child: SelectableText.rich(
+                                      style: TextStyle(fontSize: 18.0),
+                                      enHighlightedResults.length > index
+                                          ? enHighlightedResults[index]
+                                          : TextSpan(),
+                                    ),
                                   ),
                                 )
                                 : SizedBox.shrink(),
 
                             jsonSettings['display_lang2']
                                 ? Expanded(
-                                  child: SelectableText(
-                                    style: TextStyle(fontSize: 18.0),
-                                    skResults.length > index
-                                        ? skResults[index]
-                                        : '',
+                                  flex: 4, // Language columns are wider
+                                  child: Container(
+                                    // color:
+                                    //     Colors
+                                    //        .grey[100], // Subtle shading for differentiation
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8.0,
+                                    ),
+                                    child: SelectableText(
+                                      style: TextStyle(fontSize: 18.0),
+                                      skResults.length > index
+                                          ? skResults[index]
+                                          : '',
+                                    ),
                                   ),
                                 )
                                 : SizedBox.shrink(),
                             jsonSettings['display_lang3']
                                 ? Expanded(
-                                  child: SelectableText(
-                                    style: TextStyle(fontSize: 18.0),
-                                    czResults.length > index
-                                        ? czResults[index]
-                                        : '',
+                                  flex: 4, // Language columns are wider
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8.0,
+                                    ),
+                                    child: SelectableText(
+                                      style: TextStyle(fontSize: 18.0),
+                                      czResults.length > index
+                                          ? czResults[index]
+                                          : '',
+                                    ),
                                   ),
                                 )
                                 : SizedBox.shrink(),
                             jsonSettings['display_meta']
                                 ? Expanded(
-                                  child: Column(
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Text("Celex: "),
-                                          SelectableText(
-                                            metaCelex.length > index
-                                                ? metaCelex[index]
-                                                : '',
-                                          ),
-                                        ],
-                                      ),
-                                      // If you want to show czResults here as well, add another widget:
-                                      Row(
-                                        children: [
-                                          Text("Cellar: "),
-                                          SelectableText(
-                                            metaCellar.length > index
-                                                ? metaCellar[index]
-                                                : '',
-                                          ),
-                                        ],
-                                      ),
-
-                                      Row(
-                                        children: [
-                                          Text("Date: "),
-                                          SelectableText(
-                                            docDate.length > index
-                                                ? docDate[index]
-                                                : '',
-                                          ),
-                                        ],
-                                      ),
-
-                                      Row(
-                                        children: [
-                                          Text("Class: "),
-                                          SelectableText(
-                                            className.length > index
-                                                ? className[index]
-                                                : '',
-                                          ),
-                                        ],
-                                      ),
-                                      Row(
-                                        children: [
-                                          Text("Unmatched paragraphs: "),
-                                          SelectableText(
-                                            parNotMatched.length > index
-                                                ? parNotMatched[index]
-                                                : '',
-                                          ),
-                                        ],
-                                      ),
-
-                                      Row(
-                                        children: [
-                                          Text("Open URL: "),
-                                          GestureDetector(
-                                            onTap: () {
-                                              // Handle the tap event here, e.g. open the link in a browser
-                                              launchUrl(
-                                                Uri.parse(
-                                                  'http://eur-lex.europa.eu/legal-content/EN-SK/TXT/?uri=CELEX:${metaCelex[index]}',
-                                                ),
-                                              );
-                                            },
-                                            child: Text(
-                                              'EN-SK',
-                                              style: TextStyle(
-                                                decoration:
-                                                    TextDecoration.underline,
-                                                color: Colors.blue,
+                                  flex: 2, // Metadata column is narrower
+                                  child: Container(
+                                    // Subtle shading for differentiation
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8.0,
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Text("Celex: "),
+                                            Flexible(
+                                              child: SelectableText(
+                                                metaCelex.length > index
+                                                    ? metaCelex[index]
+                                                    : '',
+                                                // overflow: TextOverflow.ellipsis,
                                               ),
                                             ),
-                                          ),
-                                          SizedBox(width: 10),
-
-                                          GestureDetector(
-                                            onTap: () {
-                                              // Handle the tap event here, e.g. open the link in a browser
-                                              launchUrl(
-                                                Uri.parse(
-                                                  'http://eur-lex.europa.eu/legal-content/EN-CS/TXT/?uri=CELEX:${metaCelex[index]}',
-                                                ),
-                                              );
-                                            },
-                                            child: Text(
-                                              'EN-CZ',
-                                              style: TextStyle(
-                                                decoration:
-                                                    TextDecoration.underline,
-                                                color: Colors.blue,
+                                          ],
+                                        ),
+                                        // If you want to show czResults here as well, add another widget:
+                                        Row(
+                                          children: [
+                                            Text("Cellar: "),
+                                            Flexible(
+                                              child: SelectableText(
+                                                metaCellar.length > index
+                                                    ? metaCellar[index]
+                                                    : '',
+                                                //  overflow: TextOverflow.ellipsis,
                                               ),
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
+                                          ],
+                                        ),
+
+                                        Row(
+                                          children: [
+                                            Text("Date: "),
+                                            Flexible(
+                                              child: SelectableText(
+                                                docDate.length > index
+                                                    ? docDate[index]
+                                                    : '',
+                                                //  overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+
+                                        Row(
+                                          children: [
+                                            Text("Class: "),
+                                            Flexible(
+                                              child: SelectableText(
+                                                className.length > index
+                                                    ? className[index]
+                                                    : '',
+                                                // overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        Row(
+                                          children: [
+                                            Text("Unmatched paragraphs: "),
+                                            Flexible(
+                                              child: SelectableText(
+                                                parNotMatched.length > index
+                                                    ? parNotMatched[index]
+                                                    : '',
+                                                // overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+
+                                        Row(
+                                          children: [
+                                            Text("Open URL: "),
+                                            GestureDetector(
+                                              onTap: () {
+                                                // Handle the tap event here, e.g. open the link in a browser
+                                                launchUrl(
+                                                  Uri.parse(
+                                                    'http://eur-lex.europa.eu/legal-content/EN-SK/TXT/?uri=CELEX:${metaCelex[index]}',
+                                                  ),
+                                                );
+                                              },
+                                              child: Text(
+                                                'EN-SK',
+                                                style: TextStyle(
+                                                  decoration:
+                                                      TextDecoration.underline,
+                                                  color: Colors.blue,
+                                                ),
+                                              ),
+                                            ),
+                                            SizedBox(width: 10),
+
+                                            GestureDetector(
+                                              onTap: () {
+                                                // Handle the tap event here, e.g. open the link in a browser
+                                                launchUrl(
+                                                  Uri.parse(
+                                                    'http://eur-lex.europa.eu/legal-content/EN-CS/TXT/?uri=CELEX:${metaCelex[index]}',
+                                                  ),
+                                                );
+                                              },
+                                              child: Text(
+                                                'EN-CZ',
+                                                style: TextStyle(
+                                                  decoration:
+                                                      TextDecoration.underline,
+                                                  color: Colors.blue,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 )
                                 : SizedBox.shrink(),
@@ -1051,48 +1067,57 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                                 CrossAxisAlignment.start,
 
                                             children: [
-                                              Expanded(
-                                                child: SelectableText(
-                                                  style: TextStyle(
-                                                    fontSize: 18.0,
-                                                  ),
-                                                  contextEnSkCz[0].length >
-                                                          index
-                                                      ? contextEnSkCz[0][index]
-                                                      : '',
-                                                ),
-                                              ),
-                                              Expanded(
-                                                child: SelectableText(
-                                                  style: TextStyle(
-                                                    fontSize: 18.0,
-                                                  ),
-                                                  contextEnSkCz[1].length >
-                                                          index
-                                                      ? contextEnSkCz[1][index]
-                                                      : '',
-                                                ),
-                                              ),
-                                              Expanded(
-                                                child: SelectableText(
-                                                  style: TextStyle(
-                                                    fontSize: 18.0,
-                                                  ),
-                                                  contextEnSkCz[2].length >
-                                                          index
-                                                      ? contextEnSkCz[2][index]
-                                                      : '',
-                                                ),
-                                              ),
-
-                                              Expanded(
-                                                child: SelectableText(
-                                                  style: TextStyle(
-                                                    fontSize: 18.0,
-                                                  ),
-                                                  '',
-                                                ),
-                                              ),
+                                              jsonSettings['display_lang1'] ==
+                                                      true
+                                                  ? Expanded(
+                                                    child: SelectableText(
+                                                      style: TextStyle(
+                                                        fontSize: 18.0,
+                                                      ),
+                                                      (jsonSettings['display_lang1'] ==
+                                                                  true &&
+                                                              contextEnSkCz[0]
+                                                                      .length >
+                                                                  index)
+                                                          ? contextEnSkCz[0][index]
+                                                          : '',
+                                                    ),
+                                                  )
+                                                  : SizedBox.shrink(),
+                                              jsonSettings['display_lang2'] ==
+                                                      true
+                                                  ? Expanded(
+                                                    child: SelectableText(
+                                                      style: TextStyle(
+                                                        fontSize: 18.0,
+                                                      ),
+                                                      (jsonSettings['display_lang2'] ==
+                                                                  true &&
+                                                              contextEnSkCz[1]
+                                                                      .length >
+                                                                  index)
+                                                          ? contextEnSkCz[1][index]
+                                                          : '',
+                                                    ),
+                                                  )
+                                                  : SizedBox.shrink(),
+                                              jsonSettings['display_lang3'] ==
+                                                      true
+                                                  ? Expanded(
+                                                    child: SelectableText(
+                                                      style: TextStyle(
+                                                        fontSize: 18.0,
+                                                      ),
+                                                      (jsonSettings['display_lang3'] ==
+                                                                  true &&
+                                                              contextEnSkCz[2]
+                                                                      .length >
+                                                                  index)
+                                                          ? contextEnSkCz[2][index]
+                                                          : '',
+                                                    ),
+                                                  )
+                                                  : SizedBox.shrink(),
                                             ],
                                           ),
                                         ),
