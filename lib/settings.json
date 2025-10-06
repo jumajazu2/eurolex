@@ -6,9 +6,9 @@
   "lang3": "CZ",
   "display_lang1": true,
   "display_lang2": true,
-  "display_lang3": true,
+  "display_lang3": false,
   "display_meta": true,
-  "auto_lookup": true,
+  "auto_lookup": false,
   "log_level": "info",
   "max_log_size": 999999,
   "access_key": "trial"

@@ -4,8 +4,36 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Search EU Law</title>
-  <style>
+  <title>Eurolex: EU Law Toolbox for Translators, Linguists & Lawyers</title>
+
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="Eurolex is an advanced EU Law Toolbox for translators, linguists, and lawyers. Unlock powerful, affordable full-text search across Union law with Trados Studio integration, dual access via web form and Windows app and customizable options.">
+  <meta name="keywords" content="EUR-Lex search, EU law, legal translation, translation memory, CAT tool, terminology, Juremy, legal tech, Slovak, Czech, English, EU legislation search, EU Law Toolbox, translators, linguists, lawyers, machine translation post-editing, legal drafting, legal analysis, affordable Juremy alternative, právny preklad, prekladateľská pamäť, legislatíva EÚ, nástroje pre prekladateľov, právní překlad, překladatelská paměť, legislativa EU, nástroje pro překladatele">
+
+  <!-- Open Graph / Facebook / LinkedIn -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Eurolex: EU Law Toolbox for Translators, Linguists & Lawyers">
+  <meta property="og:description" content="An advanced search tool for professionals working with EU law, offering powerful features for legal translation and research.">
+
+  <!-- Hreflang tags for multilingual targeting -->
+  <link rel="alternate" hreflang="en" href="https://www.pts-translation.sk/opensearch.html" />
+  <link rel="alternate" hreflang="sk" href="https://www.pts-translation.sk/opensearch.html" />
+  <link rel="alternate" hreflang="cs" href="https://www.pts-translation.sk/opensearch.html" />
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-66JRRH14F8"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag() { dataLayer.push(arguments); }
+  gtag('js', new Date());
+
+  gtag('config', 'G-66JRRH14F8');
+</script>
+
+<script async
+  src="https://js.stripe.com/v3/buy-button.js">
+</script>
+
+<style>
     :root {
       --primary-color: #0056b3;
       --primary-hover-color: #004494;
@@ -206,7 +234,7 @@
       <div>To obtain the full version visit <a href="https://www.pts-translation.sk/" target="_blank" rel="noopener noreferrer">this page</a>.</div>
     </div>
 
-    <h2>Search EU Law</h2>
+    <h1>Eurolex: EU Law Toolbox</h1>
 
     <div class="search-controls">
       <input id="q" type="text" placeholder="Enter search phrase..." />
@@ -218,25 +246,65 @@
     <div style="margin-top: 10px; font-size: 0.9rem;">
       <input type="checkbox" id="highlightToggle" checked style="vertical-align: middle;">
       <label for="highlightToggle" style="vertical-align: middle;">Highlight results</label>
+      <input type="checkbox" id="deduplicateToggle" checked style="vertical-align: middle; margin-left: 20px;">
+      <label for="deduplicateToggle" style="vertical-align: middle;">Deduplicate results</label>
     </div>
 
-    <div id="results" style="margin-top: 25px;"></div>
+    <details style="margin-top: 20px; background-color: #e9ecef; padding: 10px; border-radius: 6px;">
+      <summary style="cursor: pointer; font-weight: 500;">Technical Details</summary>
+      <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid var(--medium-gray);">
+        <div style="margin-bottom: 10px;">
+          <strong>Last Query URL:</strong>
+          <div id="lastQueryUrl" style="font-family: monospace; font-size: 0.8rem; word-break: break-all; background: #fff; padding: 5px; border-radius: 4px;">N/A</div>
+        </div>
+        <div style="margin-bottom: 10px;">
+          <strong>Last Query Payload:</strong>
+          <pre id="lastQueryPayload" style="font-family: monospace; font-size: 0.8rem; word-break: break-all; background: #fff; padding: 5px; border-radius: 4px; white-space: pre-wrap;">N/A</pre>
+        </div>
+        <div>
+          <strong>API Key Management:</strong>
+          <div id="apiKeySection" style="display: flex; align-items: center; gap: 10px; margin-top: 5px;">
+            <input type="text" id="apiKeyInput" placeholder="Enter new API key" style="flex-grow: 0; width: 300px;">
+            <button id="setApiKeyBtn">Set Key</button>
+            <span style="font-size: 0.9rem;">Current: <strong id="currentApiKey"></strong></span>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <div id="quotaInfo" style="margin-top: 15px; font-size: 0.9rem; color: var(--dark-gray);"></div>
+
+    <div id="results" style="margin-top: 20px;"></div>
   </div>
 
   <script>
     const OPENSEARCH_URL = 'https://search.pts-translation.sk';
     const DEFAULT_INDEX = '_all';
-    
+    //const DEFAULT_INDEX = 'eurolex4';
+    let apiKey = 'trial'; // Default API key
     let userIP = 'N/A';
     let userFingerprint = 'N/A';
+    let lastQueryUrl = 'N/A';
+    let lastQueryPayload = 'N/A';
+    let searchCount = 0; // Counter for session queries
 
     const qInput = document.getElementById('q');
     const resultsDiv = document.getElementById('results');
+    const quotaInfoDiv = document.getElementById('quotaInfo'); // This is correct
 
     document.getElementById('searchBtn1').addEventListener('click', () => doSearch("phraseBoost"));
     document.getElementById('searchBtn2').addEventListener('click', () => doSearch("multiFuzzy"));
     document.getElementById('searchBtn3').addEventListener('click', () => doSearch("combined"));
     document.getElementById('clearBtn').addEventListener('click', () => { qInput.value = ''; resultsDiv.innerHTML = ''; });
+    document.getElementById('setApiKeyBtn').addEventListener('click', () => {
+      const newKey = document.getElementById('apiKeyInput').value.trim();
+      if (newKey) {
+        apiKey = newKey;
+        searchCount = 0; // Reset counter for new key
+        updateQuotaDisplay();
+        updateTechnicalDetails();
+      }
+    });
 
     qInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doSearch("phraseBoost"); });
 
@@ -249,7 +317,12 @@
         ip: userIP,
         fingerprint: userFingerprint,
         timestamp: new Date().toISOString(),
-        query: q
+        //query: q
+      };
+
+      if (q) {
+        searchCount++;
+        updateQuotaDisplay();
       };
 
       let body;
@@ -265,8 +338,7 @@
               ]
             }
           },
-          size: 50,
-          "collapse": { "field": "dir_id.keyword" }
+          size: 50
         };
       } else if (mode === "multiFuzzy") {
         body = {
@@ -285,8 +357,7 @@
               ]
             }
           },
-          size: 50,
-          "collapse": { "field": "dir_id.keyword" }
+          size: 50
         };
       } else if (mode === "combined") {
         body = {
@@ -303,23 +374,73 @@
               minimum_should_match: 1
             }
           },
-          size: 25,
-          "collapse": { "field": "dir_id.keyword" }
+          size: 25
         };
       }
+
+      // Conditionally add de-duplication based on the checkbox
+      const deduplicate = document.getElementById('deduplicateToggle').checked;
+      if (deduplicate && q) { // Only collapse if there's a query
+        body.collapse = { "field": "dir_id.keyword" };
+      }
+
+      lastQueryPayload = JSON.stringify(body, null, 2); // Store the formatted payload
 
       resultsDiv.innerHTML = '<p class="muted">Searching…</p>';
 
       try {
         const url = `${OPENSEARCH_URL}/${encodeURIComponent(index)}/_search`;
+        lastQueryUrl = url; // Store the URL
         const headers = {
           'Content-Type': 'application/json',
           'x-client-context': JSON.stringify(clientContext), // Add context as a header
-          'x-api-key': '1234'
+          'x-api-key': apiKey
         };
         const resp = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+
+        if (resp.status === 429) {
+          const errorData = await resp.json();
+          const quotaHtml = `
+            <div style="text-align: center; padding: 20px; background-color: #fff3f3; border: 1px solid #f5c6cb; border-radius: 8px;">
+              <p style="color: #721c24; font-weight: bold; font-size: 1.2rem; margin-bottom: 20px;">${escapeHtml(errorData.error)}</p>
+              
+              <div style="margin-bottom: 25px;">
+                <p>If you have a subscription key, please enter it below to continue:</p>
+                <div style="display: flex; justify-content: center; gap: 10px; margin-top: 10px;">
+                  <input type="text" id="newApiKeyInput" placeholder="Enter subscription key" style="flex-grow: 0; width: 300px;">
+                  <button id="updateApiKeyBtn">Submit Key</button>
+                </div>
+              </div>
+
+              <div style="display: flex; justify-content: center; gap: 10px; margin-top: 15px;">
+                <stripe-buy-button
+                  buy-button-id="buy_btn_1SEQa2EoCB1sdCAHJm9xEvSs"
+                  publishable-key="pk_live_51SDXiqEoCB1sdCAHcZ6FXuvXxaP4IGTU3hYSON6pUtsZwLmbXLfur4XsOi42feOBdOgwireE4D6ibWtVSPneMm2R00sloxPWJW"
+                ></stripe-buy-button>
+              </div>
+              <div style="margin-top: 15px; font-size: 0.9rem; color: var(--dark-gray);"><strong>No subscription yet?</strong> The personal subscription key will be emailed to you within 24 hours, but you will be able to use the service immediately with a temporary key.</div>
+            </div>
+          `;
+          resultsDiv.innerHTML = quotaHtml;
+          document.getElementById('updateApiKeyBtn').addEventListener('click', () => {
+            const newKey = document.getElementById('newApiKeyInput').value.trim();
+            if (newKey) {
+              apiKey = newKey;
+              searchCount = 0; // Reset counter for new key
+              updateTechnicalDetails();
+              resultsDiv.innerHTML = '<p class="muted">API key updated. Please try your search again.</p>';
+            }
+          });
+          return;
+        }
+
+        if (!resp.ok) {
+          throw new Error(`HTTP error! status: ${resp.status}`);
+        }
+
         const data = await resp.json();
         renderResults(data, q);
+        updateTechnicalDetails();
       } catch (err) {
         resultsDiv.innerHTML = `<pre style="color:darkred">Error:\n${escapeHtml(String(err))}</pre>`;
       }
@@ -404,6 +525,28 @@
       return escapeHtml(highlightedText).replace(/&lt;mark&gt;/g, '<mark>').replace(/&lt;\/mark&gt;/g, '</mark>');
     }
 
+    function updateQuotaDisplay() {
+      if (!quotaInfoDiv) return;
+      if (apiKey === 'trial') {
+        quotaInfoDiv.textContent = `Daily usage: ${searchCount} / 7 queries.`;
+        quotaInfoDiv.style.fontWeight = searchCount >= 7 ? 'bold' : 'normal';
+      } else {
+        quotaInfoDiv.textContent = `Queries used: ${searchCount} (As per subscription)`;
+        quotaInfoDiv.style.color = 'var(--dark-gray)';
+      }
+    }
+
+    function updateTechnicalDetails() {
+      document.getElementById('lastQueryUrl').textContent = lastQueryUrl;
+      document.getElementById('lastQueryPayload').textContent = lastQueryPayload;
+      const apiKeyDisplay = document.getElementById('currentApiKey');
+      if (apiKey === 'trial') {
+        apiKeyDisplay.textContent = 'trial';
+      } else {
+        apiKeyDisplay.textContent = `${apiKey.substring(0, 4)}...`;
+      }
+    }
+
     function generateFingerprint() {
       const components = [
         navigator.userAgent,
@@ -445,6 +588,8 @@
     (async () => {
       userFingerprint = generateFingerprint();
       await displayUserInfo();
+      updateTechnicalDetails();
+      updateQuotaDisplay(); // Initialize quota display on page load
     })();
   </script>
 </body>

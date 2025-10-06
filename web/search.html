@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>EU Law Search - LegisTracerEU</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="Search EU legislation with LegisTracerEU - Professional EU Law search tool for translators and lawyers." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-66JRRH14F8"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+
+    gtag('config', 'G-66JRRH14F8');
+  </script>
+  
+  <style>
+    body {
+      background: var(--color-bg);
+      margin: 0;
+      font-family: var(--font-sans);
+    }
+    
+    .search-page-header {
+      background: var(--color-surface);
+      border-bottom: 1px solid var(--color-border);
+      padding: var(--space-m) 0;
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .search-page-header .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .search-page-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: var(--space-l);
+    }
+    
+    .search-intro {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-l);
+      padding: var(--space-l);
+      margin-bottom: var(--space-l);
+      text-align: center;
+    }
+    
+    .search-intro h1 {
+      color: var(--color-accent-solid);
+      margin-bottom: var(--space-m);
+    }
+    
+    .full-search-demo {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-l);
+      padding: var(--space-xl);
+      margin-bottom: var(--space-l);
+    }
+  </style>
+</head>
+<body>
+  <header class="search-page-header">
+    <div class="container">
+      <a class="brand" href="index.html">
+        <span class="brand__logo" aria-hidden="true">⚖️</span>
+        <span class="brand__text">LegisTracerEU</span>
+      </a>
+      <nav>
+        <a href="index.html" class="btn ghost small">← Back to Home</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="search-page-content">
+    <div class="search-intro">
+      <h1>EU Law Search</h1>
+      <p>Fast full-text search in the bulk of EU law. Search through tens of thousands of EU regulations and directives.</p>
+    </div>
+
+    <div class="full-search-demo">
+      <div class="demo-notice">
+        <div><strong>Trial Version - 7 searches per day</strong></div>
+        <div>The legal content is based on the authoritative EUR-Lex portal and IATE terminology system.</div>
+        <div>EU Law data reused under <a href="https://eur-lex.europa.eu/content/help/data-reuse/reuse-contents-eurlex-details.html" target="_blank" rel="noopener noreferrer">European Commission's reuse policy</a>.</div>
+        <div>For each search result, you can see it in context with a direct link to the full document on EUR-Lex.</div>
+      </div>
+
+      <div class="search-demo">
+        <div class="search-controls">
+          <input id="demoSearch" type="text" placeholder="Enter search phrase (e.g., GDPR, banking supervision, climate change)..." />
+          <button id="searchBtn1" title="Performs a precise phrase search on English text.">Search (English only)</button>
+          <button id="searchBtn2" title="Performs a fuzzy search across English, Slovak, and Czech.">Search (EN, SK, CZ)</button>
+          <button id="searchBtn3" title="Combines phrase and fuzzy matching across all three languages.">Search (Combined)</button>
+          <button id="clearBtn">Clear</button>
+        </div>
+        
+        <div class="search-options">
+          <label><input type="checkbox" id="highlightToggle" checked> Highlight results</label>
+          <label><input type="checkbox" id="deduplicateToggle" checked> Deduplicate results</label>
+        </div>
+
+        <div id="quotaInfo" class="quota-display"></div>
+        <div id="results" class="search-results"></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
