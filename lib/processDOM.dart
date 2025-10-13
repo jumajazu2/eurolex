@@ -94,7 +94,7 @@ List<Map<String, dynamic>> extractParagraphs(
   var documentEN = html_parser.parse(htmlEN);
   var documentSK = html_parser.parse(htmlSK);
   var documentCZ = html_parser.parse(htmlCZ);
-  var paragraphsEN = documentEN.getElementsByTagName('p');
+  var paragraphsEN = documentEN.getElementsByTagName('p'); //this extracts all <p> elements, but we also need to extract bulleted lists which have a different tag
   var paragraphsSK = documentSK.getElementsByTagName('p');
   var paragraphsCZ = documentCZ.getElementsByTagName('p');
 

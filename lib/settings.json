@@ -8,7 +8,7 @@
   "display_lang2": true,
   "display_lang3": false,
   "display_meta": true,
-  "auto_lookup": false,
+  "auto_lookup": true,
   "log_level": "info",
   "max_log_size": 999999,
   "access_key": "trial"

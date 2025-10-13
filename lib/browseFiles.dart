@@ -48,8 +48,7 @@ void listFilesInDirEN() async {
       if (files.isEmpty) {
         print('Directory is accessible but contains no files.');
       } else {
-        int startIndex =
-            18410; //to restart data processing into OS after a failure
+        int startIndex = 0; //to restart data processing into OS after a failure
         for (int i = startIndex; i < files.length; i++) {
           dirPointer = i; // Update the global pointer for directory processing
           var file = files[i]; //first level of subfolders
@@ -162,7 +161,7 @@ void listFilesInDirEN() async {
             czFile,
             mtdFile,
             dirID,
-            indexName
+            indexName,
           );
 
           print(

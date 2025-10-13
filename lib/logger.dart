@@ -3,11 +3,19 @@ import 'package:path_provider/path_provider.dart';
 
 class LogManager {
   static const int maxLogSize = 90000000; // bytes (adjust as needed)
+
+  // Backward compatibility: keep existing static name
   static const String fileName = "OSJSON-log.txt";
+
+  // New per-instance filename (defaults to the static one)
+  final String _fileName;
+
+  const LogManager({String? fileName})
+    : _fileName = fileName ?? LogManager.fileName;
 
   Future<String> get _logFilePath async {
     final directory = await getApplicationDocumentsDirectory();
-    return "${directory.path}/$fileName";
+    return "${directory.path}/$_fileName";
   }
 
   Future<File> get _logFile async {
@@ -27,10 +35,8 @@ class LogManager {
     String updatedContent = currentContent + logEntry;
 
     if (updatedContent.length > maxLogSize) {
-      // Trim oldest part to maintain max size
       int trimFrom = updatedContent.length - maxLogSize;
       updatedContent = updatedContent.substring(trimFrom);
-      // Optional: start from next newline to avoid partial log line
       int newLineIndex = updatedContent.indexOf("\n");
       if (newLineIndex != -1) {
         updatedContent = updatedContent.substring(newLineIndex + 1);
@@ -48,7 +54,6 @@ class LogManager {
     return "";
   }
 }
-
 
 /*
 HOW TO USE

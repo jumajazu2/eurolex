@@ -15,6 +15,7 @@ import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
 import 'package:eurolex/main.dart';
 import 'package:path/path.dart' as path;
+import 'package:eurolex/bulkupload.dart';
 
 class DataUploadPage extends StatelessWidget {
   @override
@@ -41,7 +42,7 @@ class DataUploadPage extends StatelessWidget {
                 ),
                 Tab(
                   child: Text(
-                    'Add Data Dump Data',
+                    'Upload Eur-LexData Dump Files',
                     style: TextStyle(fontSize: 14), // Set the desired font size
                   ),
                 ),
@@ -53,7 +54,7 @@ class DataUploadPage extends StatelessWidget {
                 children: [
                   Center(child: manualCelexList()),
                   Center(child: FilePickerButton2()),
-                  Center(child: Text('Content for Tab 3')),
+                  Center(child: DataUploadTab()),
                 ],
               ),
             ),
