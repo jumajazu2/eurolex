@@ -1,12 +1,14 @@
 //import 'dart:ffi';
 import 'package:eurolex/main.dart';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
 import 'dart:convert';
 import 'package:xml/xml.dart' as xml;
 import 'package:eurolex/logger.dart';
-
-import 'preparehtml.dart';
+import 'package:html/dom.dart' as dom;
+import 'package:eurolex/preparehtml.dart';
+import 'package:eurolex/preparehtml.dart' show loadHtmlFromCelex;
 
 var dirPointer = 0; // Pointer for directory processing
 
@@ -34,6 +36,7 @@ List<Map<String, dynamic>> extractParagraphs(
 
   if (htmlEN.isEmpty || htmlSK.isEmpty || htmlCZ.isEmpty) {
     print('One or more input strings are empty.');
+    final logger = LogManager();
     logger.log(
       "$dirPointer, $dirID, NotProcessed, One or more input strings are empty",
     );
@@ -80,7 +83,7 @@ List<Map<String, dynamic>> extractParagraphs(
       htmlSKFileNameMod != htmlCZFileNameMod ||
       htmlENFileNameMod != htmlCZFileNameMod) {
     print('File names do not match!');
-
+    final logger = LogManager();
     logger.log(
       "$dirPointer, $dirID, Processed, Celex: $celex, File names do not match-set warning flag namesNotMatched",
     );
@@ -94,7 +97,9 @@ List<Map<String, dynamic>> extractParagraphs(
   var documentEN = html_parser.parse(htmlEN);
   var documentSK = html_parser.parse(htmlSK);
   var documentCZ = html_parser.parse(htmlCZ);
-  var paragraphsEN = documentEN.getElementsByTagName('p'); //this extracts all <p> elements, but we also need to extract bulleted lists which have a different tag
+  var paragraphsEN = documentEN.getElementsByTagName(
+    'p',
+  ); //this extracts all <p> elements, but we also need to extract bulleted lists which have a different tag
   var paragraphsSK = documentSK.getElementsByTagName('p');
   var paragraphsCZ = documentCZ.getElementsByTagName('p');
 
@@ -113,10 +118,6 @@ List<Map<String, dynamic>> extractParagraphs(
   if (paragraphsEN.length != paragraphsSK.length) {
     print(
       'Paragraphs in EN and SK do not match in length, files not identical! $dirPointer, $dirID',
-    );
-
-    logger.log(
-      "$dirPointer, $dirID, Processed, Celex: $celex, parNotMatched, EN $htmlENFileNameMod ${paragraphsEN.length} SK $htmlSKFileNameMod ${paragraphsSK.length}",
     );
 
     paragraphsNotMatched = true;
@@ -161,15 +162,99 @@ List<Map<String, dynamic>> extractParagraphs(
   jsonOutput = jsonEncode(jsonData);
   openSearchUpload(jsonData, indexName);
 
-  logger.log(
-    "$dirPointer, $dirID, Processed, Celex: $celex, status_ok, $htmlENFileName",
-  );
+  final logger = LogManager(fileName: '${fileSafeStamp}_$indexName.log');
+  final status = paragraphsNotMatched ? 'parNotMatched' : 'status_ok';
+  final msg =
+      '$indexName, $dirPointer, $dirID, Processed, Celex: $celex, '
+      '$status, EN $htmlENFileNameMod ${paragraphsEN.length} '
+      'SK $htmlSKFileNameMod ${paragraphsSK.length}';
+
+  logger.log(msg);
   //JSOn ready, now turning in into NDJSON + action part
   print("Extract paragraphs uploaded to Open Search>COMPLETED");
   return jsonData;
 }
 
-//https://eur-lex.europa.eu/legal-content/EN-SK/TXT/?uri=CELEX:32022D2391
+//Function to parse HTML content as String and return list<Element>
+List<dom.Element> parseHtmlContent(String htmlContent) {
+  var document = html_parser.parse(htmlContent);
+  var paragraphs = document.getElementsByTagName('p');
+  return paragraphs;
+}
+//final List<String> paragraphsText = paragraphs.map((e) => e.text.trim()).toList();
+
+//********************************************************* */
+List<dom.Element> collectSimple(dom.Document doc) =>
+    doc.querySelectorAll('p, td, span, div');
+
+// De-duplicated blocks (skips descendants after capturing p/td/div.list; spans only if not inside those)
+List<dom.Element> collectBlocks(dom.Document doc) {
+  final out = <dom.Element>[];
+  void walk(dom.Element el, {bool inBlock = false}) {
+    final name = el.localName;
+    final isList = name == 'div';
+    final isP = name == 'p';
+    final isTd = name == 'td';
+    final isSpan = name == 'span';
+    final capture = (isList || isP || isTd || (!inBlock && isSpan));
+    if (capture) {
+      out.add(el);
+      if (isList || isP || isTd) {
+        for (final c in el.children) {
+          walk(c, inBlock: true);
+        }
+        return;
+      }
+    }
+    for (final c in el.children) {
+      walk(c, inBlock: inBlock);
+    }
+  }
+
+  final body = doc.body;
+  if (body != null) walk(body);
+  return out;
+}
+
+// Text extractor (special handling for div.list)
+String elementText(dom.Element e) {
+  if (e.localName == 'div' && e.classes.contains('list')) {
+    final items =
+        e
+            .querySelectorAll('li')
+            .map((li) => li.text.trim())
+            .where((t) => t.isNotEmpty)
+            .toList();
+    return items.isEmpty ? e.text.trim() : items.join(' • ');
+  }
+  return e.text.trim();
+}
+
+// Quick comparison printout
+void compareExtraction(String label, dom.Document doc, {int sample = 10000}) {
+  final simple = collectSimple(doc);
+  final blocks = collectBlocks(doc);
+  print('[$label] simple=${simple.length}, blocks=${blocks.length}');
+  print('[$label] simple sample:');
+  for (var i = 0; i < simple.length && i < sample; i++) {
+    print('  S[$i] ${elementText(simple[i])}');
+  }
+  print('[$label] blocks sample:');
+  for (var i = 0; i < blocks.length && i < sample; i++) {
+    print('  B[$i] ${elementText(blocks[i])}');
+  }
+}
+
+void testExtractionMethods() async {
+  var htmlContent = await loadHtmtFromCelex(
+    "02016R1036-20200811",
+    "EN",
+  ); //load html file from disk
+  final doc = html_parser.parse(htmlContent);
+  compareExtraction('Test', doc);
+}
+
+//************************************************************ */
 
 void openSearchUpload(json, indexName) {
   // Your regular JSON data (similar to the data you uploaded)

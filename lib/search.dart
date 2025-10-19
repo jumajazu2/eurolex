@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:eurolex/file_handling.dart';
+import 'package:eurolex/testHtmlDumps.dart';
 
 import 'package:path_provider/path_provider.dart';
 
@@ -23,8 +24,8 @@ var metaCelex = [];
 var metaCellar = [];
 var sequenceNo;
 var parNotMatched = ["N/A"];
-var className;
-var docDate;
+var className = ["N/A"];
+var docDate = ["N/A"];
 var pointerPar;
 var contextEnSkCz;
 var queryText;
@@ -58,7 +59,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _controller2 = TextEditingController();
   final TextEditingController _controller3 = TextEditingController();
-  final List<bool> _quickSettings = List.generate(6, (_) => true);
+  //final List<bool> _quickSettings = List.generate(6, (_) => true);
   final List<String> _results = [];
 
   Color _fillColor = Colors.white30;
@@ -777,7 +778,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Text(
-                  'Query Result: $decodedResults',
+                  'Query Result: $enResults',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -814,7 +815,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                       (parNotMatched.isNotEmpty &&
                               index < parNotMatched.length &&
                               parNotMatched[index] == 'false' ||
-                          !_quickSettings[4]))
+                          !_matchedOnly))
                   ? Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10.0,

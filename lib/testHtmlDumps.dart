@@ -1,0 +1,132 @@
+// ...existing code...
+import 'package:html/dom.dart' as dom;
+import 'package:html/parser.dart' as html_parser;
+import 'package:eurolex/processDOM.dart';
+import 'package:eurolex/preparehtml.dart';
+// ...existing code...
+
+void testDumps() async {
+  var htmlContent = await loadHtmtFromCelex(
+    "02016R1036-20200811",
+    "EN",
+  ); //load html file from disk
+
+  demoDomAndLines(htmlContent);
+}
+
+// Debug: print a compact DOM tree (tags and short text nodes)
+void dumpDom(dom.Node node, {int depth = 0, int maxText = 30}) {
+  final indent = '  ' * depth;
+  if (node is dom.Element) {
+    final cls = node.classes.isNotEmpty ? ' .${node.classes.join('.')}' : '';
+    print('$indent<${node.localName}$cls>');
+    for (final c in node.nodes) {
+      dumpDom(c, depth: depth + 1, maxText: maxText);
+    }
+  } else if (node is dom.Text) {
+    final t = node.text.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (t.isNotEmpty) {
+      print(
+        '$indent"text: ${t.length > maxText ? t.substring(0, maxText) + '…' : t}"',
+      );
+    }
+  }
+}
+
+// Extract plain-text lines in DOM order:
+// - No tags in output
+// - No double-counting (we only read text nodes)
+// - Lines split at common block elements and <br>
+List<String> extractPlainTextLines(String html) {
+  final doc = html_parser.parse(html);
+
+  // Treat these as block boundaries (start/end a line). Include all div to be universal.
+  const blockTags = {
+    'p',
+    'li',
+    'td',
+    'th',
+    'tr',
+    'thead',
+    'tbody',
+    'tfoot',
+    'table',
+    'section',
+    'article',
+    'aside',
+    'nav',
+    'header',
+    'footer',
+    'main',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    'blockquote',
+    'pre',
+    'address',
+    'figure',
+    'figcaption',
+    'div',
+  };
+
+  final lines = <String>[];
+  final buf = StringBuffer();
+
+  void flush() {
+    final s = buf.toString().replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (s.isNotEmpty) lines.add(s);
+    buf.clear();
+  }
+
+  void walk(dom.Node n, {bool inPre = false}) {
+    if (n is dom.Text) {
+      // Append text; normalize later on flush (keeps order, no duplicates).
+      buf.write(n.text);
+      return;
+    }
+    if (n is! dom.Element) return;
+
+    final tag = n.localName;
+    if (tag == 'script' || tag == 'style' || tag == 'template') return;
+
+    if (tag == 'br') {
+      flush();
+      return;
+    }
+
+    final isBlock = blockTags.contains(tag);
+    if (isBlock) flush(); // end previous line before a block
+
+    final nextInPre = inPre || tag == 'pre';
+    for (final c in n.nodes) {
+      walk(c, inPre: nextInPre);
+    }
+
+    if (isBlock) flush(); // end the block as its own line
+  }
+
+  final body = doc.body ?? doc.documentElement;
+  if (body != null) walk(body);
+  return lines;
+}
+
+// Example usage (e.g., inside a test/debug method)
+void demoDomAndLines(String sampleHtml) {
+  final doc = html_parser.parse(sampleHtml);
+  print('--- DOM dump ---');
+  final root = doc.body ?? doc.documentElement;
+  if (root != null) {
+    dumpDom(root);
+  } else {
+    print('No document root to dump.');
+  }
+  print('--- Plain text lines ---');
+  final lines = extractPlainTextLines(sampleHtml);
+  for (var i = 0; i < lines.length; i++) {
+    print('[$i] ${lines[i]}');
+  }
+}
+// ...existing code...

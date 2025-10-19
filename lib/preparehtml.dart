@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:eurolex/bulkupload.dart';
 import 'dart:convert';
 
+
 import 'package:html/parser.dart' as html_parser;
 
 import 'dart:io';
@@ -426,6 +427,14 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
   }
 }
 
+final now = DateTime.now();
+final fileSafeStamp =
+    '${now.year.toString().padLeft(4, '0')}-'
+    '${now.month.toString().padLeft(2, '0')}-'
+    '${now.day.toString().padLeft(2, '0')}_'
+    '${now.hour.toString().padLeft(2, '0')}-'
+    '${now.minute.toString().padLeft(2, '0')}';
+
 class manualCelexList extends StatefulWidget {
   _manualCelexListState createState() => _manualCelexListState();
 }
@@ -453,6 +462,7 @@ class _manualCelexListState extends State<manualCelexList> {
       print('Loaded SK HTML for manual Celex: $i');
 
       metadata = "%%%#$i"; // Placeholder for metadata
+
       extractParagraphs(
         fileEN_DOM,
         fileSK_DOM,

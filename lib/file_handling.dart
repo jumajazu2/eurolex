@@ -55,10 +55,10 @@ loadJsonFromFile() async //loads JSON from config.json file to the global variab
   }
 }
 
-Future<void> writeJsonToFile(Map<String, dynamic> newJsonData) async {
+Future<void> writeJsonToFile(Map<String, dynamic> newJsonData, String filename) async {
   try {
     // Get the writable config file
-    final file = File(getFilePath('config.json'));
+    final file = File(getFilePath(filename));
 
     // Encode the JSON and write it to the file
     final jsonString = jsonEncode(newJsonData);

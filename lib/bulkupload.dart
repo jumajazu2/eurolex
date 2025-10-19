@@ -17,6 +17,9 @@ import 'package:eurolex/main.dart';
 import 'package:path/path.dart' as path;
 import 'package:eurolex/logger.dart';
 
+bool debugMode = false; // global debug mode flag
+
+
 class DataUploadTab extends StatefulWidget {
   const DataUploadTab({
     super.key,
@@ -54,7 +57,8 @@ class _DataUploadTabState extends State<DataUploadTab> {
   final _manualIndexController = TextEditingController();
   final logger = LogManager(fileName: 'bulkupload.log');
   String _selectedIndex = '';
-  bool simulateUpload = false; // checkbox state
+  bool simulateUpload = false;
+ // checkbox state
 
   @override
   void initState() {
@@ -182,6 +186,26 @@ class _DataUploadTabState extends State<DataUploadTab> {
                           },
                         ),
                         const Text('Simulate'),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(width: 12),
+                  Tooltip(
+                    message:
+                        'Debug Mode: for each uploaded files, a JSON file with multilingual pairs will be created in the local "debug_output" folder, to troubleshoot mismatched paragraphs and other issues.',
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Checkbox(
+                          value: debugMode,
+                          onChanged: (v) {
+                            setState(() {
+                              debugMode = v ?? false;
+                            });
+                          },
+                        ),
+                        const Text('Debug Mode'),
                       ],
                     ),
                   ),
