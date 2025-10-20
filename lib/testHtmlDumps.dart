@@ -1,4 +1,7 @@
 // ...existing code...
+import 'dart:ffi';
+
+import 'package:flutter/material.dart';
 import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' as html_parser;
 import 'package:eurolex/processDOM.dart';
@@ -41,6 +44,68 @@ void testDumpsMultipleLangsCelex(var celex) async {
       writeLinesToFile(lines, 'test_output_${celex}_$lang-${lines.length}.txt');
     }
   }
+}
+
+const String kClassDelimiter = '#@#';
+
+// Convert ["some text#@#class-a", "other text#@#class-b"] -> [["some text","class-a"], ["other text","class-b"]]
+List<List<String>> splitTextAndClass(List<String> taggedLines) {
+  final out = <List<String>>[];
+  for (final line in taggedLines) {
+    final idx = line.lastIndexOf(kClassDelimiter);
+    if (idx >= 0) {
+      final text = line.substring(0, idx).trim();
+      final cls = line.substring(idx + kClassDelimiter.length).trim();
+      if (text.isNotEmpty) out.add([text, cls.isEmpty ? 'unknown' : cls]);
+    } else {
+      final t = line.trim();
+      if (t.isNotEmpty)
+        out.add([t, 'unknown']); // fallback if delimiter missing
+    }
+  }
+  return out;
+}
+
+Future<List<List<String>>> retrieveCelexForLang(var celex, var lang) async {
+  final doc = await loadHtmtFromCelex(celex, lang);
+  final lines = extractPlainTextLines(doc); // lines with "...#@#class"
+  final pairs = splitTextAndClass(lines);
+  print("Lang: $lang, Pairs: ${pairs.length}");
+  return pairs;
+}
+
+Future<Map<String, List<List<String>>>> createUploadArrayFromCelex(
+  String celex,
+  dynamic langs,
+) async {
+  try {
+    final Iterable<String> languages =
+        (langs is String) ? [langs] : (langs as Iterable).cast<String>();
+
+    final entries = await Future.wait(
+      languages.map((lang) async {
+        final pairs = await retrieveCelexForLang(celex, lang);
+        return MapEntry(lang, pairs); // lang -> [[text, class], ...]
+      }),
+    );
+
+    return Map<String, List<List<String>>>.fromEntries(entries);
+  } catch (e, st) {
+    debugPrint('createUploadArrayFromCelex error: $e');
+    debugPrintStack(stackTrace: st);
+    rethrow;
+  }
+}
+
+Future<void> testCreateUploadArray() async {
+  final result = await createUploadArrayFromCelex('52024AA0001', [
+    'EN',
+    'SK',
+    'ES',
+  ]);
+  debugPrint(
+    result.entries.map((e) => '${e.key}:${e.value.length}').join(', '),
+  );
 }
 
 // Debug: print a compact DOM tree (tags and short text nodes)
