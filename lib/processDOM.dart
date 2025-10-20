@@ -11,6 +11,31 @@ import 'package:eurolex/preparehtml.dart';
 import 'package:eurolex/preparehtml.dart' show loadHtmlFromCelex;
 
 var dirPointer = 0; // Pointer for directory processing
+List<String> langsEU = [
+  "BG",
+  "CS",
+  "DA",
+  "DE",
+  "EL",
+  "EN",
+  "ES",
+  "ET",
+  "FI",
+  "FR",
+  "HR",
+  "HU",
+  "IT",
+  "LT",
+  "LV",
+  "MT",
+  "NL",
+  "PL",
+  "PT",
+  "RO",
+  "SK",
+  "SL",
+  "SV",
+];
 
 class DomProcessor {
   // Function to parse HTML content and extract text
@@ -175,6 +200,7 @@ List<Map<String, dynamic>> extractParagraphs(
   return jsonData;
 }
 
+/*
 //Function to parse HTML content as String and return list<Element>
 List<dom.Element> parseHtmlContent(String htmlContent) {
   var document = html_parser.parse(htmlContent);
@@ -184,6 +210,107 @@ List<dom.Element> parseHtmlContent(String htmlContent) {
 //final List<String> paragraphsText = paragraphs.map((e) => e.text.trim()).toList();
 
 //********************************************************* */
+*/
+//This is the chosen method for extracting plain text lines from HTML DOM
+// ...existing code...
+List<String> extractPlainTextLines(String html) {
+  final doc = html_parser.parse(html);
+
+  // Treat these as block boundaries (start/end a line). Include all div to be universal.
+  const blockTags = {
+    'p',
+    'li',
+    'td',
+    'th',
+    'tr',
+    'thead',
+    'tbody',
+    'tfoot',
+    'table',
+    'section',
+    'article',
+    'aside',
+    'nav',
+    'header',
+    'footer',
+    'main',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    'blockquote',
+    'pre',
+    'address',
+    'figure',
+    'figcaption',
+    'div',
+  };
+
+  const String delimiter = '#@#';
+
+  final lines = <String>[];
+  final buf = StringBuffer();
+  final blockStack = <dom.Element>[]; // nearest enclosing block on top
+
+  void flush() {
+    final s = buf.toString().replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (s.isEmpty) {
+      buf.clear();
+      return;
+    }
+    // Use the nearest enclosing block's classes; fallback to 'unknown'
+    String cls = 'unknown';
+    if (blockStack.isNotEmpty) {
+      final top = blockStack.last;
+      if (top.classes.isNotEmpty) {
+        cls = top.classes.join(' ');
+      }
+    }
+    lines.add('$s$delimiter$cls');
+    buf.clear();
+  }
+
+  void walk(dom.Node n, {bool inPre = false}) {
+    if (n is dom.Text) {
+      buf.write(n.text);
+      return;
+    }
+    if (n is! dom.Element) return;
+
+    final tag = n.localName;
+    if (tag == 'script' || tag == 'style' || tag == 'template') return;
+
+    if (tag == 'br') {
+      flush(); // same enclosing class (don’t push/pop)
+      return;
+    }
+
+    final isBlock = blockTags.contains(tag);
+    if (isBlock) flush(); // end previous block before starting a new one
+
+    if (isBlock) blockStack.add(n);
+
+    final nextInPre = inPre || tag == 'pre';
+    for (final c in n.nodes) {
+      walk(c, inPre: nextInPre);
+    }
+
+    if (isBlock) {
+      flush(); // end this block line
+      blockStack.removeLast();
+    }
+  }
+
+  final body = doc.body ?? doc.documentElement;
+  if (body != null) walk(body);
+  return lines;
+}
+// ...existing code...
+
+/*
+
 List<dom.Element> collectSimple(dom.Document doc) =>
     doc.querySelectorAll('p, td, span, div');
 
@@ -255,7 +382,7 @@ void testExtractionMethods() async {
 }
 
 //************************************************************ */
-
+*/
 void openSearchUpload(json, indexName) {
   // Your regular JSON data (similar to the data you uploaded)
   var bilingualData = json;

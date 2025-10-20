@@ -3,6 +3,9 @@ import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' as html_parser;
 import 'package:eurolex/processDOM.dart';
 import 'package:eurolex/preparehtml.dart';
+import 'package:eurolex/file_handling.dart';
+import 'package:eurolex/sparql.dart'
+    show fetchSector5CelexTitles2024, fetchSectorXCelexTitles;
 // ...existing code...
 
 void testDumps() async {
@@ -12,6 +15,32 @@ void testDumps() async {
   ); //load html file from disk
 
   demoDomAndLines(htmlContent);
+}
+
+void testDumpsMultiple() async {
+  for (var lang in langsEU) {
+    var htmlContent = await loadHtmtFromCelex(
+      "52024AA0001",
+      lang,
+    ); //load html file from disk
+    var lines = extractPlainTextLines(htmlContent);
+    print('Lang: $lang, Lines: ${lines.length}');
+    writeLinesToFile(lines, 'test_output_52024AA0001_$lang.txt');
+  }
+}
+
+void testDumpsMultipleLangsCelex(var celex) async {
+  for (var lang in langsEU) {
+    var htmlContent = await loadHtmtFromCelex(
+      celex,
+      lang,
+    ); //load html file from disk
+    var lines = extractPlainTextLines(htmlContent);
+    print('$celex fetchedang: $lang, Lines: ${lines.length}');
+    if (lines.isNotEmpty) {
+      writeLinesToFile(lines, 'test_output_${celex}_$lang-${lines.length}.txt');
+    }
+  }
 }
 
 // Debug: print a compact DOM tree (tags and short text nodes)
@@ -37,7 +66,7 @@ void dumpDom(dom.Node node, {int depth = 0, int maxText = 30}) {
 // - No tags in output
 // - No double-counting (we only read text nodes)
 // - Lines split at common block elements and <br>
-List<String> extractPlainTextLines(String html) {
+/*List<String> extractPlainTextLines(String html) {
   final doc = html_parser.parse(html);
 
   // Treat these as block boundaries (start/end a line). Include all div to be universal.
@@ -112,7 +141,7 @@ List<String> extractPlainTextLines(String html) {
   if (body != null) walk(body);
   return lines;
 }
-
+*/
 // Example usage (e.g., inside a test/debug method)
 void demoDomAndLines(String sampleHtml) {
   final doc = html_parser.parse(sampleHtml);
@@ -128,5 +157,15 @@ void demoDomAndLines(String sampleHtml) {
   for (var i = 0; i < lines.length; i++) {
     print('[$i] ${lines[i]}');
   }
+  writeLinesToFile(lines, 'test_output.txt');
 }
 // ...existing code...
+
+void fetchsparql() async {
+  final lines = await fetchSectorXCelexTitles(6, 2024);
+  for (final line in lines) {
+    print("Celex fetched: ${line.split('\t')[0]}");
+    testDumpsMultipleLangsCelex(line.split('\t')[0]);
+  }
+  print('Total lines fetched: ${lines.length}');
+}

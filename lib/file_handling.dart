@@ -55,7 +55,10 @@ loadJsonFromFile() async //loads JSON from config.json file to the global variab
   }
 }
 
-Future<void> writeJsonToFile(Map<String, dynamic> newJsonData, String filename) async {
+Future<void> writeJsonToFile(
+  Map<String, dynamic> newJsonData,
+  String filename,
+) async {
   try {
     // Get the writable config file
     final file = File(getFilePath(filename));
@@ -68,6 +71,24 @@ Future<void> writeJsonToFile(Map<String, dynamic> newJsonData, String filename) 
   } catch (e) {
     print("Error writing JSON: $e");
   }
+}
+
+Future<void> writeTextToFile(String text, String filename) async {
+  try {
+    final directory = await getApplicationDocumentsDirectory();
+
+    final file = File("${directory.path}/$filename");
+
+    await file.writeAsString(text);
+    print("Text written successfully to: ${file.path}");
+  } catch (e) {
+    print("Error writing text: $e");
+  }
+}
+
+Future<void> writeLinesToFile(List<String> lines, String filename) async {
+  final eol = Platform.isWindows ? '\r\n' : '\n';
+  await writeTextToFile(lines.join(eol), filename);
 }
 
 Future<void>
