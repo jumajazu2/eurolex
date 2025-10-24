@@ -118,17 +118,26 @@ List<Map<String, dynamic>> extractParagraphs(
   print(
     "filenames after lang removed, matched>>> $htmlENFileNameMod, $htmlSKFileNameMod, $htmlCZFileNameMod",
   );
-
+  /*
   var documentEN = html_parser.parse(htmlEN);
   var documentSK = html_parser.parse(htmlSK);
   var documentCZ = html_parser.parse(htmlCZ);
-  var paragraphsEN = documentEN.getElementsByTagName(
-    'p',
-  ); //this extracts all <p> elements, but we also need to extract bulleted lists which have a different tag
-  var paragraphsSK = documentSK.getElementsByTagName('p');
-  var paragraphsCZ = documentCZ.getElementsByTagName('p');
-
+*/
+  var documentEN = extractPlainTextLines(htmlEN);
+  var documentSK = extractPlainTextLines(htmlSK);
+  var documentCZ = extractPlainTextLines(htmlCZ);
+  var paragraphsEN =
+      documentEN; //this extracts all <p> elements, but we also need to extract bulleted lists which have a different tag
+  var paragraphsSK = documentSK;
+  var paragraphsCZ = documentCZ;
+  print(
+    'LENGTHS EN: ${paragraphsEN.length}, SK: ${paragraphsSK.length}, CZ: ${paragraphsCZ.length}',
+  );
+  /*
   var dateElements = documentEN.getElementsByClassName('oj-hd-date');
+
+
+
   String date =
       dateElements.isNotEmpty
           ? (dateElements.first.nodes.isNotEmpty &&
@@ -138,8 +147,10 @@ List<Map<String, dynamic>> extractParagraphs(
           : 'unknown';
 
   print('date: $date');
-
+*/
   //check if paragraps in SK and EN are the same length
+  String date =
+      'N/A'; //date temporarily not extracted// Placeholder for date extraction logic
   if (paragraphsEN.length != paragraphsSK.length) {
     print(
       'Paragraphs in EN and SK do not match in length, files not identical! $dirPointer, $dirID',
@@ -159,9 +170,12 @@ List<Map<String, dynamic>> extractParagraphs(
         i < paragraphsCZ.length;
     i++
   ) {
-    var enText = paragraphsEN[i].text.trim();
-    var skText = paragraphsSK[i].text.trim();
-    var czText = paragraphsCZ[i].text.trim();
+    var enText = paragraphsEN[i].trim().split('#@#')[0];
+    var skText = paragraphsSK[i].trim().split('#@#')[0];
+    var czText = paragraphsCZ[i].trim().split('#@#')[0];
+    print(
+      'EN: ${safePrefix(enText, 35)}, SK: ${safePrefix(skText, 35)}, CZ: ${safePrefix(czText, 35)}',
+    );
 
     if (enText.isNotEmpty && skText.isNotEmpty && czText.isNotEmpty) {
       Map<String, dynamic> jsonEntry = {
@@ -177,9 +191,9 @@ List<Map<String, dynamic>> extractParagraphs(
         "paragraphsNotMatched": paragraphsNotMatched,
         "namesNotMatched": namesNotMatched,
         "class":
-            paragraphsEN[i].classes.isNotEmpty
-                ? paragraphsEN[i].classes.first
-                : "unknown",
+            paragraphsEN[i].split('#@#').length > 1
+                ? paragraphsEN[i].split('#@#')[1]
+                : 'unknown',
       };
       jsonData.add(jsonEntry);
     }
@@ -199,6 +213,8 @@ List<Map<String, dynamic>> extractParagraphs(
   print("Extract paragraphs uploaded to Open Search>COMPLETED");
   return jsonData;
 }
+
+String safePrefix(String s, int n) => s.length <= n ? s : s.substring(0, n);
 
 /*
 //Function to parse HTML content as String and return list<Element>
@@ -460,4 +476,69 @@ String getmetadata(metadataRDF) //get celex and cellar info from RDF metadata
   return 'not found';
 }
 
-//var outputList = paragraphs.map((p) => p.text.trim()).toList();
+//the function below will process a multilingual map with extracted plain text lines and create a list of json entries
+List<Map<String, dynamic>> processMultilingualMap(
+  Map<String, List<List<String>>> map,
+  String indexName,
+  String celex,
+  String dirID,
+  bool simulate,
+  bool debug,
+  bool paragraphsNotMatched,
+  bool namesNotMatched,
+) {
+  List<Map<String, dynamic>> jsonData =
+      []; //to store created json entry for file
+
+  int sequenceID = 0;
+
+  final int numParagraphs =
+      map.values.isEmpty
+          ? 0
+          : map.values.map((v) => v.length).reduce((a, b) => a > b ? a : b);
+
+  String classForIndex(int i) {
+    for (final lang in langsEU) {
+      final rows = map[lang];
+      if (rows != null && i >= 0 && i < rows.length && rows[i].length > 1) {
+        final cls = rows[i][1];
+        if (cls.isNotEmpty) return cls;
+      }
+    }
+    return 'unknown';
+  }
+
+  //here a part of json will be created dynamically based on the supplied map, including all languages in the map
+  for (int i = 0; i < numParagraphs; i++) {
+    Map<String, String> texts = {};
+    for (String lang in langsEU) {
+      if (map.containsKey(lang) && map[lang]!.length > i) {
+        texts["text_${lang.toLowerCase()}"] =
+            map[lang]![i][0]; //texts["lang.toLowerCase()] = map[lang]![i][0];
+      }
+    }
+
+    // list of langs []
+
+    if (texts.isNotEmpty) {
+      final cls = classForIndex(i);
+      Map<String, dynamic> jsonEntry = {
+        "sequence_id": sequenceID++,
+        "date": DateTime.now().toUtc().toIso8601String(),
+        "language": {"en": "English", "sk": "Slovak", "cz": "Czech"},
+        "celex": celex,
+        "dir_id": dirID, // Directory ID for logging purposes
+        "filename": celex,
+        "paragraphsNotMatched": paragraphsNotMatched,
+        "namesNotMatched": namesNotMatched,
+        "class": cls,
+      };
+
+      jsonEntry.addAll(texts); //here programatically created part with langs and texts is added
+      jsonData.add(jsonEntry);
+    }
+  }
+
+  openSearchUpload(jsonData, indexName);
+  return jsonData;
+}

@@ -227,10 +227,10 @@ void demoDomAndLines(String sampleHtml) {
 // ...existing code...
 
 void fetchsparql() async {
-  final lines = await fetchSectorXCelexTitles(6, 2024);
+  final lines = await fetchSectorXCelexTitles(6, 2020);
   for (final line in lines) {
     print("Celex fetched: ${line.split('\t')[0]}");
     testDumpsMultipleLangsCelex(line.split('\t')[0]);
   }
-  print('Total lines fetched: ${lines.length}');
+  print('Total lines fetched: ${lines.length}, lines: $lines');
 }
