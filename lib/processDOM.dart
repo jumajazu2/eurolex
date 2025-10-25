@@ -534,11 +534,31 @@ List<Map<String, dynamic>> processMultilingualMap(
         "class": cls,
       };
 
-      jsonEntry.addAll(texts); //here programatically created part with langs and texts is added
+      jsonEntry.addAll(
+        texts,
+      ); //here programatically created part with langs and texts is added
       jsonData.add(jsonEntry);
     }
   }
 
-  openSearchUpload(jsonData, indexName);
+  if (!simulate) openSearchUpload(jsonData, indexName);
+
+  if (debug) {
+    final logger = LogManager(
+      fileName: '${fileSafeStamp}_${indexName}_debug.log',
+    );
+    final pretty = const JsonEncoder.withIndent('  ').convert(jsonData);
+    logger.log(pretty);
+  }
+
+  final logger = LogManager(fileName: '${fileSafeStamp}_$indexName.log');
+  final status = paragraphsNotMatched ? 'parNotMatched' : 'status_ok';
+  final msg =
+      '$indexName, $dirPointer, $dirID, Processed, Celex: $celex, $status, Simulated: $simulate';
+
+  logger.log(msg);
+  //JSOn ready, now turning in into NDJSON + action part
+  print("Extract paragraphs uploaded to Open Search>COMPLETED");
+
   return jsonData;
 }
