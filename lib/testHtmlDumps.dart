@@ -7,6 +7,7 @@ import 'package:html/parser.dart' as html_parser;
 import 'package:eurolex/processDOM.dart';
 import 'package:eurolex/preparehtml.dart';
 import 'package:eurolex/file_handling.dart';
+import 'package:eurolex/logger.dart';
 import 'package:eurolex/sparql.dart'
     show fetchSector5CelexTitles2024, fetchSectorXCelexTitles;
 // ...existing code...
@@ -233,4 +234,29 @@ void fetchsparql() async {
     testDumpsMultipleLangsCelex(line.split('\t')[0]);
   }
   print('Total lines fetched: ${lines.length}, lines: $lines');
+}
+
+//test to upload a certain celex sector from a certain year
+void uploadTestSparqlSectorYear(int sector, int year) async {
+  final lines = await fetchSectorXCelexTitles(sector, year);
+
+  final logger = LogManager(fileName: '${fileSafeStamp}_sparql.log');
+  logger.log(
+    'Upload test for sector $sector, year $year, total celexes: ${lines.length}\n$lines',
+  );
+  for (final line in lines) {
+    final celex = line.split('\t')[0];
+    logger.log('Processing celex: $celex');
+    final uploadData = await createUploadArrayFromCelex(celex, langsEU);
+    processMultilingualMap(
+      uploadData,
+      "eurolex_sparql3",
+      celex,
+      "N/A",
+      false,
+      true,
+      false,
+      false,
+    );
+  }
 }

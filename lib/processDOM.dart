@@ -180,11 +180,11 @@ List<Map<String, dynamic>> extractParagraphs(
     if (enText.isNotEmpty && skText.isNotEmpty && czText.isNotEmpty) {
       Map<String, dynamic> jsonEntry = {
         "sequence_id": sequenceID++,
-        "date": date,
+        // "date": date,
         "en_text": enText,
         "sk_text": skText,
         "cz_text": czText,
-        "language": {"en": "English", "sk": "Slovak", "cz": "Czech"},
+        //"language": {"en": "English", "sk": "Slovak", "cz": "Czech"},
         "celex": celex,
         "dir_id": dirID, // Directory ID for logging purposes
         "filename": htmlENFileName,
