@@ -119,7 +119,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
               "multi_match": {
                 "query": lastFileContent,
                 "fields": ["en_text", "sk_text", "cz_text"],
-                "fuzziness": "AUTO",
+                "fuzziness": "0",
                 "minimum_should_match": "70%",
               },
             },

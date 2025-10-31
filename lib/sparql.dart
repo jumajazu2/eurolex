@@ -31,7 +31,7 @@ WHERE {
         cdm:expression_title ?title .
 }
 ORDER BY ?celex
-LIMIT 5
+LIMIT 10000
 ''';
 
   final resp = await http.post(

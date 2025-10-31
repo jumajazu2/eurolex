@@ -448,7 +448,7 @@ Future<String> sendToOpenSearch(String url, List<String> bulkData) async {
       print(response.body);
       return response.body; // Return the response body
     } else {
-      print("Error: ${response.statusCode} - ${response.body}");
+      print(" Error: ${response.statusCode} - ${response.headers}");
       return response.body;
     }
   } on Exception catch (e) {
@@ -513,7 +513,7 @@ List<Map<String, dynamic>> processMultilingualMap(
     Map<String, String> texts = {};
     for (String lang in langsEU) {
       if (map.containsKey(lang) && map[lang]!.length > i) {
-        texts["text_${lang.toLowerCase()}"] =
+        texts["${lang.toLowerCase()}_text"] =
             map[lang]![i][0]; //texts["lang.toLowerCase()] = map[lang]![i][0];
       }
     }
@@ -525,7 +525,6 @@ List<Map<String, dynamic>> processMultilingualMap(
       Map<String, dynamic> jsonEntry = {
         "sequence_id": sequenceID++,
         "date": DateTime.now().toUtc().toIso8601String(),
-        "language": {"en": "English", "sk": "Slovak", "cz": "Czech"},
         "celex": celex,
         "dir_id": dirID, // Directory ID for logging purposes
         "filename": celex,
@@ -554,11 +553,12 @@ List<Map<String, dynamic>> processMultilingualMap(
   final logger = LogManager(fileName: '${fileSafeStamp}_$indexName.log');
   final status = paragraphsNotMatched ? 'parNotMatched' : 'status_ok';
   final msg =
-      '$indexName, $dirPointer, $dirID, Processed, Celex: $celex, $status, Simulated: $simulate';
+      '$indexName, $dirPointer, $dirID, Processed, Celex: $celex, $status, Simulated: $simulate, Paragraphs: $numParagraphs';
 
   logger.log(msg);
+
   //JSOn ready, now turning in into NDJSON + action part
-  print("Extract paragraphs uploaded to Open Search>COMPLETED");
+  print("Harvested paragraphs uploaded to Open Search>COMPLETED  $msg");
 
   return jsonData;
 }

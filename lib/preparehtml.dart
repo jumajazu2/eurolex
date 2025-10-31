@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:eurolex/bulkupload.dart';
 import 'dart:convert';
 
-
 import 'package:html/parser.dart' as html_parser;
 
 import 'dart:io';
@@ -631,7 +630,9 @@ Future<String> loadHtmtFromCelex(
       return htmlContent; // Return the HTML content as a string
       // Process the HTML content as needed
     } else {
-      print('Failed to load HTML. Status code: ${response.statusCode}');
+      print(
+        'Failed to load HTML in Harvest. Status code: ${response.statusCode}, ${response.headers}',
+      );
       return 'Error loading HTML: ${response.statusCode}';
     }
   } catch (e) {
