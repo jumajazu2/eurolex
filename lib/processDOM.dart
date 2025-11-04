@@ -427,7 +427,7 @@ void openSearchUpload(json, indexName) {
 
   print("Sending data to OpenSearch at $opensearchUrl");
   print("******************************************************************");
-  print(bulkData.sublist(0, bulkData.length < 10 ? bulkData.length : 9));
+  print(bulkData.sublist(0, bulkData.length < 2 ? bulkData.length : 2));
   print("******************************************************************");
 
   sendToOpenSearch(opensearchUrl, bulkData);
@@ -444,7 +444,9 @@ Future<String> sendToOpenSearch(String url, List<String> bulkData) async {
     );
 
     if (response.statusCode == 200) {
-      print("Data successfully processed!");
+      print(
+        "Data successfully processed in opensearch! ${response.body.substring(0, 100)}",
+      );
       print(response.body);
       return response.body; // Return the response body
     } else {
@@ -485,17 +487,33 @@ List<Map<String, dynamic>> processMultilingualMap(
   bool simulate,
   bool debug,
   bool paragraphsNotMatched,
-  bool namesNotMatched,
+  int pointer,
 ) {
   List<Map<String, dynamic>> jsonData =
       []; //to store created json entry for file
 
   int sequenceID = 0;
-
+  /*
   final int numParagraphs =
       map.values.isEmpty
           ? 0
           : map.values.map((v) => v.length).reduce((a, b) => a > b ? a : b);
+
+*/
+
+  final counts = map.map((k, v) => MapEntry(k, v.length));
+  final lengths = counts.values;
+  final int minLen =
+      lengths.isEmpty ? 0 : lengths.reduce((a, b) => a < b ? a : b);
+  final int maxLen =
+      lengths.isEmpty ? 0 : lengths.reduce((a, b) => a > b ? a : b);
+  final bool lengthMismatch = minLen != maxLen;
+  if (lengthMismatch) {
+    print('Harvest Line count mismatch for $celex: $counts');
+  }
+
+  // Choose max (union) or switch to minLen for strict alignment
+  final int numParagraphs = maxLen;
 
   String classForIndex(int i) {
     for (final lang in langsEU) {
@@ -528,8 +546,8 @@ List<Map<String, dynamic>> processMultilingualMap(
         "celex": celex,
         "dir_id": dirID, // Directory ID for logging purposes
         "filename": celex,
-        "paragraphsNotMatched": paragraphsNotMatched,
-        "namesNotMatched": namesNotMatched,
+        "paragraphsNotMatched": lengthMismatch,
+
         "class": cls,
       };
 
@@ -544,21 +562,23 @@ List<Map<String, dynamic>> processMultilingualMap(
 
   if (debug) {
     final logger = LogManager(
-      fileName: '${fileSafeStamp}_${indexName}_debug.log',
+      fileName: 'logs/${fileSafeStamp}_${indexName}_debug.log',
     );
     final pretty = const JsonEncoder.withIndent('  ').convert(jsonData);
     logger.log(pretty);
   }
 
-  final logger = LogManager(fileName: '${fileSafeStamp}_$indexName.log');
-  final status = paragraphsNotMatched ? 'parNotMatched' : 'status_ok';
+  final logger = LogManager(fileName: 'logs/${fileSafeStamp}_$indexName.log');
+  final status = lengthMismatch ? 'parNotMatched' : 'status_ok';
   final msg =
-      '$indexName, $dirPointer, $dirID, Processed, Celex: $celex, $status, Simulated: $simulate, Paragraphs: $numParagraphs';
+      '$pointer $indexName, $dirPointer, $dirID, Processed, Celex: $celex, $status, Simulated: $simulate, Paragraphs: $numParagraphs';
 
   logger.log(msg);
 
   //JSOn ready, now turning in into NDJSON + action part
-  print("Harvested paragraphs uploaded to Open Search>COMPLETED  $msg");
+  print(
+    "$pointer Harvested paragraphs uploaded to Open Search $indexName>COMPLETED  $msg",
+  );
 
   return jsonData;
 }

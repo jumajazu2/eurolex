@@ -1,3 +1,4 @@
+//import 'dart:nativewrappers/_internal/vm/lib/internal_patch.dart';
 import 'dart:ui';
 
 import 'package:eurolex/browseFiles.dart';
@@ -612,32 +613,46 @@ class _manualCelexListState extends State<manualCelexList> {
   }
 }
 
-Future<String> loadHtmtFromCelex(
-  celex,
-  lang,
-) async //based on Celex, language create a link and download any lang file, //eur-lex.europa.eu/legal-content/SK/TXT/HTML/?uri=CELEX:32017D0502
-{
+Future<String> loadHtmtFromCelex(celex, lang) async {
+  // Use HTTPS
   String url =
-      'http://eur-lex.europa.eu/legal-content/$lang/TXT/HTML/?uri=CELEX:$celex';
-  print('Loading HTML from URL: $url');
+      'https://eur-lex.europa.eu/legal-content/$lang/TXT/HTML/?uri=CELEX:$celex';
+  print('Harvest HTML from URL: $url');
 
   try {
-    final response = await http.get(Uri.parse(url));
+    // Add browser-like headers (minimal)
+    final headers = <String, String>{
+      'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+      'Accept':
+          'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+      'Accept-Language': '$lang;q=1.0,en;q=0.8',
+      'Referer': 'https://eur-lex.europa.eu/',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+    };
+
+    final response = await http
+        .get(Uri.parse(url), headers: headers)
+        .timeout(const Duration(seconds: 25));
+    // ...existing code...
     if (response.statusCode == 200) {
       String htmlContent = response.body;
       print('HTML content loaded successfully: celex: $celex, lang: $lang');
-
-      return htmlContent; // Return the HTML content as a string
-      // Process the HTML content as needed
+      return htmlContent;
     } else {
-      print(
-        'Failed to load HTML in Harvest. Status code: ${response.statusCode}, ${response.headers}',
-      );
-      return 'Error loading HTML: ${response.statusCode}';
+      final snippetLen =
+          response.body.length > 100 ? 100 : response.body.length;
+      final errorMsg =
+          'Failed to load HTML in Harvest for celex: $celex, lang: $lang. '
+          'Status code: ${response.statusCode}, ${response.headers}\n'
+          '${response.body.substring(0, snippetLen)}';
+      print(errorMsg);
+      throw Exception(errorMsg);
     }
   } catch (e) {
     print('Error loading HTML: $e');
-    return 'Error loading HTML: $e';
+    throw Exception('Error loading HTML: $e');
   }
 }
 

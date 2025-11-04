@@ -20,7 +20,10 @@ class LogManager {
 
   Future<File> get _logFile async {
     final path = await _logFilePath;
-    return File(path);
+    final file = File(path);
+    // Ensure parent directory exists (this creates Documents/logs if needed)
+    await file.parent.create(recursive: true);
+    return file;
   }
 
   Future<void> log(String message) async {

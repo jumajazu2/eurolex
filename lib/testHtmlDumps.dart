@@ -1,7 +1,7 @@
 // ...existing code...
-import 'dart:ffi';
-import 'dart:math';
 
+import 'dart:math';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' as html_parser;
@@ -89,15 +89,17 @@ Future<List<List<String>>> retrieveCelexForLang(var celex, var lang) async {
       return pairs;
     } catch (e) {
       final msg = e.toString();
+      print('Catch triggered, Error harvesting $celex/$lang: $msg');
+      // Treat CloudFront WAF challenge (202) as throttle too
       final isThrottle =
           msg.contains('403') ||
           msg.contains('429') ||
+          msg.contains('202') ||
+          msg.contains('x-amzn-waf-action') ||
           msg.contains('CloudFront');
-      if (!isThrottle || attempt >= 6) rethrow;
+      if (!isThrottle || attempt >= 2) rethrow;
       final wait = _backoffWithJitter(attempt);
-      print(
-        'harvest Throttle for $celex/$lang (${msg.split("\n").first}). Retry in ${wait.inSeconds}s',
-      );
+      print('harvest Throttle for $celex/$lang  Retry in ${wait.inSeconds}s');
       await Future.delayed(wait);
       attempt++;
     }
@@ -112,7 +114,7 @@ Future<Map<String, List<List<String>>>> createUploadArrayFromCelex(
   final Iterable<String> languages =
       (langs is String) ? [langs] : (langs as Iterable).cast<String>();
 
-  const maxConcurrent = 3; // Tune this (2–4 is usually safe)
+  const maxConcurrent = 2; // Tune this (2–4 is usually safe)
   final list = languages.toList();
   final out = <String, List<List<String>>>{};
   var idx = 0;
@@ -127,14 +129,45 @@ Future<Map<String, List<List<String>>>> createUploadArrayFromCelex(
       try {
         final pairs = await retrieveCelexForLang(celex, lang);
         out[lang] = pairs;
-        print("Lang: $lang, Pairs: ${pairs.length}");
+        print("Harvest Worker Lang: $lang, Pairs: ${pairs.length}");
       } catch (e) {
         print('Error fetching $celex/$lang: $e');
+        rethrow;
       }
     }
   }
 
   await Future.wait(List.generate(maxConcurrent, (_) => worker()));
+  print('Harvest completed for $celex, total langs fetched: ${out.length}');
+  return out;
+}
+
+Future<Map<String, List<List<String>>>> createUploadArrayFromCelexSingle(
+  String celex,
+  dynamic langs,
+  bool throttle,
+) async {
+  final Iterable<String> languages =
+      (langs is String) ? [langs] : (langs as Iterable).cast<String>();
+
+  final list = languages.toList();
+  final out = <String, List<List<String>>>{};
+
+  print('Harvest sequential languages: $list...');
+
+  for (final lang in list) {
+    try {
+      final pairs = await retrieveCelexForLang(celex, lang);
+      //print("Harvest Fetched Lang: $lang, Pairs: $pairs");
+      out[lang] = pairs;
+      print("Harvest Lang: $lang, Pairs: ${pairs.length}");
+      await Future.delayed(const Duration(milliseconds: 400));
+    } catch (e) {
+      print('Error fetching $celex/$lang: $e');
+      rethrow;
+    }
+  }
+
   return out;
 }
 
@@ -277,47 +310,83 @@ void fetchsparql() async {
 }
 
 //test to upload a certain celex sector from a certain year
-void uploadTestSparqlSectorYear(int sector, int year) async {
+void uploadTestSparqlSectorYear(
+  int sector,
+  int year,
+  String indexName, [
+  int startPointer = 0,
+]) async {
   final lines = await fetchSectorXCelexTitles(sector, year);
-  var pointer = 0;
-  final logger = LogManager(fileName: '${fileSafeStamp}_sparql.log');
+
+  if (startPointer < 0 || startPointer >= lines.length) {
+    print(
+      'Invalid startPointer=$startPointer (lines: ${lines.length}). Starting from 0.',
+    );
+    startPointer = 0;
+  }
+
+  final logger = LogManager(fileName: 'logs/${fileSafeStamp}_$indexName.log');
   logger.log(
-    'Upload test for sector $sector, year $year, total celexes: ${lines.length}\n$lines',
+    'Upload for sector $sector, year $year, total celexes: ${lines.length}, resumeFrom: $startPointer',
   );
   print(
-    'Starting Harvest for sector $sector, year $year, total celexes: ${lines.length}\n$lines',
+    'Starting Harvest for sector $sector, year $year, total celexes: ${lines.length}, resumeFrom: $startPointer',
   );
-  for (final line in lines) {
+
+  for (var i = startPointer; i < lines.length; i++) {
+    final pointer = i + 1; // human-friendly (1-based) progress
+    final line = lines[i];
     final celex = line.split('\t')[0];
     final actName = line.split('\t')[1];
+
     print(
-      'Harvesting ${++pointer}/${lines.length} — $celex, ${actName.substring(0, actName.length > 50 ? 50 : actName.length)}',
+      'Harvesting $pointer/${lines.length} — $celex, ${actName.substring(0, actName.length > 50 ? 50 : actName.length)}',
     );
 
-    final uploadData = await createUploadArrayFromCelex(
-      celex,
-      langsEU,
-      false, //  throttle
-    );
-    processMultilingualMap(
-      uploadData,
-      "eurolex_sparql8",
-      celex,
-      "N/A",
-      false,
-      true,
-      false,
-      false,
-    );
+    try {
+      final uploadData = await createUploadArrayFromCelexSingle(
+        celex,
+        langsEU,
+        true, // throttle
+      );
 
-    // Cooldown every 100 items (match message with actual wait)
-    if (pointer % 100 == 0) {
-      print('Waiting 2 seconds to avoid throttling...');
-      await Future.delayed(const Duration(seconds: 2));
+      processMultilingualMap(
+        uploadData,
+        indexName,
+        celex,
+        pointer.toString(), //dirID = pointer
+        false, //simulate
+        false, // debug
+        false,
+        i, //index
+      );
+
+      if (pointer % 10 == 0) {
+        print(
+          'Harvest pointer: $pointer, Waiting 5 seconds after 10 items to avoid throttling...',
+        );
+        await Future.delayed(const Duration(seconds: 5));
+      }
+
+      if (pointer % 30 == 0) {
+        print(
+          'Harvest pointer: $pointer, Waiting 30 seconds after 30 items to avoid throttling...',
+        );
+        await Future.delayed(const Duration(seconds: 30));
+      }
+    } on Exception catch (e) {
+      print(
+        'Failed to harvest $celex: $e at pointer: $pointer (index $i) (exception $e)',
+      );
+      logger.log('Failed to harvest $celex: (resume at index $i)\n$e');
+      return;
+      // Optionally stop here to resume later from this pointer:
+      // return;
     }
 
-    // Light pacing between CELEXes too
-    // await Future.delayed(Duration(milliseconds: 800 + Random().nextInt(600)));
+    // Light pacing between CELEXes
+    await Future.delayed(Duration(milliseconds: 800 + Random().nextInt(600)));
+    print('Harvest pointer: $pointer, Waiting a bit to avoid throttling...');
   }
 }
 
