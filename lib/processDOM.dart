@@ -35,6 +35,7 @@ List<String> langsEU = [
   "SK",
   "SL",
   "SV",
+  "GA"
 ];
 
 class DomProcessor {

@@ -171,85 +171,95 @@ Future<Map<String, Map<String, String>>> fetchSectorXCellarLinksNumber(
   dynamic year,
 ) async {
   const endpoint = 'https://publications.europa.eu/webapi/rdf/sparql';
-
   final sectorStr = sector.toString();
   final yearStr = year.toString();
 
-  // Use a non-const, non-raw string so interpolation works
-  final query = '''
+  final Map<String, Map<String, String>> resultMap = {};
+  const int limit = 10000;
+  String? lastCelex; // cursor
+  bool hasMore = true;
+  int page = 0;
+
+  while (hasMore) {
+    final cursorFilter =
+        lastCelex == null ? '' : 'FILTER(STR(?celex) > "${lastCelex!}")';
+
+    final query = '''
 prefix cdm: <http://publications.europa.eu/ontology/cdm#>
 prefix purl: <http://purl.org/dc/elements/1.1/>
-select distinct ?celex, ?work, ?expr, ?manif, ?langCode, str(?format) as ?format, ?item
+select distinct ?celex ?langCode ?item
 where {
- ?work a cdm:resource_legal ;
+  ?work a cdm:resource_legal ;
         cdm:resource_legal_id_celex ?celex .
- FILTER(STRSTARTS(STR(?celex), "$sectorStr"))
+  FILTER(STRSTARTS(STR(?celex), "$sectorStr"))
   FILTER(SUBSTR(STR(?celex), 2, 4) = "$yearStr")
-?expr cdm:expression_belongs_to_work ?work ;
-cdm:expression_uses_language ?lang .
-?lang purl:identifier ?langCode .
-?manif cdm:manifestation_manifests_expression ?expr;
-cdm:manifestation_type ?format.
-?item cdm:item_belongs_to_manifestation ?manif.
-
-FILTER(str(?format)="xhtml")
-
-} 
-ORDER BY ASC(?celex)
-LIMIT 100
+  $cursorFilter
+  ?expr cdm:expression_belongs_to_work ?work ;
+        cdm:expression_uses_language ?lang .
+  ?lang purl:identifier ?langCode .
+  ?manif cdm:manifestation_manifests_expression ?expr ;
+        cdm:manifestation_type ?format .
+  ?item cdm:item_belongs_to_manifestation ?manif .
+  FILTER(str(?format)="xhtml")
+}
+ORDER BY ?celex
+LIMIT $limit
 ''';
 
-  try {
-    final resp = await http.post(
-      Uri.parse(endpoint),
-      headers: {
-        'Accept': 'application/sparql-results+json',
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-      },
-      body: {'query': query},
-    );
-
-    if (resp.statusCode != 200) {
-      throw Exception('SPARQL HTTP ${resp.statusCode}: ${resp.body}');
-    }
-
-    print(resp.body);
-    final decoded = jsonDecode(resp.body) as Map<String, dynamic>;
-    final bindings = (decoded['results']?['bindings'] as List?) ?? const [];
-
-    Map<String, Map<String, String>> resultMap = {};
-    int index = 0;
-    for (final row in bindings) {
-      final celex = row['celex']?['value'] as String? ?? '';
-      final langCode = (row['langCode']?['value'] as String? ?? '').trim();
-      final twoLetterLangCode = langMap[langCode] ?? langCode;
-      final downloadCellarUrl = row['item']?['value'] as String? ?? '';
-      if (celex.isNotEmpty && downloadCellarUrl.isNotEmpty) {
-        print(
-          "Harvest Row ${index++}: CELEX: $celex, LangCode: $langCode ($twoLetterLangCode), Cellar URL: $downloadCellarUrl",
-        );
-        resultMap[celex] ??= {};
-        resultMap[celex]![twoLetterLangCode] = downloadCellarUrl;
+    try {
+      final resp = await http.post(
+        Uri.parse(endpoint),
+        headers: {
+          'Accept': 'application/sparql-results+json',
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        },
+        body: {'query': query},
+      );
+      if (resp.statusCode != 200) {
+        throw Exception('SPARQL HTTP ${resp.statusCode}: ${resp.body}');
       }
+
+      final decoded = jsonDecode(resp.body) as Map<String, dynamic>;
+      final bindings = (decoded['results']?['bindings'] as List?) ?? const [];
+
+      if (bindings.isEmpty) {
+        hasMore = false;
+        break;
+      }
+
+      for (final row in bindings) {
+        final celex = row['celex']?['value'] as String? ?? '';
+        final langCode = row['langCode']?['value'] as String? ?? '';
+        final twoLetter = langMap[langCode] ?? langCode;
+        final url = row['item']?['value'] as String? ?? '';
+        if (celex.isEmpty || url.isEmpty) continue;
+        resultMap[celex] ??= {};
+        resultMap[celex]![twoLetter] = url;
+        lastCelex = celex; // advance cursor continuously
+      }
+
+      page++;
+      print(
+        'Harvest Page $page fetched, lastCelex=$lastCelex, distinct CELEX so far=${resultMap.length}',
+      );
+      //   print("Harvest, resultMap size: ${resultMap}");
+
+      // If less than limit, final page
+      if (bindings.length < limit) {
+        hasMore = false;
+      }
+    } catch (e) {
+      print('Harvest Error on page $page: $e');
+      break;
     }
-
-    // Count total language variants across all CELEX entries
-    int totalLanguageVariants = 0;
-    for (final entry in resultMap.values) {
-      totalLanguageVariants += entry.length;
-    }
-
-    print(
-      "Harvest cellar links count: ${resultMap.length} unique CELEX entries, $totalLanguageVariants total language variants",
-    );
-
-    print(resultMap['32015A0228(01)']?.keys.join(', '));
-    print(resultMap);
-    return resultMap;
-  } on Exception catch (e) {
-    // For error, return a map with 'error' key containing a map with 'message'
-    return {
-      'error': {'message': e.toString()},
-    };
   }
+
+  int totalLangVariants = 0;
+  for (final m in resultMap.values) {
+    totalLangVariants += m.length;
+  }
+  print(
+    'Harvest Done: ${resultMap.length} CELEX, $totalLangVariants language variants.',
+  );
+  return resultMap;
 }
