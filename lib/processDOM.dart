@@ -35,7 +35,7 @@ List<String> langsEU = [
   "SK",
   "SL",
   "SV",
-  "GA"
+  "GA",
 ];
 
 class DomProcessor {
@@ -489,6 +489,7 @@ List<Map<String, dynamic>> processMultilingualMap(
   bool debug,
   bool paragraphsNotMatched,
   int pointer,
+  LogManager runLogger,
 ) {
   List<Map<String, dynamic>> jsonData =
       []; //to store created json entry for file
@@ -559,7 +560,26 @@ List<Map<String, dynamic>> processMultilingualMap(
     }
   }
 
-  if (!simulate) openSearchUpload(jsonData, indexName);
+  // Simple sync try/catch (note: this will NOT catch asynchronous errors
+  // originating inside sendToOpenSearch because openSearchUpload is not awaited)
+  try {
+    if (!simulate) {
+      openSearchUpload(jsonData, indexName);
+    }
+  } catch (e, st) {
+    runLogger.log(
+      'OpenSearch upload failed, pointer: $pointer, celex: $celex: $e\n$st',
+    );
+  }
+
+  // Recommended (to catch async errors): make processMultilingualMap async,
+  // change openSearchUpload to return Future<void> and then:
+  // try {
+  //   if (!simulate) await openSearchUpload(jsonData, indexName);
+  // } catch (e, st) {
+  //   final logger = LogManager(fileName: 'logs/${fileSafeStamp}_${indexName}_error.log');
+  //   logger.log('OpenSearch upload failed: $e\n$st');
+  // }
 
   if (debug) {
     final logger = LogManager(

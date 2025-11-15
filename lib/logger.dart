@@ -30,23 +30,28 @@ class LogManager {
     final file = await _logFile;
     final logEntry = "${DateTime.now().toIso8601String()}, $message\n";
 
-    String currentContent = "";
     if (await file.exists()) {
-      currentContent = await file.readAsString();
-    }
-
-    String updatedContent = currentContent + logEntry;
-
-    if (updatedContent.length > maxLogSize) {
-      int trimFrom = updatedContent.length - maxLogSize;
-      updatedContent = updatedContent.substring(trimFrom);
-      int newLineIndex = updatedContent.indexOf("\n");
-      if (newLineIndex != -1) {
-        updatedContent = updatedContent.substring(newLineIndex + 1);
+      final len = await file.length();
+      // Fast append if below cap
+      if (len + logEntry.length <= LogManager.maxLogSize) {
+        await file.writeAsString(logEntry, mode: FileMode.append, flush: true);
+        return;
       }
     }
 
-    await file.writeAsString(updatedContent);
+    // Fallback: read + trim + overwrite
+    var content = '';
+    if (await file.exists()) {
+      content = await file.readAsString();
+    }
+    var updated = content + logEntry;
+    if (updated.length > LogManager.maxLogSize) {
+      final overflow = updated.length - LogManager.maxLogSize;
+      updated = updated.substring(overflow);
+      final nl = updated.indexOf('\n');
+      if (nl != -1) updated = updated.substring(nl + 1);
+    }
+    await file.writeAsString(updated, mode: FileMode.write, flush: true);
   }
 
   Future<String> readLogs() async {

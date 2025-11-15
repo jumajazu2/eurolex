@@ -1,6 +1,7 @@
 // ...existing code...
 
 import 'dart:math';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:html/dom.dart' as dom;
@@ -9,8 +10,8 @@ import 'package:eurolex/processDOM.dart';
 import 'package:eurolex/preparehtml.dart';
 import 'package:eurolex/file_handling.dart';
 import 'package:eurolex/logger.dart';
-import 'package:eurolex/sparql.dart'
-    show fetchSector5CelexTitles2024, fetchSectorXCelexTitles;
+import 'package:eurolex/sparql.dart';
+import 'package:http/http.dart' as http;
 // ...existing code...
 
 void testDumps() async {
@@ -78,18 +79,18 @@ Duration _backoffWithJitter(
   return Duration(milliseconds: r.nextInt(ms + 1)); // 0..ms
 }
 
-Future<List<List<String>>> retrieveCelexForLang(var celex, var lang) async {
+Future<List<List<String>>> retrieveCelexForLang(var link, var lang) async {
   var attempt = 0;
   while (true) {
     try {
-      final doc = await loadHtmtFromCelex(celex, lang);
+      final doc = await loadHtmtFromCellar(link, lang);
       final lines = extractPlainTextLines(doc);
       final pairs = splitTextAndClass(lines);
-      print("Lang: $lang, Pairs: ${pairs.length}");
+      print("Harvest Lang: $lang, Pairs: ${pairs.length} from $link/n");
       return pairs;
     } catch (e) {
       final msg = e.toString();
-      print('Catch triggered, Error harvesting $celex/$lang: $msg');
+      print('Catch triggered, Error harvesting $link/$lang: $msg');
       // Treat CloudFront WAF challenge (202) as throttle too
       final isThrottle =
           msg.contains('403') ||
@@ -99,12 +100,65 @@ Future<List<List<String>>> retrieveCelexForLang(var celex, var lang) async {
           msg.contains('CloudFront');
       if (!isThrottle || attempt >= 2) rethrow;
       final wait = _backoffWithJitter(attempt);
-      print('harvest Throttle for $celex/$lang  Retry in ${wait.inSeconds}s');
+      print('harvest Throttle for $link/$lang  Retry in ${wait.inSeconds}s');
       await Future.delayed(wait);
       attempt++;
     }
   }
 }
+
+Future<Map<String, List<List<String>>>> createUploadArrayFromMap(
+  String celex,
+  Map<String, String> langLinks, // lang -> URL
+  LogManager logger,
+) async {
+  final out = <String, List<List<String>>>{};
+  final failed = <String>[];
+
+  final futures = <Future<void>>[];
+  for (final entry in langLinks.entries) {
+    final lang = entry.key;
+    final url = entry.value;
+
+    futures.add(() async {
+      try {
+        final pairs = await retrieveCelexForLang(url, lang);
+        out[lang] = pairs;
+      } catch (e) {
+        final msg = 'Harvest error for $celex/$lang from $url: $e';
+        print(msg);
+        logger.log(msg);
+        // Optionally also log stack trace:
+        // logger.log(st.toString());
+        failed.add(lang);
+      }
+    }());
+  }
+
+  await Future.wait(futures);
+
+  if (failed.isNotEmpty) {
+    logger.log('Failed languages for $celex: ${failed.join(', ')}');
+  }
+  return out;
+}
+
+/*downloading docs one by one 
+Future<Map<String, List<List<String>>>> createUploadArrayFromMap(
+  Map langLinks,
+) async {
+  final out = <String, List<List<String>>>{};
+  for (var lang in langLinks.keys) {
+    final url = langLinks[lang]!;
+
+    final pairs = await retrieveCelexForLang(url, lang);
+
+    out[lang] = pairs;
+  }
+
+  return out;
+}
+*/
 
 Future<Map<String, List<List<String>>>> createUploadArrayFromCelex(
   String celex,
@@ -310,44 +364,63 @@ void fetchsparql() async {
 }
 
 //test to upload a certain celex sector from a certain year
+//this is main entry point for sparql harvesting and uploading
 void uploadTestSparqlSectorYear(
   int sector,
   int year,
   String indexName, [
   int startPointer = 0,
 ]) async {
-  final lines = await fetchSectorXCelexTitles(sector, year);
+  //final lines = await fetchSectorXCelexTitles(sector, year);
+  final downloadLinks = await fetchSectorXCellarLinksNumber(
+    sector,
+    year,
+  ); //this reads a map of celex->lang->links
 
-  if (startPointer < 0 || startPointer >= lines.length) {
+  if (startPointer < 0 ||
+      startPointer >=
+          downloadLinks.length) //this give number of celexes to process
+  {
     print(
-      'Invalid startPointer=$startPointer (lines: ${lines.length}). Starting from 0.',
+      'Invalid startPointer=$startPointer (Celexes: ${downloadLinks.length}). Starting from 0.',
     );
     startPointer = 0;
   }
 
+  final loggerUrl = LogManager(
+    fileName: 'logs/${fileSafeStamp}_${indexName}_URLs.log',
+  );
+  loggerUrl.log(
+    'Cellar Upload for sector $sector, year $year, total celexes: ${downloadLinks.length}, resumeFrom: $startPointer, the following URLs will be processed: ${const JsonEncoder.withIndent('  ').convert(downloadLinks)}',
+  );
+
   final logger = LogManager(fileName: 'logs/${fileSafeStamp}_$indexName.log');
   logger.log(
-    'Upload for sector $sector, year $year, total celexes: ${lines.length}, resumeFrom: $startPointer',
+    'Cellar Upload for sector $sector, year $year, total celexes: ${downloadLinks.length}, resumeFrom: $startPointer',
   );
   print(
-    'Starting Harvest for sector $sector, year $year, total celexes: ${lines.length}, resumeFrom: $startPointer',
+    'Starting Harvest for sector $sector, year $year, total celexes: ${downloadLinks.length}, resumeFrom: $startPointer',
   );
 
-  for (var i = startPointer; i < lines.length; i++) {
+  final celexIds =
+      downloadLinks.keys
+          .toList(); //create list of celex ids to access map by index
+
+  for (var i = startPointer; i < downloadLinks.length; i++) {
     final pointer = i + 1; // human-friendly (1-based) progress
-    final line = lines[i];
-    final celex = line.split('\t')[0];
-    final actName = line.split('\t')[1];
+    final celex = celexIds[i];
+    final langMapForCelex =
+        downloadLinks[celex]!; //get lang->links map for this celex
 
     print(
-      'Harvesting $pointer/${lines.length} — $celex, ${actName.substring(0, actName.length > 50 ? 50 : actName.length)}',
+      'Harvesting $pointer/${downloadLinks.length} — $celex, langmap: ${langMapForCelex.keys.toList()}',
     );
 
     try {
-      final uploadData = await createUploadArrayFromCelexSingle(
+      final uploadData = await createUploadArrayFromMap(
         celex,
-        langsEU,
-        true, // throttle
+        langMapForCelex,
+        logger, // throttle
       );
 
       processMultilingualMap(
@@ -358,9 +431,10 @@ void uploadTestSparqlSectorYear(
         false, //simulate
         false, // debug
         false,
-        i, //index
+        i,
+        logger, //index
       );
-
+      /*
       if (pointer % 10 == 0) {
         print(
           'Harvest pointer: $pointer, Waiting 5 seconds after 10 items to avoid throttling...',
@@ -374,6 +448,8 @@ void uploadTestSparqlSectorYear(
         );
         await Future.delayed(const Duration(seconds: 30));
       }
+
+      */
     } on Exception catch (e) {
       print(
         'Failed to harvest $celex: $e at pointer: $pointer (index $i) (exception $e)',
@@ -411,4 +487,20 @@ void sectorsSparql() async {
   for (var sector = 0; sector <= 10; sector++) {
     checkYearsSparql(sector, 1990, 2025);
   }
+}
+
+Future deleteOpenSearchIndex(index) async {
+  // String indicesBefore = await getListIndices(server);
+  // print('Remaining indices before delete: $indicesBefore');
+  final resp = await http.delete(
+    Uri.parse('https://search.pts-translation.sk/$index'),
+    headers: {'x-api-key': '1234'},
+  );
+
+  print('DELETE: ${resp.statusCode}');
+  if (resp.statusCode != 200) {
+    print('Delete failed ${resp.statusCode}: ${resp.body}');
+  }
+  // String indicesAfter = await getListIndices(server);
+  // print('Remaining indices after delete: $indicesAfter');
 }

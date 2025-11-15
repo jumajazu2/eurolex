@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:eurolex/setup.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
@@ -102,7 +103,7 @@ loadSettingsFromFile() async //loads JSON from config.json file to the global va
     // Decode the JSON
     jsonSettings = jsonDecode(jsonString);
 
-    print("JSON Settings loaded successfully: $jsonSettings");
+    print("JSON Settings from $file loaded successfully: $jsonSettings");
 
     LogManager logger = LogManager();
     logger.log("{$TimeOfDay.now()} $file loaded ok");
@@ -128,6 +129,9 @@ loadSettingsFromFile() async //loads JSON from config.json file to the global va
       "log_level": "info",
       "max_log_size": 999999,
       "access_key": "trial",
+      "user_email": userEmail,
+      "os_server": osServer,
+      "os_indices": ["*"],
     };
 
     writeSettingsToFile(jsonSettings); //create the file with default values

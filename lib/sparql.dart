@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'testHtmlDumps.dart';
 import 'package:http/http.dart' as http;
 
 final langMap = {
@@ -25,6 +26,7 @@ final langMap = {
   'SLK': 'SK', // Slovak
   'SLV': 'SL', // Slovenian
   'SWE': 'SV', // Swedish
+  'GLE': 'GA', // Ukrainian
 };
 
 String convertLangCode(String code) {
@@ -234,7 +236,11 @@ LIMIT $limit
         final url = row['item']?['value'] as String? ?? '';
         if (celex.isEmpty || url.isEmpty) continue;
         resultMap[celex] ??= {};
-        resultMap[celex]![twoLetter] = url;
+        // resultMap[celex]![twoLetter] = url;
+        resultMap[celex]!.putIfAbsent(
+          twoLetter,
+          () => url,
+        ); //to ensure that only the first url is used when there are more URLs for a lang,
         lastCelex = celex; // advance cursor continuously
       }
 
@@ -261,5 +267,6 @@ LIMIT $limit
   print(
     'Harvest Done: ${resultMap.length} CELEX, $totalLangVariants language variants.',
   );
+
   return resultMap;
 }

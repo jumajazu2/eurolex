@@ -406,6 +406,33 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     processQuery(query, _searchController.text);
   }
 
+  void _startSearchPhraseAll() async {
+    setState(() {
+      _results.clear();
+      enHighlightedResults.clear();
+    });
+
+    final query = {
+      "query": {
+        "multi_match": {
+          "type": "phrase",
+          "query": _searchController.text,
+          "slop": 10,
+          "fields": ["*_text"], // all lang fields ending with _text
+          "auto_generate_synonyms_phrase_query": false,
+          "lenient": true,
+        },
+      },
+      "size": 50,
+      "highlight": {
+        "require_field_match": false,
+        "fields": {"*_text": {}},
+      },
+    };
+
+    processQuery(query, _searchController.text);
+  }
+
   Color backgroundColor = Colors.white12;
 
   void updateDropdown() async {
@@ -517,6 +544,10 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
               ElevatedButton(
                 onPressed: _startSearch3,
                 child: Text('Search (match+matchphrase)'),
+              ),
+              ElevatedButton(
+                onPressed: _startSearchPhraseAll,
+                child: Text('Search (phrase all)'),
               ),
 
               SizedBox(
@@ -770,7 +801,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
               ),
               Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: Text(
+                child: SelectableText(
                   'Query Text: $queryPattern',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),

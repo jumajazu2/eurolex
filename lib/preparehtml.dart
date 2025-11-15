@@ -634,7 +634,7 @@ Future<String> loadHtmtFromCelex(celex, lang) async {
 
     final response = await http
         .get(Uri.parse(url), headers: headers)
-        .timeout(const Duration(seconds: 25));
+        .timeout(const Duration(seconds: 225));
     // ...existing code...
     if (response.statusCode == 200) {
       String htmlContent = response.body;
@@ -645,6 +645,48 @@ Future<String> loadHtmtFromCelex(celex, lang) async {
           response.body.length > 100 ? 100 : response.body.length;
       final errorMsg =
           'Failed to load HTML in Harvest for celex: $celex, lang: $lang. '
+          'Status code: ${response.statusCode}, ${response.headers}\n'
+          '${response.body.substring(0, snippetLen)}';
+      print(errorMsg);
+      throw Exception(errorMsg);
+    }
+  } catch (e) {
+    print('Error loading HTML: $e');
+    throw Exception('Error loading HTML: $e');
+  }
+}
+
+Future<String> loadHtmtFromCellar(url, lang) async {
+  // Use HTTPS
+
+  print('Harvest HTML from URL: $url');
+
+  try {
+    // Add browser-like headers (minimal)
+    final headers = <String, String>{
+      'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+      'Accept':
+          'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+      'Accept-Language': '$lang;q=1.0,en;q=0.8',
+      'Referer': 'https://eur-lex.europa.eu/',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+    };
+
+    final response = await http
+        .get(Uri.parse(url))
+        .timeout(const Duration(seconds: 1000));
+    // ...existing code...
+    if (response.statusCode == 200) {
+      String htmlContent = response.body;
+      print('HTML content loaded successfully: $url, lang: $lang');
+      return htmlContent;
+    } else {
+      final snippetLen =
+          response.body.length > 100 ? 100 : response.body.length;
+      final errorMsg =
+          'Failed to load HTML in Harvest for $url, lang: $lang. '
           'Status code: ${response.statusCode}, ${response.headers}\n'
           '${response.body.substring(0, snippetLen)}';
       print(errorMsg);
