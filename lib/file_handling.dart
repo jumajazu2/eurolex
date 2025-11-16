@@ -14,11 +14,19 @@ String getExecutableDir() {
 
 String getFilePath(String filename) {
   if (kReleaseMode) {
-    // In release mode, use the executable directory
-    final exeDir = getExecutableDir();
-    return p.join(exeDir, filename);
+    // Windows release: use %APPDATA%\LegistracerEU
+    final appData =
+        Platform.environment['APPDATA']; // e.g. C:\Users\User\AppData\Roaming
+    final baseDir =
+        (appData != null && appData.isNotEmpty)
+            ? p.join(appData, 'LegistracerEU')
+            : getExecutableDir(); // fallback if APPDATA missing
+    try {
+      Directory(baseDir).createSync(recursive: true);
+    } catch (_) {}
+    return p.join(baseDir, filename);
   } else {
-    // In debug mode, use a relative path
+    // Debug: keep existing project-relative path
     print("Debug mode detected. Using relative path.");
     return 'c:/Users/Juraj/Documents/IT/OSLex/eurolex/lib/$filename';
   }

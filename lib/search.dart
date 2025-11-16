@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:eurolex/main.dart';
+import 'package:eurolex/setup.dart';
 import 'package:flutter/material.dart';
 import 'package:eurolex/processDOM.dart';
 import 'package:eurolex/display.dart';
@@ -17,9 +18,9 @@ import 'package:path_provider/path_provider.dart';
 
 var resultsOS = [];
 var decodedResults = [];
-var skResults = [];
-var enResults = ["N/A"];
-var czResults = [];
+var lang2Results = [];
+var lang1Results = ["N/A"];
+var lang3Results = [];
 var metaCelex = [];
 var metaCellar = [];
 var sequenceNo;
@@ -196,12 +197,27 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     var hits = decodedResults['hits']['hits'] as List;
 
     setState(() {
-      skResults =
-          hits.map((hit) => hit['_source']['sk_text'].toString()).toList();
-      enResults =
-          hits.map((hit) => hit['_source']['en_text'].toString()).toList();
-      czResults =
-          hits.map((hit) => hit['_source']['cz_text'].toString()).toList();
+      lang2Results =
+          hits
+              .map(
+                (hit) =>
+                    hit['_source']['${lang2?.toLowerCase()}_text'].toString(),
+              )
+              .toList();
+      lang1Results =
+          hits
+              .map(
+                (hit) =>
+                    hit['_source']['${lang1?.toLowerCase()}_text'].toString(),
+              )
+              .toList();
+      lang3Results =
+          hits
+              .map(
+                (hit) =>
+                    hit['_source']['${lang3?.toLowerCase()}_text'].toString(),
+              )
+              .toList();
 
       metaCelex =
           hits.map((hit) => hit['_source']['celex'].toString()).toList();
@@ -222,7 +238,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
       docDate = hits.map((hit) => hit['_source']['date'].toString()).toList();
     });
 
-    print("Query: $query, Results SK = $skResults");
+    print("Query: $query, Results SK = $lang2Results");
 
     queryText = searchTerm; //_searchController.text;
     //converting the results to TextSpans for highlighting
@@ -235,7 +251,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
 
     print("Query Words: $queryWords");
 
-    for (var hit in enResults) {
+    for (var hit in lang1Results) {
       var enHighlight = highlightFoundWords2(hit, queryWords);
 
       // You can store these highlights in a list or map if needed
@@ -749,7 +765,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                       children: [
                         Icon(Icons.filter_alt, color: Colors.orange),
                         SizedBox(width: 8),
-                        Text("Query Details: ${enResults.length} result(s)"),
+                        Text("Query Details: ${lang1Results.length} result(s)"),
                         SizedBox(width: 8),
 
                         GestureDetector(
@@ -778,7 +794,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                         ),
                       ],
                     )
-                    : Text("Query Details: ${enResults.length} result(s)"),
+                    : Text("Query Details: ${lang1Results.length} result(s)"),
             onExpansionChanged: (bool expanded) {
               if (expanded) {
                 // Wrap the async call in an anonymous async function
@@ -809,7 +825,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Text(
-                  'Query Result: $enResults',
+                  'Query Result: $lang1Results',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -831,9 +847,9 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
           child: ListView.builder(
             itemCount: enHighlightedResults.length,
             itemBuilder: (context, index) {
-              return ((enResults.isNotEmpty &&
-                              index < enResults.length &&
-                              enResults[index].toLowerCase().contains(
+              return ((lang1Results.isNotEmpty &&
+                              index < lang1Results.length &&
+                              lang1Results[index].toLowerCase().contains(
                                 containsFilter.toLowerCase(),
                               ) ||
                           containsFilter == '') &&
@@ -887,8 +903,8 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                     ),
                                     child: SelectableText(
                                       style: TextStyle(fontSize: 18.0),
-                                      skResults.length > index
-                                          ? skResults[index]
+                                      lang2Results.length > index
+                                          ? lang2Results[index]
                                           : '',
                                     ),
                                   ),
@@ -903,8 +919,8 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                     ),
                                     child: SelectableText(
                                       style: TextStyle(fontSize: 18.0),
-                                      czResults.length > index
-                                          ? czResults[index]
+                                      lang3Results.length > index
+                                          ? lang3Results[index]
                                           : '',
                                     ),
                                   ),
