@@ -270,3 +270,100 @@ LIMIT $limit
 
   return resultMap;
 }
+
+Future<Map<String, Map<String, String>>> fetchLinksForCelex(
+  dynamic celex,
+) async {
+  const endpoint = 'https://publications.europa.eu/webapi/rdf/sparql';
+  final celexStr = celex;
+
+  final Map<String, Map<String, String>> resultMap = {};
+  const int limit = 10000;
+  String? lastCelex; // cursor
+  bool hasMore = true;
+  int page = 0;
+
+  while (hasMore) {
+    final cursorFilter =
+        lastCelex == null ? '' : 'FILTER(STR(?celex) > "${lastCelex!}")';
+
+    final query = '''
+prefix cdm: <http://publications.europa.eu/ontology/cdm#>
+prefix purl: <http://purl.org/dc/elements/1.1/>
+select distinct ?celex ?langCode ?item
+where {
+  ?work cdm:resource_legal_id_celex ?celex .
+FILTER(str(?celex) = "$celexStr")
+
+  ?expr cdm:expression_belongs_to_work ?work ;
+        cdm:expression_uses_language ?lang .
+  ?lang purl:identifier ?langCode .
+  ?manif cdm:manifestation_manifests_expression ?expr ;
+        cdm:manifestation_type ?format .
+  ?item cdm:item_belongs_to_manifestation ?manif .
+  FILTER(str(?format)="xhtml")
+}
+ORDER BY ?celex
+''';
+
+    try {
+      final resp = await http.post(
+        Uri.parse(endpoint),
+        headers: {
+          'Accept': 'application/sparql-results+json',
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        },
+        body: {'query': query},
+      );
+      if (resp.statusCode != 200) {
+        throw Exception('SPARQL HTTP ${resp.statusCode}: ${resp.body}');
+      }
+
+      final decoded = jsonDecode(resp.body) as Map<String, dynamic>;
+      final bindings = (decoded['results']?['bindings'] as List?) ?? const [];
+
+      if (bindings.isEmpty) {
+        hasMore = false;
+        break;
+      }
+
+      for (final row in bindings) {
+        final celex = row['celex']?['value'] as String? ?? '';
+        final langCode = row['langCode']?['value'] as String? ?? '';
+        final twoLetter = langMap[langCode] ?? langCode;
+        final url = row['item']?['value'] as String? ?? '';
+        if (celex.isEmpty || url.isEmpty) continue;
+        resultMap[celex] ??= {};
+        // resultMap[celex]![twoLetter] = url;
+        resultMap[celex]!.putIfAbsent(
+          twoLetter,
+          () => url,
+        ); //to ensure that only the first url is used when there are more URLs for a lang,
+        lastCelex = celex; // advance cursor continuously
+      }
+
+      page++;
+      print(
+        'Harvest Page $page fetched, lastCelex=$lastCelex, distinct CELEX so far=${resultMap.length}',
+      );
+      //   print("Harvest, resultMap size: ${resultMap}");
+
+      // If less than limit, final page
+      if (bindings.length < limit) {
+        hasMore = false;
+      }
+    } catch (e) {
+      print('Harvest Error on page $page: $e');
+      break;
+    }
+  }
+  int totalLangVariants = 0;
+  for (final m in resultMap.values) {
+    totalLangVariants += m.length;
+  }
+  print(
+    'Harvest Done for individual CELEX $celexStr: ${resultMap.length}, $totalLangVariants language variants, resultMap: $resultMap.',
+  );
+
+  return resultMap;
+}

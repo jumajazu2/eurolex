@@ -466,6 +466,106 @@ void uploadTestSparqlSectorYear(
   }
 }
 
+void uploadSparqlForCelex(
+  String celex,
+
+  String indexName, [
+  int startPointer = 0,
+]) async {
+  //final lines = await fetchSectorXCelexTitles(sector, year);
+  final downloadLinks = await fetchLinksForCelex(
+    celex,
+  ); //this reads a map of celex->lang->links
+
+  if (startPointer < 0 ||
+      startPointer >=
+          downloadLinks.length) //this give number of celexes to process
+  {
+    print(
+      'Invalid startPointer=$startPointer (Celexes: ${downloadLinks.length}). Starting from 0.',
+    );
+    startPointer = 0;
+  }
+
+  final loggerUrl = LogManager(
+    fileName: 'logs/${fileSafeStamp}_${indexName}_URLs.log',
+  );
+  loggerUrl.log(
+    'Cellar Upload for celex $celex,  ${downloadLinks.length}, resumeFrom: $startPointer, the following URLs will be processed: ${const JsonEncoder.withIndent('  ').convert(downloadLinks)}',
+  );
+
+  final logger = LogManager(fileName: 'logs/${fileSafeStamp}_$indexName.log');
+  logger.log(
+    'Cellar Upload for celex $celex, total links: ${downloadLinks.length}, resumeFrom: $startPointer',
+  );
+  print(
+    'Starting Harvest for celex $celex, total links: ${downloadLinks.length}, resumeFrom: $startPointer',
+  );
+
+  final celexIds =
+      downloadLinks.keys
+          .toList(); //create list of celex ids to access map by index
+
+  for (var i = startPointer; i < downloadLinks.length; i++) {
+    final pointer = i + 1; // human-friendly (1-based) progress
+    final celex = celexIds[i];
+    final langMapForCelex =
+        downloadLinks[celex]!; //get lang->links map for this celex
+
+    print(
+      'Harvesting $pointer/${downloadLinks.length} — $celex, langmap: ${langMapForCelex.keys.toList()}',
+    );
+
+    try {
+      final uploadData = await createUploadArrayFromMap(
+        celex,
+        langMapForCelex,
+        logger, // throttle
+      );
+
+      processMultilingualMap(
+        uploadData,
+        indexName,
+        celex,
+        pointer.toString(), //dirID = pointer
+        false, //simulate
+        false, // debug
+        false,
+        i,
+        logger, //index
+      );
+      /*
+      if (pointer % 10 == 0) {
+        print(
+          'Harvest pointer: $pointer, Waiting 5 seconds after 10 items to avoid throttling...',
+        );
+        await Future.delayed(const Duration(seconds: 5));
+      }
+
+      if (pointer % 30 == 0) {
+        print(
+          'Harvest pointer: $pointer, Waiting 30 seconds after 30 items to avoid throttling...',
+        );
+        await Future.delayed(const Duration(seconds: 30));
+      }
+
+      */
+    } on Exception catch (e) {
+      print(
+        'Failed to harvest $celex: $e at pointer: $pointer (index $i) (exception $e)',
+      );
+      logger.log('Failed to harvest $celex: (resume at index $i)\n$e');
+      return;
+      // Optionally stop here to resume later from this pointer:
+      // return;
+    }
+
+    // Light pacing between CELEXes
+    await Future.delayed(Duration(milliseconds: 800 + Random().nextInt(600)));
+    print('Harvest pointer: $pointer, Waiting a bit to avoid throttling...');
+  }
+}
+
 void numberSparql(sector, year) async {
   final lines = await fetchSectorXCelexTitles(sector, year);
   print('Total lines fetched: ${lines.length}');

@@ -1,3 +1,72 @@
+WORKING, to implement, return for specific Celex - Cellar links and lang codes
+
+
+prefix cdm: <http://publications.europa.eu/ontology/cdm#>
+prefix purl: <http://purl.org/dc/elements/1.1/>
+select distinct ?celex ?langCode ?item
+where {
+  ?work cdm:resource_legal_id_celex ?celex .
+FILTER(str(?celex) = "52025DC0030")
+
+  ?expr cdm:expression_belongs_to_work ?work ;
+        cdm:expression_uses_language ?lang .
+  ?lang purl:identifier ?langCode .
+  ?manif cdm:manifestation_manifests_expression ?expr ;
+        cdm:manifestation_type ?format .
+  ?item cdm:item_belongs_to_manifestation ?manif .
+  FILTER(str(?format)="xhtml")
+}
+ORDER BY ?celex
+
+***************************
+
+BUG -WORKING 17-11-2025
+returns filtered by ENG, but missing some (52025DC0030)
+
+prefix cdm: <http://publications.europa.eu/ontology/cdm#>
+prefix purl: <http://purl.org/dc/elements/1.1/>
+select distinct ?celex ?langCode ?item
+where {
+  ?work a cdm:resource_legal ;
+        cdm:resource_legal_id_celex ?celex .
+  FILTER(STRSTARTS(STR(?celex), "5"))
+  FILTER(SUBSTR(STR(?celex), 2, 4) = "2025")
+ 
+  ?expr cdm:expression_belongs_to_work ?work ;
+        cdm:expression_uses_language ?lang .
+  ?lang purl:identifier ?langCode .
+ FILTER(str(?langCode)="ENG")
+  ?manif cdm:manifestation_manifests_expression ?expr ;
+        cdm:manifestation_type ?format .
+  ?item cdm:item_belongs_to_manifestation ?manif .
+  FILTER(str(?format)="xhtml")
+
+}
+
+WORKING 17-11-2025
+return cellars for individual celex
+
+prefix cdm: <http://publications.europa.eu/ontology/cdm#> 
+SELECT ?celex, ?expr, ?manif, ?item  WHERE { ?work cdm:resource_legal_id_celex ?celex . FILTER(str(?celex) = "52025DC0030") 
+
+
+?expr cdm:expression_belongs_to_work ?work ;
+cdm:expression_uses_language ?lang .
+
+?manif cdm:manifestation_manifests_expression ?expr;
+cdm:manifestation_type ?format.
+?item cdm:item_belongs_to_manifestation ?manif.
+}
+LIMIT 1000
+
+
+
+
+
+
+
+
+
 prefix cdm: <http://publications.europa.eu/ontology/cdm#>
 prefix purl: <http://purl.org/dc/elements/1.1/>
 select distinct ?celex, ?work, ?expr, ?manif, ?langCode, str(?format) as ?format, ?item
@@ -87,3 +156,21 @@ LIMIT 10000
 
 
 
+PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
+
+SELECT ?consolidatedWork ?title ?date
+WHERE {
+BIND("32022R2391" AS ?originalCELEX)  # change CELEX here
+
+?originalWork a cdm:resource_legal ;
+cdm:resource_legal_id_celex ?originalCELEX .
+?consolidatedWork a cdm:resource_legal ;
+cdm:consolidates ?originalWork .
+OPTIONAL {
+?exp  cdm:expression_belongs_to_work ?consolidatedWork ;
+cdm:expression_uses_language <http://publications.europa.eu/resource/authority/language/ENG> ;
+cdm:expression_title ?title .
+}
+OPTIONAL { ?consolidatedWork cdm:resource_legal_date_document ?date . }
+}
+ORDER BY DESC(?date)
