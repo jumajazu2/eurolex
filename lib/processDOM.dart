@@ -9,6 +9,8 @@ import 'package:eurolex/logger.dart';
 import 'package:html/dom.dart' as dom;
 import 'package:eurolex/preparehtml.dart';
 import 'package:eurolex/preparehtml.dart' show loadHtmlFromCelex;
+import 'dart:async'; // for TimeoutException
+import 'dart:io';
 
 var dirPointer = 0; // Pointer for directory processing
 List<String> langsEU = [
@@ -437,24 +439,36 @@ void openSearchUpload(json, indexName) {
 // Function to send the NDJSON data to OpenSearch
 Future<String> sendToOpenSearch(String url, List<String> bulkData) async {
   try {
-    //return; //temporary disable for testing
-    final response = await http.post(
-      Uri.parse(url),
-      headers: {"Content-Type": "application/x-ndjson", 'x-api-key': '1234'},
-      body: bulkData.join("\n") + "\n", // Join the bulk data with newlines
-    );
+    final response = await http
+        .post(
+          Uri.parse(url),
+          headers: {
+            "Content-Type": "application/x-ndjson",
+            'x-api-key': '1234',
+          },
+          body: bulkData.join("\n") + "\n",
+        )
+        .timeout(const Duration(seconds: 20)); // added timeout
 
     if (response.statusCode == 200) {
       print(
         "Data successfully processed in opensearch! ${response.body.substring(0, 100)}",
       );
-      print(response.body);
-      return response.body; // Return the response body
+      return response.body;
     } else {
-      print(" Error: ${response.statusCode} - ${response.headers}");
+      print("Error: ${response.statusCode} - ${response.headers}");
       return response.body;
     }
-  } on Exception catch (e) {
+  } on TimeoutException catch (e) {
+    print("Timeout sending data to OpenSearch: $e");
+    return "Timeout: $e";
+  } on SocketException catch (e) {
+    print("SocketException sending data to OpenSearch: $e");
+    return "SocketException: $e";
+  } on http.ClientException catch (e) {
+    print("ClientException sending data to OpenSearch: $e");
+    return "ClientException: $e";
+  } catch (e) {
     print("Error sending data to OpenSearch: $e");
     return "Error with OpenSearch: $e";
   }

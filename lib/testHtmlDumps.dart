@@ -466,7 +466,7 @@ void uploadTestSparqlSectorYear(
   }
 }
 
-void uploadSparqlForCelex(
+Future uploadSparqlForCelex(
   String celex,
 
   String indexName, [

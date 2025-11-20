@@ -46,9 +46,12 @@ Future<List> searchQuery(query, queryString) async {
 
   var hits = decodedResults['hits']['hits'] as List;
 
- lang2Results = hits.map((hit) => hit['_source']['sk_text'].toString()).toList();
-  lang1Results = hits.map((hit) => hit['_source']['en_text'].toString()).toList();
-  lang3Results = hits.map((hit) => hit['_source']['cz_text'].toString()).toList();
+  lang2Results =
+      hits.map((hit) => hit['_source']['sk_text'].toString()).toList();
+  lang1Results =
+      hits.map((hit) => hit['_source']['en_text'].toString()).toList();
+  lang3Results =
+      hits.map((hit) => hit['_source']['cz_text'].toString()).toList();
 
   metaCelex = hits.map((hit) => hit['_source']['celex'].toString()).toList();
   metaCellar = hits.map((hit) => hit['_source']['dir_id'].toString()).toList();
@@ -65,7 +68,9 @@ Future<List> searchQuery(query, queryString) async {
 
   docDate = hits.map((hit) => hit['_source']['date'].toString()).toList();
 
-  print("Query?: $query, Results SK = $lang2Results, Results EN = $lang1Results");
+  print(
+    "Query?: $query, Results SK = $lang2Results, Results EN = $lang1Results",
+  );
 
   return [lang1Results, lang2Results];
 }
@@ -135,7 +140,7 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
             {
               "multi_match": {
                 "query": lastFileContent,
-                "fields": ["en_text", "sk_text", "cz_text"],
+                "fields": ["en_text", "sk_text", "cs_text"],
                 "fuzziness": "AUTO",
                 "minimum_should_match": "65%",
               },

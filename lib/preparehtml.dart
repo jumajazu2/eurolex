@@ -14,6 +14,7 @@ import 'package:html/parser.dart' as html_parser;
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:eurolex/logger.dart';
+import 'package:eurolex/testHtmlDumps.dart';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
 import 'package:eurolex/main.dart';
@@ -49,6 +50,20 @@ class FilePickerButton extends StatefulWidget {
 }
 
 class _FilePickerButtonState extends State<FilePickerButton> {
+  double _progress = 0.01;
+
+  void _recalcProgress() {
+    // Count loaded parts (SK, EN, CZ, metadata optional)
+    final parts = [
+      fileContentSK.isNotEmpty,
+      fileContentEN.isNotEmpty,
+      fileContentCZ.isNotEmpty,
+      metadata.isNotEmpty,
+    ];
+    final loaded = parts.where((e) => e).length;
+    _progress = loaded / parts.length;
+  }
+
   // Function to open file picker and load the file content
   Future<void> pickAndLoadFile() async {
     // Open file picker dialog
@@ -65,6 +80,7 @@ class _FilePickerButtonState extends State<FilePickerButton> {
       if (await file.exists()) {
         String content = await file.readAsString();
         print('File content loaded successfully: $content');
+        if (!mounted) return;
         setState(()
         // Update the state with the file content
         {
@@ -88,6 +104,8 @@ class _FilePickerButtonState extends State<FilePickerButton> {
             print("File does not match SK, EN, CZ or MTD criteria.");
           }
 
+          _recalcProgress();
+
           if (fileContentSK.isNotEmpty && fileContentEN.isNotEmpty) {
             // If both SK and EN files are loaded, parse the HTML content
             fileEN_DOM = html_parser.parse(fileContentEN);
@@ -103,7 +121,7 @@ class _FilePickerButtonState extends State<FilePickerButton> {
             print("resultPen: $resultPen");
 */
             //insert button that starts processing of DOM on press
-          } else {
+          } else if (fileContentSK.isEmpty || fileContentEN.isEmpty) {
             fileContent = 'No valid SK or EN file content loaded.';
           }
         });
@@ -118,20 +136,35 @@ class _FilePickerButtonState extends State<FilePickerButton> {
   @override
   Widget build(BuildContext context) {
     return Padding(
+      // ...existing code...
       padding: const EdgeInsets.all(16.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Button to open file picker
-          ElevatedButton(onPressed: pickAndLoadFile, child: Text('Pick File')),
-          SizedBox(height: 20), // Space between the button and content box
+          ElevatedButton(
+            onPressed: pickAndLoadFile,
+            child: const Text('Pick File'),
+          ),
+          const SizedBox(height: 12),
+          if (_progress > 0 && _progress < 1)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                LinearProgressIndicator(value: _progress),
+                const SizedBox(height: 4),
+                Text('${(_progress * 100).floor()}%'),
+              ],
+            ),
+          if (_progress >= 1.0) const LinearProgressIndicator(value: 1.0),
+          const SizedBox(height: 20),
           // Box to display file content
           fileContent.isEmpty
-              ? Text('No file loaded.')
+              ? const Text('No file loaded.')
               : Container(
-                constraints: BoxConstraints(
+                // ...existing code...
+                constraints: const BoxConstraints(
                   maxHeight: 200,
-                  maxWidth: 200, // Limit the maximum height
+                  maxWidth: 200,
                 ),
                 child: SingleChildScrollView(
                   child: Padding(
@@ -140,28 +173,24 @@ class _FilePickerButtonState extends State<FilePickerButton> {
                       children: [
                         Text(
                           fileName,
-                          style: TextStyle(fontFamily: 'monospace'),
+                          style: const TextStyle(fontFamily: 'monospace'),
                         ),
-
-                        SizedBox(height: 10),
-
+                        const SizedBox(height: 10),
                         ElevatedButton(
                           onPressed: () {
-                            var paragraphs = extractParagraphs(
+                            extractParagraphs(
                               fileContentEN,
                               fileContentSK,
                               fileContentCZ,
                               metadata,
                               "dir",
-                              indexName, // Directory ID for logging purposes
+                              indexName,
                             );
-                            // print(jsonOutput);
                           },
-                          child: Text('Extract Paragraphs'),
+                          child: const Text('Extract Paragraphs'),
                         ),
                       ],
                     ),
-                    // Space between file name and content
                   ),
                 ),
               ),
@@ -177,164 +206,100 @@ class FilePickerButton2 extends StatefulWidget {
 }
 
 class _FilePickerButtonState2 extends State<FilePickerButton2> {
-  // Function to open file picker and load the file content
+  double _progress = 0.01;
+
+  // Unify progress logic with picker 1: phases -> file read, celex extraction, uploads.
+  // We treat total phases as: 1 (file loaded) + 1 (celex list extracted) + N uploads.
+  int _totalUploads = 0;
+  int _completedUploads = 0;
+  bool _fileLoaded = false;
+  bool _celexExtracted = false;
+
+  void _recalcProgress() {
+    final basePhases = (_fileLoaded ? 1 : 0) + (_celexExtracted ? 1 : 0);
+    final totalPhases = 2 + _totalUploads; // 2 fixed phases + upload phases
+    final done = basePhases + _completedUploads;
+    _progress = totalPhases == 0 ? 0.0 : done / totalPhases;
+  }
+
   Future<void> pickAndLoadFile2() async {
-    // Open file picker dialog
     FilePickerResult? result = await FilePicker.platform.pickFiles();
-    print(result);
+    if (!mounted) return;
     setState(() {
       celexNumbersExtracted.clear();
       extractedCelex.clear();
+      _progress = 0.01;
+      _fileLoaded = false;
+      _celexExtracted = false;
+      _totalUploads = 0;
+      _completedUploads = 0;
     });
+    if (result == null) return;
 
-    if (result != null) {
-      // Get the file path
-      String filePath = result.files.single.path!;
-      fileName = path.basename(filePath);
+    final filePath = result.files.single.path!;
+    fileName = path.basename(filePath);
+    final file = File(filePath);
+    if (!await file.exists()) return;
 
-      // Read the content of the file
-      File file = File(filePath);
-      if (await file.exists()) {
-        String content = await file.readAsString();
+    final content = await file.readAsString();
+    fileContent2 = content;
+    _fileLoaded = true;
 
-        // Update the state with the file content
-        {
-          fileContent2 = content;
-          print('File content loaded successfully: $fileContent2');
-
-          // Reset the list for new content
-
-          if (fileContent2.isNotEmpty) {
-            setState(() {
-              fileDOM2 = html_parser.parse(fileContent2);
-              var tdElements = fileDOM2.getElementsByTagName('td');
-              for (var td in tdElements) {
-                if (td.text.contains('Celex number:')) {
-                  var celexNumberTd =
-                      td.nextElementSibling; // Get the next TD element
-                  var celexNumber = celexNumberTd.text.trim();
-                  print('Celex number: $celexNumber');
-                  celexNumbersExtracted.add(celexNumber); // Store the number
-                }
-
-                print(celexNumbersExtracted);
-              }
-            });
-          } else {
-            print('File content is empty.');
-          }
-
-          //end of manual override
-          for (int index = 0; index < celexNumbersExtracted.length; index++) {
-            var i = celexNumbersExtracted[index];
-            print('Processing Celex number: $i');
-
-            var fileEN = await loadHtmtFromCelex(i, 'EN');
-            fileEN_DOM = i + '.celex@@@' + fileEN;
-            print('Loaded EN HTML for Celex: $i');
-            var fileCZ = await loadHtmtFromCelex(i, 'CS');
-            fileCZ_DOM = i + '.celex@@@' + fileCZ;
-            print('Loaded CS HTML for Celex: $i');
-
-            var fileSK = await loadHtmtFromCelex(i, 'SK');
-            fileSK_DOM = i + '.celex@@@' + fileSK;
-            print('Loaded SK HTML for Celex: $i');
-
-            metadata = "%%%#$i"; // Placeholder for metadata
-            extractParagraphs(
-              fileEN_DOM,
-              fileSK_DOM,
-              fileCZ_DOM,
-              metadata,
-              i,
-              newIndexName,
-            );
-
-            setState(() {
-              extractedCelex.add(
-                '$i ${index + 1}/${celexNumbersExtracted.length}',
-              ); // Add the processed Celex number to the list
-              print('Processed Celex number: $i');
-            });
-          }
-
-          setState(() {
-            extractedCelex.add('COMPLETED');
-            getListIndices(
-              server,
-            ); // Add the processed Celex number to the list
-          });
-          // Process the HTML content as needed
-          // For example, you can extract specific elements or text from the HTML
-        }
-      } else {
-        print("File does not exist!");
-      }
-    } else {
-      print("No file selected.");
-    }
-  }
-
-  Future<void> enterAndLoadCelex(celexNumbersExtracted) async {
-    final logger = LogManager();
-    // Open file picker dialog
-    for (int index = 0; index < celexNumbersExtracted.length; index++) {
-      var i = celexNumbersExtracted[index];
-      print('Processing Celex number: $i');
-
-      var fileEN = await loadHtmtFromCelex(i, 'EN');
-      fileEN_DOM = i + '.celex@@@' + fileEN;
-      print('Loaded EN HTML for Celex: $i');
-      var fileCZ = await loadHtmtFromCelex(i, 'CS');
-      fileCZ_DOM = i + '.celex@@@' + fileCZ;
-      print('Loaded CS HTML for Celex: $i');
-
-      var fileSK = await loadHtmtFromCelex(i, 'SK');
-      fileSK_DOM = i + '.celex@@@' + fileSK;
-      print('Loaded SK HTML for Celex: $i');
-
-      metadata = "%%%#$i"; // Placeholder for metadata
-      extractParagraphs(
-        fileEN_DOM,
-        fileSK_DOM,
-        fileCZ_DOM,
-        metadata,
-        i,
-        newIndexName,
-      );
-
+    if (fileContent2.isNotEmpty) {
+      if (!mounted) return;
       setState(() {
-        extractedCelex.add(
-          '$i ${index + 1}/${celexNumbersExtracted.length}',
-        ); // Add the processed Celex number to the list
-        print('Processed Celex number: $i');
+        fileDOM2 = html_parser.parse(fileContent2);
+        for (final td in fileDOM2.getElementsByTagName('td')) {
+          if (td.text.contains('Celex number:')) {
+            final celexNumberTd = td.nextElementSibling;
+            final celexNumber = celexNumberTd.text.trim();
+            celexNumbersExtracted.add(celexNumber);
+          }
+        }
+        _celexExtracted = true;
+        _totalUploads = celexNumbersExtracted.length;
+        _recalcProgress();
       });
-      logger.log("$i uploaded to $activeIndex in Refs List upload.");
+    } else {
+      if (!mounted) return;
+      setState(() {
+        _recalcProgress();
+      });
     }
 
+    for (final celex in celexNumbersExtracted) {
+      await uploadSparqlForCelex(celex, newIndexName);
+      _completedUploads++;
+      if (!mounted) return;
+      setState(() {
+        extractedCelex.add('$celex ${_completedUploads}/$_totalUploads');
+        _recalcProgress();
+      });
+    }
+
+    if (!mounted) return;
     setState(() {
       extractedCelex.add('COMPLETED');
+      _recalcProgress(); // should hit 100%
       getListIndices(server);
-      // Add the processed Celex number to the list
     });
-    // Process the HTML content as needed
-    // For example, you can extract specific elements or text from the HTML
   }
 
+  // build: add progress bar similar to first picker
   @override
   Widget build(BuildContext context) {
     return Padding(
+      // ...existing code...
       padding: const EdgeInsets.all(12.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
-          SizedBox(height: 20), // Space between the button and content box
+          SizedBox(height: 20),
           Text(
             'Enter EC File with List of Celex References to Upload',
             style: Theme.of(context).textTheme.headlineMedium,
           ),
-          // Button to open file picker
-          SizedBox(height: 20), // Space between the button and content box
+          SizedBox(height: 20),
           Text(
             'First Choose Index In Dropdown List or Enter Index Name below!',
           ),
@@ -394,14 +359,27 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
                   'Pick File with References (Upload to $newIndexName)',
                 ),
               ),
-          SizedBox(height: 20), // Space between the button and content box
-          // Box to display file content
+          SizedBox(height: 20),
+
+          // Progress bar (added)
+          if (_progress > 0 && _progress < 1)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                LinearProgressIndicator(value: _progress),
+                const SizedBox(height: 4),
+                Text('${(_progress * 100).floor()}%'),
+              ],
+            ),
+          if (_progress >= 1.0) const LinearProgressIndicator(value: 1.0),
+          const SizedBox(height: 20),
+
           fileContent2.isEmpty
-              ? Text('No file loaded.')
+              ? const Text('No file loaded.')
               : Container(
-                constraints: BoxConstraints(
+                constraints: const BoxConstraints(
                   maxHeight: 400,
-                  maxWidth: 500, // Limit the maximum height
+                  maxWidth: 500,
                 ),
                 child: SingleChildScrollView(
                   child: Padding(
@@ -410,11 +388,11 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
                       children: [
                         Text(
                           extractedCelex.isEmpty
-                              ? 'No Celex Numbers Processed.' // If the list is empty
+                              ? 'No Celex Numbers Processed.'
                               : extractedCelex.length == 1
-                              ? 'Processed Celex Number: ${extractedCelex.first}' // If the list has one value
-                              : 'Processed Celex Numbers: ${extractedCelex.join(', ')}', // If the list has multiple values
-                          style: TextStyle(fontFamily: 'monospace'),
+                              ? 'Processed Celex Number: ${extractedCelex.first}'
+                              : 'Processed Celex Numbers: ${extractedCelex.join(', ')}',
+                          style: const TextStyle(fontFamily: 'monospace'),
                         ),
                       ],
                     ),
@@ -440,55 +418,34 @@ class manualCelexList extends StatefulWidget {
 }
 
 class _manualCelexListState extends State<manualCelexList> {
+  double _progress = 0.01; // 0.0 - 1.0
+
   Future manualCelexListUpload(manualCelexListEntry, newIndexName) async {
     setState(() {
       extractedCelex.clear();
+      _progress = 0.01;
     });
 
     final logger = LogManager();
-    for (int index = 0; index < manualCelexListEntry.length; index++) {
+    final total = manualCelexListEntry.length;
+    for (var index = 0; index < total; index++) {
       var i = manualCelexListEntry[index];
-      print('Processing manual Celex number: $i');
+      await uploadSparqlForCelex(i, newIndexName);
 
-      var fileEN = await loadHtmtFromCelex(i, 'EN');
-      fileEN_DOM = i + '.celex@@@' + fileEN;
-      print('Loaded EN HTML for manual Celex: $i');
-      var fileCZ = await loadHtmtFromCelex(i, 'CS');
-      fileCZ_DOM = i + '.celex@@@' + fileCZ;
-      print('Loaded CS HTML for manual Celex: $i');
-
-      var fileSK = await loadHtmtFromCelex(i, 'SK');
-      fileSK_DOM = i + '.celex@@@' + fileSK;
-      print('Loaded SK HTML for manual Celex: $i');
-
-      metadata = "%%%#$i"; // Placeholder for metadata
-
-      extractParagraphs(
-        fileEN_DOM,
-        fileSK_DOM,
-        fileCZ_DOM,
-        metadata,
-        i,
-        newIndexName,
-      );
-
+      if (!mounted) return;
       setState(() {
-        extractedCelex.add(
-          '$i ${index + 1}/${manualCelex.length}',
-        ); // Add the processed Celex number to the list
-        print('Processed Celex number: $i');
+        extractedCelex.add('$i ${index + 1}/$total');
+        _progress = (index + 1) / total;
       });
 
       logger.log("$i uploaded to $activeIndex in manual Celex upload.");
-
-      setState(() {
-        extractedCelex.add('COMPLETED');
-        getListIndices(server);
-        // Add the processed Celex number to the list
-      });
-      // Process the HTML content as needed
-      // For example, you can extract specific elements or text from the HTML
     }
+
+    if (!mounted) return;
+    setState(() {
+      extractedCelex.add('COMPLETED');
+      getListIndices(server);
+    });
   }
 
   @override
@@ -582,8 +539,26 @@ class _manualCelexListState extends State<manualCelexList> {
               ),
 
           SizedBox(height: 20),
+          if (_progress > 0 && _progress < 1)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  LinearProgressIndicator(value: _progress),
+                  SizedBox(height: 4),
+                  Text('${(_progress * 100).floor()}%'),
+                ],
+              ),
+            ),
+          if (_progress >= 1.0)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: LinearProgressIndicator(value: 1.0),
+            ),
+          // existing results container:
           manualCelex.isEmpty
-              ? Text('No file loaded.')
+              ? const Text('No file loaded.')
               : Container(
                 constraints: BoxConstraints(
                   maxHeight: 400,

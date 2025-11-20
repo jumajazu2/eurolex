@@ -1,4 +1,46 @@
-WORKING, to implement, return for specific Celex - Cellar links and lang codes
+💡 Alternative method (REST API) WORKS, FAST
+
+If SPARQL is too tricky, you can also use the Cellar REST API to get the metadata:
+
+Use the Cellar dissemination API to fetch the CELEX notice:
+http://publications.europa.eu/resource/celex/32020R0857
+
+Publications Office of the EU
++1
+
+Add ?language=en and ?notice=tree to get a full XML tree:
+
+curl -H "Accept: application/xml;notice=tree" \
+  "http://publications.europa.eu/resource/celex/32020R0857?language=en" \
+  -L
+
+
+This returns a hierarchical XML with metadata, including the Cellar work URI.
+
+
+
+---------------------------------------------------------------------
+Working, fast
+
+PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+
+SELECT DISTINCT ?work ?expr ?manif ?item
+WHERE {
+  # Match the CELEX resource using IRI
+  ?work owl:sameAs <http://publications.europa.eu/resource/celex/32020R0857> .
+
+  # Navigate down the WEMI hierarchy
+  ?expr cdm:expression_belongs_to_work ?work .
+  ?manif cdm:manifestation_manifests_expression ?expr .
+  ?item cdm:item_belongs_to_manifestation ?manif .
+}
+
+
+-------------------------------------------------------
+
+WORKING, to implement, return for specific Celex - Cellar links and lang codes 
+//VERY SLOW//
 
 
 prefix cdm: <http://publications.europa.eu/ontology/cdm#>

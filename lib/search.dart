@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
+//import 'dart:nativewrappers/_internal/vm/lib/internal_patch.dart';
 
 import 'package:eurolex/main.dart';
 import 'package:eurolex/setup.dart';
@@ -13,6 +14,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:eurolex/file_handling.dart';
 import 'package:eurolex/testHtmlDumps.dart';
+import 'package:xml/xml.dart' as xml;
 
 import 'package:path_provider/path_provider.dart';
 
@@ -21,7 +23,7 @@ var decodedResults = [];
 var lang2Results = [];
 var lang1Results = ["N/A"];
 var lang3Results = [];
-var metaCelex = [];
+List<String> metaCelex = [];
 var metaCellar = [];
 var sequenceNo;
 var parNotMatched = ["N/A"];
@@ -119,9 +121,9 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
             {
               "multi_match": {
                 "query": lastFileContent,
-                "fields": ["en_text", "sk_text", "cz_text"],
+                "fields": ["en_text", "sk_text", "cs_text"],
                 "fuzziness": "0",
-                "minimum_should_match": "70%",
+                "minimum_should_match": "60%",
               },
             },
           ],
@@ -130,7 +132,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
       "size": 50,
     };
 
-    processQuery(queryAnalyser, lastFileContent);
+    processQuery(queryAnalyser, lastFileContent, activeIndex);
 
     setState(() {
       queryText = "Auto-analyse: $lastFileContent";
@@ -164,13 +166,14 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
 
   //the end of periodi polling code
 
-  void processQuery(query, searchTerm) async {
+  void processQuery(query, searchTerm, index) async {
     queryPattern = query;
 
-    var resultsOS = await sendToOpenSearch(
-      'https://$osServer/$activeIndex/_search',
+    final resultsOS = await sendToOpenSearch(
+      'https://$osServer/$index/_search',
       [jsonEncode(query)],
     );
+    if (!mounted) return;
     var decodedResults = jsonDecode(resultsOS);
 
     //if query returns error, stop processing, display error
@@ -238,6 +241,9 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
       docDate = hits.map((hit) => hit['_source']['date'].toString()).toList();
     });
 
+    // Prefetch titles for the current result set (async, non-blocking)
+    //await _prefetchTitles(metaCelex.toSet());
+
     print("Query: $query, Results SK = $lang2Results");
 
     queryText = searchTerm; //_searchController.text;
@@ -287,7 +293,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     };
     //var queryText = _searchController.text;
 
-    processQuery(query, _searchController.text);
+    processQuery(query, _searchController.text, activeIndex);
   }
 
   void _startSearch2() async {
@@ -304,7 +310,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
           "fields": [
             "en_text",
             "sk_text",
-            "cz_text",
+            "cs_text",
           ], // Search across all language fields
           "fuzziness": "0",
           "minimum_should_match": "75%", // Allow fuzzy matching
@@ -323,7 +329,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
             {
               "multi_match": {
                 "query": _searchController.text,
-                "fields": ["en_text", "sk_text", "cz_text"],
+                "fields": ["en_text", "sk_text", "cs_text"],
                 "fuzziness": "AUTO",
                 "minimum_should_match": "80%",
               },
@@ -340,7 +346,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
       },
     };
 
-    processQuery(query2, _searchController.text);
+    processQuery(query2, _searchController.text, activeIndex);
   }
 
   void _startSearch3() async {
@@ -419,7 +425,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     };
     //var queryText = _searchController.text;
 
-    processQuery(query, _searchController.text);
+    processQuery(query, _searchController.text, activeIndex);
   }
 
   void _startSearchPhraseAll() async {
@@ -446,7 +452,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
       },
     };
 
-    processQuery(query, _searchController.text);
+    processQuery(query, _searchController.text, "*");
   }
 
   Color backgroundColor = Colors.white12;
@@ -458,6 +464,65 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
         "Dropdown tapped and indices updated from server, indices: $indices.",
       );
     });
+  }
+
+  final Map<String, String> _titleCache = {};
+
+  Future<String?> _fetchTitleForCelex(
+    String celex, {
+    String lang = 'en',
+  }) async {
+    final uri = Uri.parse(
+      'http://publications.europa.eu/resource/celex/$celex',
+    );
+    try {
+      final resp = await http
+          .get(uri, headers: {'Accept': 'application/rdf+xml;notice=tree'})
+          .timeout(const Duration(seconds: 15));
+      if (resp.statusCode != 200) return null;
+
+      final doc = xml.XmlDocument.parse(utf8.decode(resp.bodyBytes));
+      //print('title prefetch response: ${doc.length} for $uri');
+      // Prefer title with xml:lang == lang
+      for (final e in doc.descendants.whereType<xml.XmlElement>()) {
+        if (e.name.local == 'title') {
+          final langAttr = e.getAttribute(
+            'lang',
+            namespace: 'http://www.w3.org/XML/1998/namespace',
+          );
+          if ((langAttr ?? '').toLowerCase() == lang.toLowerCase()) {
+            final t = e.innerText.trim();
+            if (t.isNotEmpty) return t;
+          }
+        }
+      }
+      // Fallback: any title text
+      for (final e in doc.descendants.whereType<xml.XmlElement>()) {
+        if (e.name.local == 'title') {
+          final t = e.innerText.trim();
+          if (t.isNotEmpty) return t;
+        }
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _prefetchTitles(Iterable<String> celexes) async {
+    print("title celex to prefetch: ${celexes.join(', ')}  ");
+    for (final c in celexes) {
+      if (c.isEmpty || _titleCache.containsKey(c)) continue;
+      final t = await _fetchTitleForCelex(
+        c,
+        lang: (lang1 ?? 'EN').toLowerCase(),
+      );
+      if (!mounted) return;
+      setState(() {
+        _titleCache[c] = t ?? '';
+        print("Prefetched title for $c: ${_titleCache[c]}");
+      });
+    }
   }
 
   @override
@@ -952,7 +1017,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                           ],
                                         ),
                                         // If you want to show czResults here as well, add another widget:
-                                        Row(
+                                        /* Row(
                                           children: [
                                             Text("Cellar: "),
                                             Flexible(
@@ -965,14 +1030,24 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                             ),
                                           ],
                                         ),
-
+*/
                                         Row(
                                           children: [
                                             Text("Date: "),
                                             Flexible(
                                               child: SelectableText(
                                                 docDate.length > index
-                                                    ? docDate[index]
+                                                    ? (() {
+                                                      final raw =
+                                                          docDate[index];
+                                                      final dt =
+                                                          DateTime.tryParse(
+                                                            raw,
+                                                          );
+                                                      if (dt == null)
+                                                        return raw;
+                                                      return "${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}";
+                                                    })()
                                                     : '',
                                                 //  overflow: TextOverflow.ellipsis,
                                               ),
@@ -1009,18 +1084,18 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
 
                                         Row(
                                           children: [
-                                            Text("Open URL: "),
+                                            Text("Open in Browser: "),
                                             GestureDetector(
                                               onTap: () {
                                                 // Handle the tap event here, e.g. open the link in a browser
                                                 launchUrl(
                                                   Uri.parse(
-                                                    'http://eur-lex.europa.eu/legal-content/EN-SK/TXT/?uri=CELEX:${metaCelex[index]}',
+                                                    'http://eur-lex.europa.eu/legal-content/${lang1}-${lang2}/TXT/?uri=CELEX:${metaCelex[index]}',
                                                   ),
                                                 );
                                               },
                                               child: Text(
-                                                'EN-SK',
+                                                '${lang1}-${lang2}',
                                                 style: TextStyle(
                                                   decoration:
                                                       TextDecoration.underline,
@@ -1035,12 +1110,12 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                                 // Handle the tap event here, e.g. open the link in a browser
                                                 launchUrl(
                                                   Uri.parse(
-                                                    'http://eur-lex.europa.eu/legal-content/EN-CS/TXT/?uri=CELEX:${metaCelex[index]}',
+                                                    'http://eur-lex.europa.eu/legal-content/${lang1}-${lang3}/TXT/?uri=CELEX:${metaCelex[index]}',
                                                   ),
                                                 );
                                               },
                                               child: Text(
-                                                'EN-CZ',
+                                                '${lang2}-${lang3}',
                                                 style: TextStyle(
                                                   decoration:
                                                       TextDecoration.underline,

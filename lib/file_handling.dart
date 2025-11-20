@@ -128,7 +128,7 @@ loadSettingsFromFile() async //loads JSON from config.json file to the global va
       "font_size": 14,
       "lang1": "EN",
       "lang2": "SK",
-      "lang3": "CZ",
+      "lang3": "CS",
       "display_lang1": true,
       "display_lang2": true,
       "display_lang3": true,
