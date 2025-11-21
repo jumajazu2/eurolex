@@ -8,6 +8,7 @@ import 'package:html/parser.dart' as html_parser;
 import 'package:eurolex/browseFiles.dart';
 import 'package:eurolex/search.dart';
 import 'package:eurolex/analyser.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 //String osServer = 'localhost:9200'; // add to Settings or Autolookup
 String osServer = 'search.pts-translation.sk'; // AWS server
@@ -17,8 +18,10 @@ List<String> indices = ['*'];
 Map<String, dynamic> jsonSettings = {};
 Map<String, dynamic> jsonConfig = {};
 Map<String, dynamic> jsonData = {};
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 void main() {
-  runApp(MaterialApp(home: MainTabbedApp()));
+  runApp(MaterialApp(navigatorKey: navigatorKey, home: MainTabbedApp()));
 }
 
 class MainTabbedApp extends StatefulWidget {
@@ -83,6 +86,40 @@ class _MainTabbedAppState extends State<MainTabbedApp>
           DataUploadPage(), // Replace with your Data rocess widget
         ],
       ),
+    );
+  }
+
+  void showSubscriptionDialog(int status) {
+    final ctx = navigatorKey.currentContext;
+    print("ctx: $ctx");
+    if (ctx == null) return;
+    final msg =
+        status == 401
+            ? 'Unauthorized (401). Please purchase a subscription.'
+            : 'Too many requests (429). Please upgrade or wait.';
+    showDialog(
+      context: ctx,
+      barrierDismissible: true,
+      builder:
+          (_) => AlertDialog(
+            title: const Text('Subscription Required'),
+            content: Text('$msg\nVisit pricing page.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Close'),
+              ),
+              TextButton(
+                onPressed: () {
+                  launchUrl(
+                    Uri.parse('https://www.pts-translation.sk/#pricing'),
+                    mode: LaunchMode.externalApplication,
+                  );
+                },
+                child: const Text('Pricing'),
+              ),
+            ],
+          ),
     );
   }
 }

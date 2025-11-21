@@ -185,10 +185,12 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                       const SizedBox(height: 8),
                       Row(
                         children: [
+                          // 1) Lang 1
                           Expanded(
                             child: DropdownButtonFormField<String>(
                               value: lang1,
                               items: items,
+                              isExpanded: true, // fill available width
                               decoration: const InputDecoration(
                                 labelText: 'Language 1',
                                 border: OutlineInputBorder(),
@@ -201,10 +203,13 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                             ),
                           ),
                           const SizedBox(width: 12),
+
+                          // 2) Lang 2
                           Expanded(
                             child: DropdownButtonFormField<String>(
                               value: lang2,
                               items: items,
+                              isExpanded: true,
                               decoration: const InputDecoration(
                                 labelText: 'Language 2',
                                 border: OutlineInputBorder(),
@@ -217,32 +222,30 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                             ),
                           ),
                           const SizedBox(width: 12),
-                          // Group lang3 + Confirm on the same line
+
+                          // 3) Lang 3
                           Expanded(
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: DropdownButtonFormField<String>(
-                                    value: lang3,
-                                    items: items,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Language 3',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    onChanged:
-                                        (v) => setState(() {
-                                          lang3 = v;
-                                          jsonSettings['lang3'] = v;
-                                        }),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                ElevatedButton(
-                                  onPressed: _confirmSettings,
-                                  child: const Text('Confirm'),
-                                ),
-                              ],
+                            child: DropdownButtonFormField<String>(
+                              value: lang3,
+                              items: items,
+                              isExpanded: true,
+                              decoration: const InputDecoration(
+                                labelText: 'Language 3',
+                                border: OutlineInputBorder(),
+                              ),
+                              onChanged:
+                                  (v) => setState(() {
+                                    lang3 = v;
+                                    jsonSettings['lang3'] = v;
+                                  }),
                             ),
+                          ),
+
+                          // Move Confirm outside the three Expanded dropdowns
+                          const SizedBox(width: 12),
+                          ElevatedButton(
+                            onPressed: _confirmSettings,
+                            child: const Text('Confirm'),
                           ),
                         ],
                       ),

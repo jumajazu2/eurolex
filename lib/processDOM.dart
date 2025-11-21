@@ -1,16 +1,18 @@
 //import 'dart:ffi';
-import 'package:eurolex/main.dart';
+import 'package:eurolex/main.dart'; // ensu re showSubscrip tionDialog is visible
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
 import 'dart:convert';
 import 'package:xml/xml.dart' as xml;
 import 'package:eurolex/logger.dart';
+
 import 'package:html/dom.dart' as dom;
 import 'package:eurolex/preparehtml.dart';
 import 'package:eurolex/preparehtml.dart' show loadHtmlFromCelex;
 import 'dart:async'; // for TimeoutException
 import 'dart:io';
+import 'package:url_launcher/url_launcher.dart';
 
 var dirPointer = 0; // Pointer for directory processing
 List<String> langsEU = [
@@ -444,11 +446,12 @@ Future<String> sendToOpenSearch(String url, List<String> bulkData) async {
           Uri.parse(url),
           headers: {
             "Content-Type": "application/x-ndjson",
-            'x-api-key': '1234',
+            'x-api-key': '${jsonSettings['access_key']}',
+            'x-email': '${jsonSettings['user_email']}',
           },
           body: bulkData.join("\n") + "\n",
         )
-        .timeout(const Duration(seconds: 20)); // added timeout
+        .timeout(const Duration(seconds: 20));
 
     if (response.statusCode == 200) {
       print(
@@ -457,6 +460,10 @@ Future<String> sendToOpenSearch(String url, List<String> bulkData) async {
       return response.body;
     } else {
       print("Error: ${response.statusCode} - ${response.headers}");
+      if (response.statusCode == 401 || response.statusCode == 429) {
+        print("Showing subscription dialog for status ${response.statusCode}");
+        showSubscriptionDialog(response.statusCode);
+      }
       return response.body;
     }
   } on TimeoutException catch (e) {
@@ -616,4 +623,51 @@ List<Map<String, dynamic>> processMultilingualMap(
   );
 
   return jsonData;
+}
+
+void showSubscriptionDialog(int status) {
+  final ctx = navigatorKey.currentContext;
+  if (ctx == null) {
+    // Defer until a frame exists
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final lateCtx = navigatorKey.currentContext;
+      if (lateCtx == null) return;
+      _showSubDialogInternal(lateCtx, status);
+    });
+    return;
+  }
+  _showSubDialogInternal(ctx, status);
+}
+
+void _showSubDialogInternal(BuildContext ctx, int status) {
+  final msg =
+      status == 401
+          ? 'Please purchase an annual subscription for unlimited access.'
+          : 'Daily trial limit exceeded. Please purchase an annual subscription or wait till next day.';
+  showDialog(
+    context: ctx,
+    barrierDismissible: true,
+    builder:
+        (_) => AlertDialog(
+          title: const Text('Subscription Required'),
+          content: Text(
+            '$msg\n\nClick "Purchase" to visit the Subscription page.\nOr Go to Setup tab -> Enter Your Passkey',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Close'),
+            ),
+            TextButton(
+              onPressed: () {
+                launchUrl(
+                  Uri.parse('https://www.pts-translation.sk/#pricing'),
+                  mode: LaunchMode.externalApplication,
+                );
+              },
+              child: const Text('Purchase'),
+            ),
+          ],
+        ),
+  );
 }
