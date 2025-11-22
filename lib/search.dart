@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:eurolex/processDOM.dart';
 import 'package:eurolex/display.dart';
 import 'package:eurolex/preparehtml.dart';
+import 'package:eurolex/analyser.dart';
+import 'package:eurolex/http.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
@@ -18,6 +20,7 @@ import 'package:xml/xml.dart' as xml;
 
 import 'package:path_provider/path_provider.dart';
 
+StreamSubscription<Map<String, dynamic>>? _sub;
 var resultsOS = [];
 var decodedResults = [];
 var lang2Results = [];
@@ -77,7 +80,17 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _startPolling();
+   // _startPolling();
+
+    if (jsonSettings["auto_lookup"] == true) {
+      _sub = ingestServer.stream.listen((payload) {
+        // Replace with your custom code
+        print('HTTP Incoming: $payload');
+        if (!mounted) return;
+        print('HTTP Incoming: passed mounted test');
+        _httpUpdate(payload);
+      });
+    }
   }
 
   @override
@@ -88,6 +101,8 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
   }
 
   void _startPolling() async {
+    return;
+
     _pollingTimer = Timer.periodic(Duration(milliseconds: 500), (timer) {
       if (_isVisible || !_isVisible) {
         print("Timer triggered");
@@ -101,6 +116,57 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
         }
       }
     });
+  }
+
+  void _httpUpdate(payload) async {
+    if (jsonSettings["auto_lookup"] == false) return;
+
+    setState(() {
+      _results.clear();
+
+      enHighlightedResults.clear();
+      //   List subsegments = subsegmentFile(_fileContent);
+    });
+
+    String _httpSource = payload['source'] ?? '';
+    String _httpTarget = payload['target'] ?? '';
+    String _httpSegmentID = payload['segmentId'] ?? '';
+    String _httpTimestamp = payload['timestamp'] ?? '';
+
+    httpPassAnalyzer = _httpSource;
+
+    print(
+      "Http testing, source: $_httpSource, target: $_httpTarget, segmentID: $_httpSegmentID, timestamp: $_httpTimestamp",
+    );
+
+    //
+    var queryAnalyser = {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "multi_match": {
+                "query": _httpSource,
+                "fields": [
+                  "${lang1?.toLowerCase()}_text",
+                  "${lang2?.toLowerCase()}_text",
+                  "${lang3?.toLowerCase()}_text",
+                ],
+                "fuzziness": "0",
+                "minimum_should_match": "60%",
+              },
+            },
+          ],
+        },
+      },
+      "size": 50,
+    };
+
+    processQuery(queryAnalyser, _httpSource, activeIndex);
+
+    setState(() {
+      queryText = "Auto-analyse: $_httpSource";
+    }); // You may need to call setState again to update the UI
   }
 
   void _updateState() async {
@@ -121,7 +187,11 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
             {
               "multi_match": {
                 "query": lastFileContent,
-                "fields": ["en_text", "sk_text", "cs_text"],
+                "fields": [
+                  "${lang1?.toLowerCase()}_text",
+                  "${lang2?.toLowerCase()}_text",
+                  "${lang3?.toLowerCase()}_text",
+                ],
                 "fuzziness": "0",
                 "minimum_should_match": "60%",
               },

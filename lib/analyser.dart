@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:eurolex/main.dart';
+import 'package:eurolex/search.dart';
 import 'package:eurolex/preparehtml.dart';
+import 'package:eurolex/setup.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:eurolex/search.dart';
@@ -10,9 +12,11 @@ import 'dart:math';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+StreamSubscription<Map<String, dynamic>>? _sub1;
 var nGrams = [];
 Map nGramsResults = {"N/A": "N/A"};
 var nGramResultList = [];
+String httpPassAnalyzer = "";
 
 Future<List> searchQuery(query, queryString) async {
   queryPattern = query;
@@ -90,7 +94,15 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _startPolling();
+    if (jsonSettings["auto_lookup"] == true) {
+      _sub1 = ingestServer.stream.listen((payload) {
+        // Replace with your custom code
+        print('HTTP Incoming: $payload');
+        if (!mounted) return;
+        print('HTTP Incoming: passed mounted test');
+        _startPolling(payload);
+      });
+    }
   }
 
   @override
@@ -100,27 +112,24 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
     super.dispose();
   }
 
-  void _startPolling() async {
-    _pollingTimer = Timer.periodic(Duration(milliseconds: 500), (timer) {
-      if (_isVisible || !_isVisible) {
-        print("Timer triggered");
-        _readFile();
-        if (_fileContent != lastFileContent) {
-          print("File content changed, updating state");
-          _updateState();
-        } else {
-          print("No change in file content");
-        }
-      }
-    });
+  void _startPolling(payload) async {
+    if (_isVisible || !_isVisible) {
+      print("Timer triggered");
+
+      httpPassAnalyzer = payload['source'] ?? '';
+
+      _updateState(httpPassAnalyzer);
+    }
   }
 
-  void _updateState() async {
+  void _updateState(content) async {
     setState(() {
-      lastFileContent = _fileContent;
+      lastFileContent = httpPassAnalyzer;
+
+      _fileContent = lastFileContent;
       //   List subsegments = subsegmentFile(_fileContent);
 
-      nGrams = generateNGrams(_fileContent, 5);
+      nGrams = generateNGrams(httpPassAnalyzer, 5);
       nGrams.addAll(generateNGrams(_fileContent, 4));
       if (_fileContent.split(RegExp(r'[^\w\s]')).length <= 3)
         nGrams.addAll(generateNGrams(_fileContent, 3));
@@ -140,7 +149,11 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
             {
               "multi_match": {
                 "query": lastFileContent,
-                "fields": ["en_text", "sk_text", "cs_text"],
+                "fields": [
+                  "${lang1?.toLowerCase()}_text",
+                  "${lang2?.toLowerCase()}_text",
+                  "${lang3?.toLowerCase()}_text",
+                ],
                 "fuzziness": "AUTO",
                 "minimum_should_match": "65%",
               },
@@ -209,7 +222,7 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
     return ngrams;
   }
 
-  Future<String> _readFile() async {
+  /* Future<String> _readFile() async {
     try {
       final dir = await getApplicationDocumentsDirectory();
       final file = File('C:/Temp/segment_output.txt');
@@ -228,7 +241,7 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
     }
     return _fileContent;
   }
-
+*/
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _isVisible = state == AppLifecycleState.resumed;

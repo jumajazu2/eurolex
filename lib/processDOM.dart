@@ -651,7 +651,7 @@ void _showSubDialogInternal(BuildContext ctx, int status) {
         (_) => AlertDialog(
           title: const Text('Subscription Required'),
           content: Text(
-            '$msg\n\nClick "Purchase" to visit the Subscription page.\nOr Go to Setup tab -> Enter Your Passkey',
+            '$msg\n\nClick "Purchase" to visit the Subscription page and obtain the passkey.\nThen go to Setup tab -> Enter Your Passkey\n\nFor trial access (7 free searches per day), use access key "trial" and your email address.',
           ),
           actions: [
             TextButton(

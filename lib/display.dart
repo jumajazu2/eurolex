@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'package:eurolex/main.dart';
 
+import 'package:eurolex/setup.dart';
 import 'package:eurolex/processDOM.dart';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
@@ -113,15 +114,29 @@ Future getContext(celex, pointer) async {
   var hits = decodedResults['hits']['hits'] as List;
 
   {
-    var contextEN =
-        hits.map((hit) => hit['_source']['en_text'].toString()).toList();
-    var contextSK =
-        hits.map((hit) => hit['_source']['sk_text'].toString()).toList();
-    var contextCZ =
-        hits.map((hit) => hit['_source']['cz_text'].toString()).toList();
+    var contextLang1 =
+        hits
+            .map(
+              (hit) =>
+                  hit['_source']['${lang1?.toLowerCase()}_text'].toString(),
+            )
+            .toList();
+    var contextLang2 =
+        hits
+            .map(
+              (hit) =>
+                  hit['_source']['${lang2?.toLowerCase()}_text'].toString(),
+            )
+            .toList();
+    var contextLang3 =
+        hits
+            .map(
+              (hit) =>
+                  hit['_source']['${lang3?.toLowerCase()}_text'].toString(),
+            )
+            .toList();
+    print("Get context: $contextLang1, $contextLang2, $contextLang3");
 
-    print("Get context: $contextEN, $contextSK, $contextCZ");
-
-    return [contextEN, contextSK, contextCZ];
+    return [contextLang1, contextLang2, contextLang3];
   }
 }

@@ -9,6 +9,7 @@ import 'package:eurolex/browseFiles.dart';
 import 'package:eurolex/search.dart';
 import 'package:eurolex/analyser.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:eurolex/http.dart';
 
 //String osServer = 'localhost:9200'; // add to Settings or Autolookup
 String osServer = 'search.pts-translation.sk'; // AWS server
@@ -19,9 +20,14 @@ Map<String, dynamic> jsonSettings = {};
 Map<String, dynamic> jsonConfig = {};
 Map<String, dynamic> jsonData = {};
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+LocalIngestServer ingestServer = LocalIngestServer(port: 6175);
 
 void main() {
   runApp(MaterialApp(navigatorKey: navigatorKey, home: MainTabbedApp()));
+}
+
+Future<void> startIngestServer() async {
+  await ingestServer.start();
 }
 
 class MainTabbedApp extends StatefulWidget {
@@ -44,9 +50,12 @@ class _MainTabbedAppState extends State<MainTabbedApp>
       });
     });
     loadSettingsFromFile();
-    //loadJsonFromFile();
 
-    // Search tab first
+    startIngestServer();
+    // Example listener: log incoming payloads
+    ingestServer.stream.listen((payload) {
+      print('Incoming Trados payload: $payload');
+    });
   }
 
   @override
