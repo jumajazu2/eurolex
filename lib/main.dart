@@ -44,17 +44,21 @@ class _MainTabbedAppState extends State<MainTabbedApp>
     super.initState();
     _tabController = TabController(length: 5, vsync: this, initialIndex: 0);
 
-    getListIndices(server).then((_) {
-      setState(() {
-        // Refresh the UI after indices are loaded
-      });
-    });
-    loadSettingsFromFile();
+    getListIndices(server).then((_) => setState(() {}));
 
-    startIngestServer();
-    // Example listener: log incoming payloads
-    ingestServer.stream.listen((payload) {
-      print('Incoming Trados payload: $payload');
+    loadSettingsFromFile().then((_) {
+      if (jsonSettings["access_key"] == "trial") {
+        // Ensure a context exists
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) showTrialDialog();
+        });
+      }
+    });
+
+    startIngestServer().then((_) {
+      ingestServer.stream.listen((payload) {
+        print('Incoming Trados payload: $payload');
+      });
     });
   }
 
@@ -98,21 +102,20 @@ class _MainTabbedAppState extends State<MainTabbedApp>
     );
   }
 
-  void showSubscriptionDialog(int status) {
+  void showTrialDialog() {
     final ctx = navigatorKey.currentContext;
     print("ctx: $ctx");
     if (ctx == null) return;
-    final msg =
-        status == 401
-            ? 'Unauthorized (401). Please purchase a subscription.'
-            : 'Too many requests (429). Please upgrade or wait.';
+
     showDialog(
       context: ctx,
       barrierDismissible: true,
       builder:
           (_) => AlertDialog(
-            title: const Text('Subscription Required'),
-            content: Text('$msg\nVisit pricing page.'),
+            title: const Text('App running in Trial Mode'),
+            content: Text(
+              '\nYou can use 7 free searches per day.\n\nFor unlimited access, go to Setup tab and enter Your Passkey or click "Purchase" to obtain a Passkey.\n',
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(),
