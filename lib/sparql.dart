@@ -168,6 +168,64 @@ LIMIT 10000
   return lines;
 }
 
+Future<Map<String, String>> fetchTitlesForCelex(dynamic celex) async {
+  const endpoint = 'https://publications.europa.eu/webapi/rdf/sparql';
+  final celexStr = celex.toString();
+  final Map<String, String> titleMap = {};
+
+  final query = '''
+prefix cdm: <http://publications.europa.eu/ontology/cdm#>
+prefix purl: <http://purl.org/dc/elements/1.1/>
+prefix xsd: <http://www.w3.org/2001/XMLSchema#>
+
+select distinct ?langCode ?title
+where {
+  # Optimization: Bind CELEX immediately
+  VALUES ?celex { "$celexStr"^^xsd:string }
+
+  ?work cdm:resource_legal_id_celex ?celex .
+
+  ?expr cdm:expression_belongs_to_work ?work ;
+        cdm:expression_uses_language ?lang ;
+        cdm:expression_title ?title .
+
+  ?lang purl:identifier ?langCode .
+}
+''';
+
+  try {
+    final resp = await http.post(
+      Uri.parse(endpoint),
+      headers: {
+        'Accept': 'application/sparql-results+json',
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+      },
+      body: {'query': query},
+    );
+
+    if (resp.statusCode != 200) {
+      throw Exception('SPARQL HTTP ${resp.statusCode}: ${resp.body}');
+    }
+
+    final decoded = jsonDecode(resp.body) as Map<String, dynamic>;
+    final bindings = (decoded['results']?['bindings'] as List?) ?? const [];
+
+    for (final row in bindings) {
+      final langCode = row['langCode']?['value'] as String? ?? '';
+      final title = row['title']?['value'] as String? ?? '';
+
+      if (langCode.isNotEmpty && title.isNotEmpty) {
+        final twoLetter = langMap[langCode] ?? langCode;
+        titleMap[twoLetter] = title;
+      }
+    }
+  } catch (e) {
+    print('Error fetching titles for CELEX $celexStr: $e');
+  }
+  print('Fetched titles for CELEX $celexStr: $titleMap');
+  return titleMap;
+}
+
 Future<Map<String, Map<String, String>>> fetchSectorXCellarLinksNumber(
   dynamic sector,
   dynamic year,
@@ -292,8 +350,9 @@ prefix cdm: <http://publications.europa.eu/ontology/cdm#>
 prefix purl: <http://purl.org/dc/elements/1.1/>
 select distinct ?celex ?langCode ?item
 where {
+VALUES ?celex { "$celexStr"^^xsd:string }
+
   ?work cdm:resource_legal_id_celex ?celex .
-FILTER(str(?celex) = "$celexStr")
 
   ?expr cdm:expression_belongs_to_work ?work ;
         cdm:expression_uses_language ?lang .

@@ -1,3 +1,47 @@
+WORKING, FAST
+For celex, returns links and title for each lang
+
+prefix cdm: <http://publications.europa.eu/ontology/cdm#>
+prefix purl: <http://purl.org/dc/elements/1.1/>
+select distinct ?celex ?langCode ?item ?title
+where {
+ VALUES ?celex { "52020DC0690"^^xsd:string }
+?work cdm:resource_legal_id_celex ?celex .
+
+  ?expr cdm:expression_belongs_to_work ?work ;
+        cdm:expression_uses_language ?lang ;
+        cdm:expression_title ?title . 
+  ?lang purl:identifier ?langCode .
+  ?manif cdm:manifestation_manifests_expression ?expr ;
+        cdm:manifestation_type ?format .
+  ?item cdm:item_belongs_to_manifestation ?manif .
+  FILTER(str(?format)="xhtml")
+}
+ORDER BY ?celex
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 💡 Alternative method (REST API) WORKS, FAST
 
 If SPARQL is too tricky, you can also use the Cellar REST API to get the metadata:

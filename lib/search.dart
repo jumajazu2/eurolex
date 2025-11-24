@@ -80,7 +80,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-   // _startPolling();
+    // _startPolling();
 
     if (jsonSettings["auto_lookup"] == true) {
       _sub = ingestServer.stream.listen((payload) {
