@@ -4,6 +4,7 @@ import 'dart:math';
 
 import 'package:eurolex/main.dart';
 import 'package:eurolex/setup.dart';
+import 'package:eurolex/sparql.dart';
 import 'package:flutter/material.dart';
 import 'package:eurolex/processDOM.dart';
 import 'package:eurolex/display.dart';
@@ -13,6 +14,8 @@ import 'package:eurolex/http.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
+
+import 'dart:isolate';
 import 'dart:io';
 import 'package:eurolex/file_handling.dart';
 import 'package:eurolex/testHtmlDumps.dart';
@@ -339,7 +342,10 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
       "EN Highlight all: ${enHighlightedResults.length}, $enHighlightedResults",
     );
 
+    if (!mounted) return;
     setState(() {});
+
+    await titlesForCelex();
   }
 
   void _startSearch() async {
@@ -579,14 +585,33 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     }
   }
 
+  Future titlesForCelex() async {
+    for (final c in metaCelex) {
+      final t = _titleCache[c];
+      if (t != null) {
+        if (!mounted) return;
+        setState(() {
+          _titleCache[c] = t;
+        });
+      } else {
+        final t = await fetchTitlesForCelex(c);
+        if (t != null) {
+          if (!mounted) return;
+          setState(() {});
+        }
+      }
+    }
+
+    print("Titles fetched for all celexes in results $_titleCache");
+  }
+
   Future<void> _prefetchTitles(Iterable<String> celexes) async {
     print("title celex to prefetch: ${celexes.join(', ')}  ");
     for (final c in celexes) {
       if (c.isEmpty || _titleCache.containsKey(c)) continue;
-      final t = await _fetchTitleForCelex(
-        c,
-        lang: (lang1 ?? 'EN').toLowerCase(),
-      );
+      final x = await fetchTitlesForCelex(c);
+      String t = x['en'] ?? x.values.firstOrNull ?? '';
+
       if (!mounted) return;
       setState(() {
         _titleCache[c] = t ?? '';
