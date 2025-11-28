@@ -55,11 +55,19 @@ class _MainTabbedAppState extends State<MainTabbedApp>
       }
     });
 
-    startIngestServer().then((_) {
+     startIngestServer().then((_) {
+    ingestServer.onRequest = (payload) async {
+      // Your search logic here
+      // Return a Map<String, dynamic>
+      return <String, dynamic>{}; // Return an empty map or your actual result
+    };
+  });
+
+    /*  startIngestServer().then((_) {
       ingestServer.stream.listen((payload) {
         print('Incoming Trados payload: $payload');
       });
-    });
+    });*/
   }
 
   @override

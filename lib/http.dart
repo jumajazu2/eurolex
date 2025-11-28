@@ -2,9 +2,16 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+// 1. Define the handler type (Function signature)
+typedef RequestHandler =
+    Future<Map<String, dynamic>> Function(Map<String, dynamic> payload);
+
 class LocalIngestServer {
   final int port;
   HttpServer? _server;
+
+  // 2. Add the callback property here
+  RequestHandler? onRequest;
 
   // Broadcast so multiple listeners can subscribe.
   final StreamController<Map<String, dynamic>> _controller =
@@ -28,8 +35,24 @@ class LocalIngestServer {
           final body = await utf8.decoder.bind(req).join();
           final Map<String, dynamic> data =
               body.isEmpty ? <String, dynamic>{} : jsonDecode(body);
-          _controller.add(data); // notify listeners
-          _reply(req, 200, {'status': 'ok'});
+
+          // RESTORED LOGIC: Always notify the UI stream first
+          //    _controller.add(data);
+
+          Map<String, dynamic> responseData;
+
+          if (onRequest != null) {
+            // New Logic: Wait for search results from main.dart
+            responseData = await onRequest!(data);
+            print("Sending HTTP response: $responseData");
+          } else {
+            // Fallback: Just say OK
+            responseData = {'status': 'ok'};
+          }
+
+          // Send response (either search results or just 'ok')
+
+          _reply(req, 200, responseData);
         } catch (e) {
           _reply(req, 400, {'error': 'bad request', 'detail': e.toString()});
         }
@@ -43,7 +66,7 @@ class LocalIngestServer {
 
   void _reply(HttpRequest req, int code, Map<String, dynamic> obj) {
     req.response.statusCode = code;
-    req.response.headers.set('Content-Type', 'application/json');
+    req.response.headers.set('Content-Type', 'application/json; charset=utf-8');
     req.response.write(jsonEncode(obj));
     req.response.close();
   }

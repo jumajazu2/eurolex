@@ -83,17 +83,53 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // _startPolling();
 
-    if (jsonSettings["auto_lookup"] == true) {
-      _sub = ingestServer.stream.listen((payload) {
-        // Replace with your custom code
-        print('HTTP Incoming: $payload');
-        if (!mounted) return;
-        print('HTTP Incoming: passed mounted test');
-        _httpUpdate(payload);
+    // Remove the stream listener for Trados integration (Option A)
+    // if (jsonSettings["auto_lookup"] == true) {
+    //   _sub = ingestServer.stream.listen((payload) {
+    //     _httpUpdate(payload);
+    //   });
+    // }
+
+    // Set up the onRequest handler for Trados
+    ingestServer.onRequest = (payload) async {
+      // Run the same logic as auto_lookup
+
+      print("onRequest Received Trados payload: $payload");
+      await _httpUpdate(payload);
+
+      // Wait for processQuery to finish (if _httpUpdate is async, use await)
+      // If _httpUpdate is not async, you may need to refactor it to be async and await processQuery inside it.
+
+      // Package results for Trados
+      final count = min(
+        lang1Results.length,
+        min(lang2Results.length, metaCelex.length),
+      );
+      final results = List<Map<String, String>>.generate(count, (i) {
+        return {
+          'lang1_result': lang1Results[i],
+          'lang2_result': lang2Results[i],
+          'celex': metaCelex[i],
+        };
       });
-    }
+      print("HTTP response Returning results to Trados: $results");
+
+      // Check for serialization issues
+      try {
+        final testJson = jsonEncode({
+          'status': 'success',
+          'count': results.length,
+          'results': results,
+        });
+        print("Test JSON serialization succeeded: $testJson");
+      } catch (e) {
+        print("JSON serialization error: $e");
+      }
+
+      // return {'results': results};
+      return {'status': 'success', 'count': results.length, 'results': results};
+    };
   }
 
   @override
@@ -121,15 +157,13 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     });
   }
 
-  void _httpUpdate(payload) async {
+  Future _httpUpdate(payload) async {
     if (jsonSettings["auto_lookup"] == false) return;
 
-    setState(() {
-      _results.clear();
+    _results.clear();
 
-      enHighlightedResults.clear();
-      //   List subsegments = subsegmentFile(_fileContent);
-    });
+    enHighlightedResults.clear();
+    //   List subsegments = subsegmentFile(_fileContent);
 
     String _httpSource = payload['source'] ?? '';
     String _httpTarget = payload['target'] ?? '';
@@ -162,17 +196,18 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
           ],
         },
       },
-      "size": 50,
+      "size": 3,
     };
 
-    processQuery(queryAnalyser, _httpSource, activeIndex);
-
+    await processQuery(queryAnalyser, _httpSource, activeIndex);
+    if (!mounted) return;
     setState(() {
       queryText = "Auto-analyse: $_httpSource";
     }); // You may need to call setState again to update the UI
   }
 
   void _updateState() async {
+    if (!mounted) return;
     setState(() {
       lastFileContent = _fileContent;
 
@@ -239,7 +274,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
 
   //the end of periodi polling code
 
-  void processQuery(query, searchTerm, index) async {
+  Future processQuery(query, searchTerm, index) async {
     queryPattern = query;
 
     final resultsOS = await sendToOpenSearch(
@@ -345,7 +380,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     if (!mounted) return;
     setState(() {});
 
-    await titlesForCelex();
+    titlesForCelex();
   }
 
   void _startSearch() async {
