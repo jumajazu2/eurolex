@@ -106,9 +106,10 @@ Future getContext(celex, pointer) async {
   print(
     "Active index: $activeIndex, getting context for Celex: $celex, pointer: $pointer, gte: $gte, lte: $lte, query: $query",
   );
-  var resultsContext = await sendToOpenSearch('https://$osServer/_search', [
-    jsonEncode(query),
-  ]);
+  var resultsContext = await sendToOpenSearch(
+    'https://$osServer/$activeIndex/_search',
+    [jsonEncode(query)],
+  ); //BUG: when searching in all indices, which is appropriate, the sequence_id data does not match, now specific index is used, but it will not work for global search
   var decodedResults = jsonDecode(resultsContext);
 
   var hits = decodedResults['hits']['hits'] as List;
@@ -135,8 +136,11 @@ Future getContext(celex, pointer) async {
                   hit['_source']['${lang3?.toLowerCase()}_text'].toString(),
             )
             .toList();
+
+    var sequenceID =
+        hits.map((hit) => hit['_source']['sequence_id'].toString()).toList();
     print("Get context: $contextLang1, $contextLang2, $contextLang3");
 
-    return [contextLang1, contextLang2, contextLang3];
+    return [contextLang1, contextLang2, contextLang3, sequenceID];
   }
 }

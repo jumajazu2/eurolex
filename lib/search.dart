@@ -109,7 +109,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
       final results = List<Map<String, String>>.generate(count, (i) {
         return {
           'lang1_result': lang1Results[i],
-          'lang2_result': lang2Results[i],
+          'lang2_result': "<b>${lang2Results[i]}</b>",
           'celex': metaCelex[i],
         };
       });
@@ -119,6 +119,8 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
       try {
         final testJson = jsonEncode({
           'status': 'success',
+          'lang1': lang1,
+          'lang2': lang2,
           'count': results.length,
           'results': results,
         });
@@ -128,7 +130,13 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
       }
 
       // return {'results': results};
-      return {'status': 'success', 'count': results.length, 'results': results};
+      return {
+        'status': 'success',
+        'lang1': lang1,
+        'lang2': lang2,
+        'count': results.length,
+        'results': results,
+      };
     };
   }
 
@@ -1198,6 +1206,20 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                             ),
                                           ],
                                         ),
+
+                                        Row(
+                                          children: [
+                                            Text("Sequence ID: "),
+                                            Flexible(
+                                              child: SelectableText(
+                                                pointerPar.length > index
+                                                    ? pointerPar[index]
+                                                    : '',
+                                                // overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                         Row(
                                           children: [
                                             Text("Unmatched paragraphs: "),
@@ -1332,7 +1354,9 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                                               contextEnSkCz[0]
                                                                       .length >
                                                                   index)
-                                                          ? contextEnSkCz[0][index]
+                                                          ? contextEnSkCz[3][index] +
+                                                              " : " +
+                                                              contextEnSkCz[0][index]
                                                           : '',
                                                     ),
                                                   )

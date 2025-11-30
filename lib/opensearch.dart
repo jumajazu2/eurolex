@@ -16,3 +16,5 @@ Future deleteOpenSearchIndex(index) async {
   String indicesAfter = await getListIndices(server);
   print('Remaining indices after delete: $indicesAfter');
 }
+
+

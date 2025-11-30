@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:eurolex/file_handling.dart';
 import 'package:eurolex/main.dart';
+import 'package:eurolex/opensearch.dart';
 import 'package:flutter/material.dart';
 import 'package:eurolex/processDOM.dart';
 import 'package:eurolex/display.dart';
@@ -264,20 +265,65 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              ListView.builder(
+              GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: indices.length,
+                itemCount: indicesFull.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3, // Two columns
+                  childAspectRatio: 15, // Adjust for row height
+                  mainAxisSpacing: 4,
+                  crossAxisSpacing: 4,
+                ),
                 itemBuilder: (BuildContext context, int index) {
-                  return ListTile(
-                    title: Text(indices[index]),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete),
-                      onPressed: () {
-                        setState(() {
-                          indices.removeAt(index);
-                        });
-                      },
+                  return Card(
+                    margin: EdgeInsets.zero,
+                    child: ListTile(
+                      dense: true,
+                      title: Row(
+                        children: [
+                          Text(
+                            indicesFull[index][0],
+                            style: const TextStyle(fontSize: 14),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+
+                          Text(
+                            ' (' + indicesFull[index][1] + ' ',
+                            style: const TextStyle(fontSize: 14),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+
+                          Text(
+                            indicesFull[index][2] + ' units)',
+                            style: const TextStyle(fontSize: 14),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                      trailing:
+                          indicesFull[index][0].contains("sparql")
+                              ? null
+                              : IconButton(
+                                icon: const Icon(Icons.delete, size: 18),
+                                onPressed: () {
+                                  setState(() {
+                                    confirmAndDeleteOpenSearchIndex(
+                                      context,
+                                      indicesFull[index][0],
+                                    );
+                                  });
+                                  setState(() {
+                                    getListIndicesFull(server).then((_) {
+                                      setState(() {
+                                        print(
+                                          "Indices reloaded details: $indicesFull",
+                                        );
+                                      });
+                                    });
+                                  });
+                                },
+                              ),
                     ),
                   );
                 },

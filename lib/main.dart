@@ -10,11 +10,13 @@ import 'package:eurolex/search.dart';
 import 'package:eurolex/analyser.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:eurolex/http.dart';
+import 'package:eurolex/opensearch.dart';
 
 //String osServer = 'localhost:9200'; // add to Settings or Autolookup
 String osServer = 'search.pts-translation.sk'; // AWS server
 //String osServer = '192.168.1.14:9200';
 List<String> indices = ['*'];
+List<List<String>> indicesFull = [];
 
 Map<String, dynamic> jsonSettings = {};
 Map<String, dynamic> jsonConfig = {};
@@ -44,7 +46,21 @@ class _MainTabbedAppState extends State<MainTabbedApp>
     super.initState();
     _tabController = TabController(length: 5, vsync: this, initialIndex: 0);
 
-    getListIndices(server).then((_) => setState(() {}));
+    _tabController.addListener(() {
+      // Setup tab is index 2 (third tab)
+      if (_tabController.indexIsChanging && _tabController.index == 2) {
+        // Run your code here
+        print("Setup tab clicked!");
+        // For example, reload indices or settings
+        getListIndicesFull(server).then((_) {
+          setState(() {
+            print("Indices loaded details: $indicesFull");
+          });
+        });
+      }
+    });
+
+    print("Loading III indices...");
 
     loadSettingsFromFile().then((_) {
       if (jsonSettings["access_key"] == "trial") {
@@ -55,13 +71,13 @@ class _MainTabbedAppState extends State<MainTabbedApp>
       }
     });
 
-     startIngestServer().then((_) {
-    ingestServer.onRequest = (payload) async {
-      // Your search logic here
-      // Return a Map<String, dynamic>
-      return <String, dynamic>{}; // Return an empty map or your actual result
-    };
-  });
+    startIngestServer().then((_) {
+      ingestServer.onRequest = (payload) async {
+        // Your search logic here
+        // Return a Map<String, dynamic>
+        return <String, dynamic>{}; // Return an empty map or your actual result
+      };
+    });
 
     /*  startIngestServer().then((_) {
       ingestServer.stream.listen((payload) {
@@ -141,5 +157,36 @@ class _MainTabbedAppState extends State<MainTabbedApp>
             ],
           ),
     );
+  }
+}
+
+Future<void> confirmAndDeleteOpenSearchIndex(
+  BuildContext context,
+  String index,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder:
+        (context) => AlertDialog(
+          title: Text('Delete Index'),
+          content: Text(
+            'Do you really want to delete Index "$index"? This is irreversible and the index will be permanently deleted and all data in it lost.',
+          ),
+          actions: [
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () => Navigator.of(context).pop(false),
+            ),
+            TextButton(
+              child: const Text('Delete', style: TextStyle(color: Colors.red)),
+              onPressed: () => Navigator.of(context).pop(true),
+            ),
+          ],
+        ),
+  );
+
+  if (confirmed == true) {
+    await deleteOpenSearchIndex(index);
+   
   }
 }

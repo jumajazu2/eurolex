@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:eurolex/browseFiles.dart';
 import 'package:eurolex/processDOM.dart';
 import 'package:eurolex/search.dart';
+import 'package:eurolex/setup.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:eurolex/bulkupload.dart';
@@ -693,7 +694,7 @@ Future getListIndices(server) async {
   try {
     final response = await http.get(
       Uri.parse('$server/_cat/indices?h=index'),
-      headers: {'Authorization': basicAuth, 'x-api-key': '1234'},
+      headers: {'Authorization': basicAuth, 'x-api-key': userPasskey},
     );
     if (response.statusCode == 200) {
       String responseBody = response.body;
@@ -718,5 +719,57 @@ Future getListIndices(server) async {
   } catch (e) {
     print('Error loading indices: $e');
     return 'Error loading indices: $e';
+  }
+}
+
+Future<List<List<String>>> getListIndicesFull(server) async {
+  final username = 'admin';
+  final password = 'admin';
+  final basicAuth = 'Basic ${base64Encode(utf8.encode('$username:$password'))}';
+
+  try {
+    final response = await http.get(
+      Uri.parse('$server/_cat/indices?h=index,store.size,docs.count'),
+      headers: {'Authorization': basicAuth, 'x-api-key': userPasskey},
+    );
+    if (response.statusCode == 200) {
+      String responseBody = response.body;
+
+      // Each line: indexName store.size docs.count
+      final lines = responseBody
+          .split('\n')
+          .where(
+            (line) =>
+                line.trim().isNotEmpty &&
+                (line.contains('eurolex') || line.contains('imported')),
+          );
+
+      // Parse each line into [name, size, docs]
+      final indicesList =
+          lines
+              .map((line) {
+                final parts = line.split(RegExp(r'\s+'));
+                if (parts.length >= 3) {
+                  // Cast to List<String>
+                  return <String>[parts[0], parts[1], parts[2]];
+                } else {
+                  return <String>[];
+                }
+              })
+              .where((sublist) => sublist.isNotEmpty)
+              .toList();
+
+      print('Indices details loaded: $indicesList for server: $server');
+      indicesFull = indicesList;
+      return indicesList;
+    } else {
+      print(
+        'Failed to load indices details. Status code: ${response.statusCode}',
+      );
+      return [];
+    }
+  } catch (e) {
+    print('Error loading indices details: $e');
+    return [];
   }
 }
