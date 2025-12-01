@@ -60,8 +60,11 @@ class _MainTabbedAppState extends State<MainTabbedApp>
       }
     });
 
-    print("Loading III indices...");
-
+getListIndices( server).then((_) {
+      setState(() {
+        print("Indices loaded: $indices");
+      });
+    });
     loadSettingsFromFile().then((_) {
       if (jsonSettings["access_key"] == "trial") {
         // Ensure a context exists

@@ -2,6 +2,7 @@
 import 'dart:ui';
 
 import 'package:eurolex/browseFiles.dart';
+import 'package:eurolex/file_handling.dart';
 import 'package:eurolex/processDOM.dart';
 import 'package:eurolex/search.dart';
 import 'package:eurolex/setup.dart';
@@ -686,7 +687,7 @@ class parseHtml {
 
 Future getListIndices(server) async {
   // Function to get the list of indices from the server
-
+  await loadSettingsFromFile();
   final username = 'admin';
   final password = 'admin';
   final basicAuth = 'Basic ${base64Encode(utf8.encode('$username:$password'))}';
@@ -694,7 +695,10 @@ Future getListIndices(server) async {
   try {
     final response = await http.get(
       Uri.parse('$server/_cat/indices?h=index'),
-      headers: {'Authorization': basicAuth, 'x-api-key': userPasskey},
+      headers: {
+        'Authorization': basicAuth,
+        'x-api-key': jsonSettings['access_key'],
+      },
     );
     if (response.statusCode == 200) {
       String responseBody = response.body;
@@ -726,6 +730,7 @@ Future<List<List<String>>> getListIndicesFull(server) async {
   final username = 'admin';
   final password = 'admin';
   final basicAuth = 'Basic ${base64Encode(utf8.encode('$username:$password'))}';
+  print("userPasskey for getListIndicesFull: $userPasskey");
 
   try {
     final response = await http.get(

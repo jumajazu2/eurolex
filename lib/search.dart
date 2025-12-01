@@ -84,6 +84,13 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
+    // Load settings before using jsonSettings
+    loadSettingsFromFile().then((_) {
+      setState(() {
+        // Now jsonSettings should have correct values
+      });
+    });
+
     // Remove the stream listener for Trados integration (Option A)
     // if (jsonSettings["auto_lookup"] == true) {
     //   _sub = ingestServer.stream.listen((payload) {
@@ -580,7 +587,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     await getListIndices(server);
     setState(() {
       print(
-        "Dropdown tapped and indices updated from server, indices: $indices.",
+        "Dropdown tapped and indices updated from server $server, indices: $indices.",
       );
     });
   }

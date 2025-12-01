@@ -155,7 +155,7 @@ Future<void> writeSettingsToFile(Map<String, dynamic> newJsonData) async {
     final jsonString = const JsonEncoder.withIndent('  ').convert(newJsonData);
     await file.writeAsString(jsonString);
 
-    print("Settings JSON written successfully:\n$jsonString");
+    print("$file\nSettings JSON written successfully:\n$jsonString");
   } catch (e) {
     print("Error writing Settings JSON: $e");
   }

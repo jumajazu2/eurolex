@@ -17,8 +17,8 @@ import 'package:path_provider/path_provider.dart';
 // Simple globals (no `library` / `part`).
 
 // User
-String userEmail = '';
-String userPasskey = '';
+String userEmail = jsonSettings['user_email'] ?? '';
+String userPasskey = jsonSettings['access_key'] ?? '';
 
 // Working languages
 String? lang1;
@@ -113,7 +113,7 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
         _emailCtrl.text.trim().toLowerCase() == 'juraj.kuban.sk@gmail.com';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Setup')),
+      // appBar: AppBar(title: const Text('Setup')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -328,7 +328,13 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                   );
                 },
               ),
+              const SizedBox(height: 20),
+              const Text(
+                'Current Settings JSON saved in:',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 12),
+              Text(File(getFilePath('settings.json')).path),
               Text(jsonSettings.toString()),
             ],
           ],
