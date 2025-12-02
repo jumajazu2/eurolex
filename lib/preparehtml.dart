@@ -35,7 +35,7 @@ var fileEN_DOM;
 var fileCZ_DOM;
 var fileDOM2;
 var celexNumbersExtracted = [];
-var extractedCelex = [''];
+List<String> extractedCelex = [];
 var manualEextractedCelex = [''];
 var newIndexName = '';
 var manualCelex = [];
@@ -270,11 +270,11 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
     }
 
     for (final celex in celexNumbersExtracted) {
+      extractedCelex.add('${_completedUploads + 1}/$_totalUploads: $celex:');
       await uploadSparqlForCelex(celex, newIndexName);
       _completedUploads++;
       if (!mounted) return;
       setState(() {
-        extractedCelex.add('$celex ${_completedUploads}/$_totalUploads');
         _recalcProgress();
       });
     }
@@ -335,7 +335,7 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
                     newIndexName = newValue!;
                   });
                   // Handle dropdown selection
-                  print('Selected for Cexex Refs upload: $newValue');
+                  print('Selected for Celex Refs upload: $newValue');
                 },
               ),
             ),
@@ -379,22 +379,29 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
           fileContent2.isEmpty
               ? const Text('No file loaded.')
               : Container(
+                width:
+                    double.infinity, // Make container take full available width
                 constraints: const BoxConstraints(
                   maxHeight: 400,
-                  maxWidth: 500,
+                  // Remove maxWidth or set to double.infinity for full width
                 ),
                 child: SingleChildScrollView(
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: Column(
                       children: [
-                        Text(
-                          extractedCelex.isEmpty
-                              ? 'No Celex Numbers Processed.'
-                              : extractedCelex.length == 1
-                              ? 'Processed Celex Number: ${extractedCelex.first}'
-                              : 'Processed Celex Numbers: ${extractedCelex.join(', ')}',
-                          style: const TextStyle(fontFamily: 'monospace'),
+                        SelectableText.rich(
+                          TextSpan(
+                            children:
+                                extractedCelex.isEmpty
+                                    ? [
+                                      const TextSpan(
+                                        text: 'No Celex Numbers Processed.',
+                                      ),
+                                    ]
+                                    : buildCelexSpans(extractedCelex),
+                            style: const TextStyle(fontFamily: 'monospace'),
+                          ),
                         ),
                       ],
                     ),
@@ -564,20 +571,25 @@ class _manualCelexListState extends State<manualCelexList> {
               : Container(
                 constraints: BoxConstraints(
                   maxHeight: 400,
-                  maxWidth: 500, // Limit the maximum height
+                  maxWidth: 1800, // Limit the maximum height
                 ),
                 child: SingleChildScrollView(
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: Column(
                       children: [
-                        Text(
-                          extractedCelex.isEmpty
-                              ? 'No Celex Numbers Processed.' // If the list is empty
-                              : extractedCelex.length == 1
-                              ? 'Processed Celex Number: \n${extractedCelex.first}' // If the list has one value
-                              : 'Processed Celex Numbers: \n${extractedCelex.join(',\n')}', // If the list has multiple values
-                          style: TextStyle(fontFamily: 'monospace'),
+                        SelectableText.rich(
+                          TextSpan(
+                            children:
+                                extractedCelex.isEmpty
+                                    ? [
+                                      const TextSpan(
+                                        text: 'No Celex Numbers Processed.',
+                                      ),
+                                    ]
+                                    : buildCelexSpans(extractedCelex),
+                            style: const TextStyle(fontFamily: 'monospace'),
+                          ),
                         ),
                       ],
                     ),
@@ -778,3 +790,37 @@ Future<List<List<String>>> getListIndicesFull(server) async {
     return [];
   }
 }
+
+// Helper to build spans
+List<TextSpan> buildCelexSpans(List<String> lines) {
+  return lines.map((line) {
+    if (line == 'COMPLETED') {
+      return const TextSpan(
+        text: '\nCOMPLETED',
+        style: TextStyle(fontWeight: FontWeight.bold),
+      );
+    }
+    final parts = line.split(':');
+    print(parts);
+    if (parts.length < 2) {
+      return TextSpan(text: '\n$line');
+    }
+    final left = parts[0].trim();
+    final right =
+        parts.length > 2 ? parts.sublist(2).map((s) => s.trim()).join(':') : '';
+    final celex = parts[1].trim() + ': '; // handle any extra colons
+    return TextSpan(
+      children: [
+        TextSpan(text: '\n$left: '),
+        TextSpan(
+          text: celex,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+
+        TextSpan(text: right),
+      ],
+    );
+  }).toList();
+}
+
+// In your build where you had SelectableText.rich(...)

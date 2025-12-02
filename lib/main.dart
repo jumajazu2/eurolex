@@ -21,6 +21,9 @@ List<List<String>> indicesFull = [];
 Map<String, dynamic> jsonSettings = {};
 Map<String, dynamic> jsonConfig = {};
 Map<String, dynamic> jsonData = {};
+String? lang1;
+String? lang2;
+String? lang3;
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 LocalIngestServer ingestServer = LocalIngestServer(port: 6175);
 
@@ -60,7 +63,7 @@ class _MainTabbedAppState extends State<MainTabbedApp>
       }
     });
 
-getListIndices( server).then((_) {
+    getListIndices(server).then((_) {
       setState(() {
         print("Indices loaded: $indices");
       });
@@ -72,6 +75,9 @@ getListIndices( server).then((_) {
           if (mounted) showTrialDialog();
         });
       }
+      lang1 = jsonSettings['lang1']?.toString().toUpperCase();
+      lang2 = jsonSettings['lang2']?.toString().toUpperCase();
+      lang3 = jsonSettings['lang3']?.toString().toUpperCase();
     });
 
     startIngestServer().then((_) {
@@ -190,6 +196,6 @@ Future<void> confirmAndDeleteOpenSearchIndex(
 
   if (confirmed == true) {
     await deleteOpenSearchIndex(index);
-   
+    
   }
 }

@@ -1114,7 +1114,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                     child: SelectableText(
                                       style: TextStyle(fontSize: 18.0),
                                       lang2Results.length > index
-                                          ? lang2Results[index]
+                                          ? lang2Results[index + offsetlang2]
                                           : '',
                                     ),
                                   ),
@@ -1130,7 +1130,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                     child: SelectableText(
                                       style: TextStyle(fontSize: 18.0),
                                       lang3Results.length > index
-                                          ? lang3Results[index]
+                                          ? lang3Results[index + offsetlang3]
                                           : '',
                                     ),
                                   ),
@@ -1380,7 +1380,8 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                                               contextEnSkCz[1]
                                                                       .length >
                                                                   index)
-                                                          ? contextEnSkCz[1][index]
+                                                          ? contextEnSkCz[1][index +
+                                                              offsetlang2]
                                                           : '',
                                                     ),
                                                   )
@@ -1397,7 +1398,8 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                                               contextEnSkCz[2]
                                                                       .length >
                                                                   index)
-                                                          ? contextEnSkCz[2][index]
+                                                          ? contextEnSkCz[2][index +
+                                                              offsetlang3]
                                                           : '',
                                                     ),
                                                   )

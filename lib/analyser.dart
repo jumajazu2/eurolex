@@ -342,7 +342,7 @@ Future<Map> searchNGrams(List<dynamic> ngrams) async {
             "must": [
               {
                 "match_phrase": {
-                  "en_text": {
+                  "${lang1?.toLowerCase()}_text": {
                     "query": ngram,
                     // Allow some flexibility in word order
                     // Boost the phrase match
@@ -357,7 +357,7 @@ Future<Map> searchNGrams(List<dynamic> ngrams) async {
         },
         "highlight": {
           "fields": {
-            "en_text": {"type": "plain"},
+            "${lang1?.toLowerCase()}_text": {"type": "plain"},
           },
         },
         "size": 1, // Only top result

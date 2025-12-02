@@ -87,11 +87,22 @@ Future<List<List<String>>> retrieveCelexForLang(var link, var lang) async {
       final lines = extractPlainTextLines(doc);
       final pairs = splitTextAndClass(lines);
       print("Harvest Lang: $lang, Pairs: ${pairs.length} from $link/n");
+
+      if (extractedCelex.isNotEmpty) {
+        extractedCelex[extractedCelex.length - 1] += " $lang ${pairs.length}";
+      } else {
+        extractedCelex.add("$lang: ${pairs.length}");
+      }
+
       return pairs;
     } catch (e) {
       final msg = e.toString();
       print('Catch triggered, Error harvesting $link/$lang: $msg');
       // Treat CloudFront WAF challenge (202) as throttle too
+
+      if (extractedCelex.isNotEmpty) {
+        extractedCelex[extractedCelex.length - 1] += "  $lang: ERR";
+      }
       final isThrottle =
           msg.contains('403') ||
           msg.contains('429') ||

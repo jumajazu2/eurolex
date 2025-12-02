@@ -1,3 +1,20 @@
+to get specific sequence ID in specific Celex, to offset parMismatch
+ {"query": {
+    "bool": {
+      "must": [
+        { "term": { "celex": "32016R0679" } },
+        { "term": { "sequence_id": 2
+         } }
+      ]
+    }
+  },
+  "size": 10
+}
+
+
+
+
+
 WORKING, FAST
 For celex, returns links and title for each lang
 

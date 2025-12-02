@@ -70,6 +70,12 @@ TextSpan highlightFoundWords2(String returnedResult, List<String> foundWords) {
   return TextSpan(children: spans);
 }
 
+//as documents often do not match when parsing, these offsets are used to align the texts,
+//alternatively some smart approach could analyse and store offsets in the DB
+int offsetlang1 = 0;
+int offsetlang2 = 0;
+int offsetlang3 = 0;
+
 Future getContext(celex, pointer) async {
   // Simulate fetching context from a database or API
 

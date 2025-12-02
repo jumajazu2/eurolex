@@ -21,9 +21,6 @@ String userEmail = jsonSettings['user_email'] ?? '';
 String userPasskey = jsonSettings['access_key'] ?? '';
 
 // Working languages
-String? lang1;
-String? lang2;
-String? lang3;
 
 class indicesMaintenance extends StatefulWidget {
   @override
@@ -311,7 +308,17 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                                     confirmAndDeleteOpenSearchIndex(
                                       context,
                                       indicesFull[index][0],
-                                    );
+                                    ).then((_) {
+                                      setState(() {
+                                        getListIndicesFull(server).then((_) {
+                                          setState(() {
+                                            print(
+                                              "Indices reloaded details: $indicesFull",
+                                            );
+                                          });
+                                        });
+                                      });
+                                    });
                                   });
                                   setState(() {
                                     getListIndicesFull(server).then((_) {
