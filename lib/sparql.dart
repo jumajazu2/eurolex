@@ -331,6 +331,7 @@ LIMIT $limit
 
 Future<Map<String, Map<String, String>>> fetchLinksForCelex(
   dynamic celex,
+  String format
 ) async {
   const endpoint = 'https://publications.europa.eu/webapi/rdf/sparql';
   final celexStr = celex;
@@ -360,7 +361,7 @@ VALUES ?celex { "$celexStr"^^xsd:string }
   ?manif cdm:manifestation_manifests_expression ?expr ;
         cdm:manifestation_type ?format .
   ?item cdm:item_belongs_to_manifestation ?manif .
-  FILTER(str(?format)="xhtml")
+  FILTER(str(?format)="$format")
 }
 ORDER BY ?celex
 ''';

@@ -79,7 +79,11 @@ Duration _backoffWithJitter(
   return Duration(milliseconds: r.nextInt(ms + 1)); // 0..ms
 }
 
-Future<List<List<String>>> retrieveCelexForLang(var link, var lang) async {
+Future<List<List<String>>> retrieveCelexForLang(
+  var link,
+  var lang,
+  String celex,
+) async {
   var attempt = 0;
   while (true) {
     try {
@@ -92,6 +96,15 @@ Future<List<List<String>>> retrieveCelexForLang(var link, var lang) async {
         extractedCelex[extractedCelex.length - 1] += " $lang ${pairs.length}";
       } else {
         extractedCelex.add("$lang: ${pairs.length}");
+      }
+
+      if (pairs.length < 5) {
+        print(
+          'Warning: Harvested very few lines (${pairs.length}) for $link/$lang, should try HTML format',
+        );
+        if (!failedCelex.contains(celex)) {
+          failedCelex.add(celex);
+        }
       }
 
       return pairs;
@@ -118,6 +131,8 @@ Future<List<List<String>>> retrieveCelexForLang(var link, var lang) async {
   }
 }
 
+List failedCelex = [];
+
 Future<Map<String, List<List<String>>>> createUploadArrayFromMap(
   String celex,
   Map<String, String> langLinks, // lang -> URL
@@ -133,7 +148,7 @@ Future<Map<String, List<List<String>>>> createUploadArrayFromMap(
 
     futures.add(() async {
       try {
-        final pairs = await retrieveCelexForLang(url, lang);
+        final pairs = await retrieveCelexForLang(url, lang, celex);
         out[lang] = pairs;
       } catch (e) {
         final msg = 'Harvest error for $celex/$lang from $url: $e';
@@ -142,6 +157,10 @@ Future<Map<String, List<List<String>>>> createUploadArrayFromMap(
         // Optionally also log stack trace:
         // logger.log(st.toString());
         failed.add(lang);
+        if (!failedCelex.contains(celex)) {
+          failedCelex.add(celex);
+        }
+        print('Harvest Added to failedCelex: $celex');
       }
     }());
   }
@@ -192,7 +211,7 @@ Future<Map<String, List<List<String>>>> createUploadArrayFromCelex(
       if (i >= list.length) break;
       final lang = list[i];
       try {
-        final pairs = await retrieveCelexForLang(celex, lang);
+        final pairs = await retrieveCelexForLang(celex, lang, celex);
         out[lang] = pairs;
         print("Harvest Worker Lang: $lang, Pairs: ${pairs.length}");
       } catch (e) {
@@ -222,7 +241,7 @@ Future<Map<String, List<List<String>>>> createUploadArrayFromCelexSingle(
 
   for (final lang in list) {
     try {
-      final pairs = await retrieveCelexForLang(celex, lang);
+      final pairs = await retrieveCelexForLang(celex, lang, celex);
       //print("Harvest Fetched Lang: $lang, Pairs: $pairs");
       out[lang] = pairs;
       print("Harvest Lang: $lang, Pairs: ${pairs.length}");
@@ -480,12 +499,14 @@ void uploadTestSparqlSectorYear(
 Future uploadSparqlForCelex(
   String celex,
 
-  String indexName, [
+  String indexName,
+  String format, [
   int startPointer = 0,
 ]) async {
   //final lines = await fetchSectorXCelexTitles(sector, year);
   final downloadLinks = await fetchLinksForCelex(
     celex,
+    format
   ); //this reads a map of celex->lang->links
 
   if (startPointer < 0 ||
@@ -511,6 +532,105 @@ Future uploadSparqlForCelex(
   );
   print(
     'Starting Harvest for celex $celex, total links: ${downloadLinks.length}, resumeFrom: $startPointer',
+  );
+
+  final celexIds =
+      downloadLinks.keys
+          .toList(); //create list of celex ids to access map by index
+
+  for (var i = startPointer; i < downloadLinks.length; i++) {
+    final pointer = i + 1; // human-friendly (1-based) progress
+    final celex = celexIds[i];
+    final langMapForCelex =
+        downloadLinks[celex]!; //get lang->links map for this celex
+
+    print(
+      'Harvesting $pointer/${downloadLinks.length} — $celex, langmap: ${langMapForCelex.keys.toList()}',
+    );
+
+    try {
+      final uploadData = await createUploadArrayFromMap(
+        celex,
+        langMapForCelex,
+        logger, // throttle
+      );
+
+      processMultilingualMap(
+        uploadData,
+        indexName,
+        celex,
+        pointer.toString(), //dirID = pointer
+        false, //simulate
+        false, // debug
+        false,
+        i,
+        logger, //index
+      );
+      /*
+      if (pointer % 10 == 0) {
+        print(
+          'Harvest pointer: $pointer, Waiting 5 seconds after 10 items to avoid throttling...',
+        );
+        await Future.delayed(const Duration(seconds: 5));
+      }
+
+      if (pointer % 30 == 0) {
+        print(
+          'Harvest pointer: $pointer, Waiting 30 seconds after 30 items to avoid throttling...',
+        );
+        await Future.delayed(const Duration(seconds: 30));
+      }
+
+      */
+    } on Exception catch (e) {
+      print(
+        'Failed to harvest $celex: $e at pointer: $pointer (index $i) (exception $e)',
+      );
+      logger.log('Failed to harvest $celex: (resume at index $i)\n$e');
+      return;
+      // Optionally stop here to resume later from this pointer:
+      // return;
+    }
+
+    // Light pacing between CELEXes
+    await Future.delayed(Duration(milliseconds: 800 + Random().nextInt(600)));
+    print('Harvest pointer: $pointer, Waiting a bit to avoid throttling...');
+  }
+}
+
+Future uploadURLs(String indexName, [int startPointer = 0]) async {
+  //final lines = await fetchSectorXCelexTitles(sector, year);
+  final downloadLinks = <String, Map<String, String>>{
+    "WP254": {
+      "EN": "https://www.pts-translation.sk/Referential_ENutf8.htm",
+      "SK": "https://www.pts-translation.sk/Referential_SKutf8.htm",
+    },
+  };
+  //this reads a map of celex->lang->links
+
+  if (startPointer < 0 ||
+      startPointer >=
+          downloadLinks.length) //this give number of celexes to process
+  {
+    print(
+      'Invalid startPointer=$startPointer (Celexes: ${downloadLinks.length}). Starting from 0.',
+    );
+    startPointer = 0;
+  }
+
+  final loggerUrl = LogManager(
+    fileName: 'logs/${fileSafeStamp}_${indexName}_URLs.log',
+  );
+  loggerUrl.log(
+    'manual Upload for url $downloadLinks,  ${downloadLinks.length}, resumeFrom: $startPointer, the following URLs will be processed: ${const JsonEncoder.withIndent('  ').convert(downloadLinks)}',
+  );
+
+  final logger = LogManager(fileName: 'logs/${fileSafeStamp}_$indexName.log');
+  logger.log(
+    'manual Upload for url $downloadLinks, total links: ${downloadLinks.length}, resumeFrom: $startPointer',
+  );
+  print(
+    'Starting Harvest  for url $downloadLinks, total links: ${downloadLinks.length}, resumeFrom: $startPointer',
   );
 
   final celexIds =

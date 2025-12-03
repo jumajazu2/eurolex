@@ -224,12 +224,46 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
     _progress = totalPhases == 0 ? 0.0 : done / totalPhases;
   }
 
+  Future<void> retryFailedCelex(List celex, String indexName) async {
+    for (final cel in celex) {
+      extractedCelex.add('${_completedUploads + 1}/$_totalUploads: $celex:');
+
+      await uploadSparqlForCelex(cel, newIndexName, "html");
+      if (failedCelex.contains(celex)) {
+        extractedCelex.add('XHTML FAILED, WILL RETRY in HTML LATER');
+      } else {}
+
+      _completedUploads++;
+      if (!mounted) return;
+      setState(() {
+        _recalcProgress();
+      });
+    }
+
+    if (!mounted) return;
+
+    if (failedCelex.isNotEmpty) {}
+    setState(() {
+      if (failedCelex.isNotEmpty) {
+        extractedCelex.add(
+          'FAILED CELEX NUMBERS (will retry HTML upload): ${failedCelex.join(', ')}',
+        );
+      } else {
+        extractedCelex.add('COMPLETED');
+      }
+
+      _recalcProgress(); // should hit 100%
+      getListIndices(server);
+    });
+  }
+
   Future<void> pickAndLoadFile2() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles();
     if (!mounted) return;
     setState(() {
       celexNumbersExtracted.clear();
       extractedCelex.clear();
+      failedCelex.clear();
       _progress = 0.01;
       _fileLoaded = false;
       _celexExtracted = false;
@@ -271,7 +305,12 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
 
     for (final celex in celexNumbersExtracted) {
       extractedCelex.add('${_completedUploads + 1}/$_totalUploads: $celex:');
-      await uploadSparqlForCelex(celex, newIndexName);
+
+      await uploadSparqlForCelex(celex, newIndexName, "xhtml");
+      if (failedCelex.contains(celex)) {
+        extractedCelex.add('XHTML FAILED, WILL RETRY in HTML LATER');
+      } else {}
+
       _completedUploads++;
       if (!mounted) return;
       setState(() {
@@ -280,11 +319,24 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
     }
 
     if (!mounted) return;
+
+    if (failedCelex.isNotEmpty) {
+      await retryFailedCelex(failedCelex, newIndexName);
+    }
     setState(() {
-      extractedCelex.add('COMPLETED');
+      if (failedCelex.isNotEmpty) {
+        extractedCelex.add(
+          'FAILED CELEX NUMBERS (will retry HTML upload): ${failedCelex.join(', ')}',
+        );
+      } else {
+        extractedCelex.add('COMPLETED');
+      }
+
       _recalcProgress(); // should hit 100%
       getListIndices(server);
     });
+
+    //try retry for failed celex numbers using HTML harvesting instead of XHTML
   }
 
   // build: add progress bar similar to first picker
@@ -439,11 +491,12 @@ class _manualCelexListState extends State<manualCelexList> {
     final total = manualCelexListEntry.length;
     for (var index = 0; index < total; index++) {
       var i = manualCelexListEntry[index];
-      await uploadSparqlForCelex(i, newIndexName);
+      extractedCelex.add('${index + 1}/$total: $i:');
+      await uploadSparqlForCelex(i, newIndexName, "xhtml");
 
       if (!mounted) return;
       setState(() {
-        extractedCelex.add('$i ${index + 1}/$total');
+        // extractedCelex.add('$i ${index + 1}/$total');
         _progress = (index + 1) / total;
       });
 
@@ -568,11 +621,7 @@ class _manualCelexListState extends State<manualCelexList> {
           // existing results container:
           manualCelex.isEmpty
               ? const Text('No file loaded.')
-              : Container(
-                constraints: BoxConstraints(
-                  maxHeight: 400,
-                  maxWidth: 1800, // Limit the maximum height
-                ),
+              : Expanded(
                 child: SingleChildScrollView(
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
