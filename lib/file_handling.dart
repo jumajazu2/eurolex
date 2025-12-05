@@ -68,18 +68,19 @@ Future<void> writeJsonToFile(
   Map<String, dynamic> newJsonData,
   String filename,
 ) async {
+  File file = File(getFilePath(filename));
+  // Ensure parent directory exists
   try {
-    // Get the writable config file
-    final file = File(getFilePath(filename));
-
-    // Encode the JSON and write it to the file
-    final jsonString = jsonEncode(newJsonData);
-    await file.writeAsString(jsonString);
-
-    print("JSON written successfully: $jsonString");
+    await file.parent.create(recursive: true);
   } catch (e) {
-    print("Error writing JSON: $e");
+    debugPrint('Dir create failed: ${file.parent.path} → $e');
   }
+
+  // Pretty-print with 2-space indentation and UTF-8
+  final jsonString = const JsonEncoder.withIndent('  ').convert(newJsonData);
+  await file.writeAsString(jsonString, encoding: utf8);
+
+  print("JSON written successfully to ${file.path}:\n$jsonString");
 }
 
 Future<void> writeTextToFile(String text, String filename) async {
@@ -190,3 +191,136 @@ Future<void> debugToFile(Map<String, dynamic> newJsonData) async {
     print("Error writing Debug Log: $e");
   }
 }
+
+
+
+
+Future<Map<String, dynamic>> loadCelexYears([
+  String path = 'data/celex_years.json',
+]) async {
+  final file = File(getFilePath(path));
+  if (!await file.exists()) {
+    throw Exception('Celex years file not found: ${file.path}');
+  }
+  final s = await file.readAsString();
+  return jsonDecode(s) as Map<String, dynamic>;
+}
+
+Future<void> saveCelexYears(
+  Map<String, dynamic> data, [
+  String path = 'data/celex_years.json',
+]) async {
+  await writeJsonToFile(data, path);
+}
+
+int getYearTotal(Map<String, dynamic> data, int year) {
+  final y =
+      (data['years'] as Map<String, dynamic>)['$year'] as Map<String, dynamic>;
+  return (y['total'] as num).toInt();
+}
+
+void setYearTotal(Map<String, dynamic> data, int year, int total) {
+  final years = data['years'] as Map<String, dynamic>;
+  final y = years['$year'] as Map<String, dynamic>;
+  y['total'] = total;
+}
+
+int getSectorCount(Map<String, dynamic> data, int year, String sector) {
+  final y =
+      (data['years'] as Map<String, dynamic>)['$year'] as Map<String, dynamic>;
+  final sectors = y['sectors'] as Map<String, dynamic>;
+  return ((sectors[sector] ?? 0) as num).toInt();
+}
+
+void setSectorCount(
+  Map<String, dynamic> data,
+  int year,
+  String sector,
+  int count,
+) {
+  final years = data['years'] as Map<String, dynamic>;
+  final y = years['$year'] as Map<String, dynamic>;
+  final sectors = y['sectors'] as Map<String, dynamic>;
+  sectors[sector] = count;
+  // Recompute total from sector values
+  y['total'] = sectors.values
+      .map((v) => (v as num).toInt())
+      .fold(0, (a, b) => a + b);
+}
+
+bool getYearUploaded(Map<String, dynamic> data, int year) {
+  final y =
+      (data['years'] as Map<String, dynamic>)['$year'] as Map<String, dynamic>;
+  return (y['uploaded'] ?? false) as bool;
+}
+
+void setYearUploaded(Map<String, dynamic> data, int year, bool value) {
+  final years = data['years'] as Map<String, dynamic>;
+  final y = years['$year'] as Map<String, dynamic>;
+  y['uploaded'] = value;
+}
+
+bool getSectorUploaded(Map<String, dynamic> data, int year, String sector) {
+  final years = data['years'] as Map<String, dynamic>;
+  final y = years['$year'] as Map<String, dynamic>;
+  final m =
+      (y['uploadedBySector'] as Map<String, dynamic>?) ?? <String, dynamic>{};
+  return (m[sector] ?? false) as bool;
+}
+
+void setSectorUploaded(
+  Map<String, dynamic> data,
+  int year,
+  String sector,
+  bool value,
+) {
+  final years = data['years'] as Map<String, dynamic>;
+  final y = years['$year'] as Map<String, dynamic>;
+  final m =
+      (y['uploadedBySector'] as Map<String, dynamic>?) ?? <String, dynamic>{};
+  m[sector] = value;
+  y['uploadedBySector'] = m;
+}
+
+void extendRange(Map<String, dynamic> data, int newEndYear) {
+  final range = data['range'] as Map<String, dynamic>;
+  final start = (range['start'] as num).toInt();
+  final currentEnd = (range['end'] as num).toInt();
+  if (newEndYear <= currentEnd) return;
+
+  final years = data['years'] as Map<String, dynamic>;
+  for (int y = currentEnd + 1; y <= newEndYear; y++) {
+    years['$y'] = {
+      'total': 0,
+      'sectors': {
+        's0': 0,
+        's1': 0,
+        's2': 0,
+        's3': 0,
+        's4': 0,
+        's5': 0,
+        's6': 0,
+        's7': 0,
+        's8': 0,
+        's9': 0,
+        's10': 0,
+      },
+      'uploaded': false,
+      'uploadedBySector': {
+        's0': false,
+        's1': false,
+        's2': false,
+        's3': false,
+        's4': false,
+        's5': false,
+        's6': false,
+        's7': false,
+        's8': false,
+        's9': false,
+        's10': false,
+      },
+    };
+  }
+  range['end'] = newEndYear;
+}
+

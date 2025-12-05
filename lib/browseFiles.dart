@@ -9,11 +9,12 @@ import 'package:html/parser.dart' as html_parser;
 
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
-
+import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
 import 'package:eurolex/main.dart';
 import 'package:eurolex/logger.dart';
+import 'package:eurolex/file_handling.dart';
 import 'package:path/path.dart' as path;
 
 String pathDirEN =
@@ -344,23 +345,475 @@ Future<String> getFile(dir) async {
 class BrowseFilesWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    // Show the interactive CelexYearsWidget instead of the batch processing UI
+    return const CelexYearsWidget();
+  }
+}
+
+Future<Map<String, dynamic>> loadCelexYears([
+  String path = 'data/celex_years.json',
+]) async {
+  final file = File(getFilePath(path));
+  if (!await file.exists()) {
+    throw Exception('Celex years file not found: ${file.path}');
+  }
+  final s = await file.readAsString();
+  return jsonDecode(s) as Map<String, dynamic>;
+}
+
+Future<void> saveCelexYears(
+  Map<String, dynamic> data, [
+  String path = 'data/celex_years.json',
+]) async {
+  await writeJsonToFile(data, path);
+}
+
+int getYearTotal(Map<String, dynamic> data, int year) {
+  final y =
+      (data['years'] as Map<String, dynamic>)['$year'] as Map<String, dynamic>;
+  return (y['total'] as num).toInt();
+}
+
+void setYearTotal(Map<String, dynamic> data, int year, int total) {
+  final years = data['years'] as Map<String, dynamic>;
+  final y = years['$year'] as Map<String, dynamic>;
+  y['total'] = total;
+}
+
+int getSectorCount(Map<String, dynamic> data, int year, String sector) {
+  final y =
+      (data['years'] as Map<String, dynamic>)['$year'] as Map<String, dynamic>;
+  final sectors = y['sectors'] as Map<String, dynamic>;
+  return ((sectors[sector] ?? 0) as num).toInt();
+}
+
+void setSectorCount(
+  Map<String, dynamic> data,
+  int year,
+  String sector,
+  int count,
+) {
+  final years = data['years'] as Map<String, dynamic>;
+  final y = years['$year'] as Map<String, dynamic>;
+  final sectors = y['sectors'] as Map<String, dynamic>;
+  sectors[sector] = count;
+  // Recompute total from sector values
+  y['total'] = sectors.values
+      .map((v) => (v as num).toInt())
+      .fold(0, (a, b) => a + b);
+}
+
+bool getYearUploaded2(Map<String, dynamic> data, int year) {
+  final y =
+      (data['years'] as Map<String, dynamic>)['$year'] as Map<String, dynamic>;
+  return (y['uploaded'] ?? false) as bool;
+}
+
+void setYearUploaded(Map<String, dynamic> data, int year, bool value) {
+  final years = data['years'] as Map<String, dynamic>;
+  final y = years['$year'] as Map<String, dynamic>;
+  y['uploaded'] = value;
+}
+
+bool getSectorUploaded(Map<String, dynamic> data, int year, String sector) {
+  final years = data['years'] as Map<String, dynamic>;
+  final y = years['$year'] as Map<String, dynamic>;
+  final m =
+      (y['uploadedBySector'] as Map<String, dynamic>?) ?? <String, dynamic>{};
+  return (m[sector] ?? false) as bool;
+}
+
+void setSectorUploaded(
+  Map<String, dynamic> data,
+  int year,
+  String sector,
+  bool value,
+) {
+  final years = data['years'] as Map<String, dynamic>;
+  final y = years['$year'] as Map<String, dynamic>;
+  final m =
+      (y['uploadedBySector'] as Map<String, dynamic>?) ?? <String, dynamic>{};
+  m[sector] = value;
+  y['uploadedBySector'] = m;
+}
+
+void extendRange(Map<String, dynamic> data, int newEndYear) {
+  final range = data['range'] as Map<String, dynamic>;
+  final start = (range['start'] as num).toInt();
+  final currentEnd = (range['end'] as num).toInt();
+  if (newEndYear <= currentEnd) return;
+
+  final years = data['years'] as Map<String, dynamic>;
+  for (int y = currentEnd + 1; y <= newEndYear; y++) {
+    years['$y'] = {
+      'total': 0,
+      'sectors': {
+        's0': 0,
+        's1': 0,
+        's2': 0,
+        's3': 0,
+        's4': 0,
+        's5': 0,
+        's6': 0,
+        's7': 0,
+        's8': 0,
+        's9': 0,
+        's10': 0,
+      },
+      'uploaded': false,
+      'uploadedBySector': {
+        's0': false,
+        's1': false,
+        's2': false,
+        's3': false,
+        's4': false,
+        's5': false,
+        's6': false,
+        's7': false,
+        's8': false,
+        's9': false,
+        's10': false,
+      },
+    };
+  }
+  range['end'] = newEndYear;
+}
+
+class CelexYearsWidget extends StatefulWidget {
+  const CelexYearsWidget({super.key});
+
+  @override
+  State<CelexYearsWidget> createState() => _CelexYearsWidgetState();
+}
+
+class _CelexYearsWidgetState extends State<CelexYearsWidget> {
+  Map<String, dynamic>? data;
+  bool saving = false;
+  final expandedYears = <String>{};
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final loaded =
+          await loadCelexYears(); // defaults to data/celex_years.json
+      setState(() => data = loaded);
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to load celex years: $e')));
+    }
+  }
+
+  Future<void> _save() async {
+    if (data == null) return;
+    setState(() => saving = true);
+    try {
+      await saveCelexYears(data!);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Saved changes')));
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Save failed: $e')));
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (data == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final yearsMap = (data!['years'] as Map<String, dynamic>);
+    final years =
+        yearsMap.keys.toList()
+          ..sort((a, b) => int.parse(b).compareTo(int.parse(a)));
+
     return Column(
       children: [
-        ElevatedButton(
-          onPressed: listFilesInDirEN,
-          child: Text('Start Batch Processing'),
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            children: [
+              Text(
+                'Celex Sectors ${data!['range']['start']}–${data!['range']['end']}',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const Spacer(),
+              if (saving)
+                const Padding(
+                  padding: EdgeInsets.only(right: 8),
+                  child: SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              ElevatedButton.icon(
+                onPressed: saving ? null : _save,
+                icon: const Icon(Icons.save),
+                label: const Text('Save'),
+              ),
+            ],
+          ),
         ),
-        VerticalDivider(
-          color: Colors.grey,
-          thickness: 10,
-          indent: 20,
-          endIndent: 20,
-        ),
-        FilePickerButton(),
-        FilePickerButton2(),
-      ],
+        Expanded(
+          child: ListView.builder(
+            itemCount: years.length,
+            itemBuilder: (ctx, i) {
+              final year = years[i];
+              final y = yearsMap[year] as Map<String, dynamic>;
+              final total = (y['total'] as num?)?.toInt() ?? 0;
+              final uploaded = (y['uploaded'] ?? false) as bool;
+              final sectors = (y['sectors'] as Map<String, dynamic>);
+              final uploadedBySector =
+                  (y['uploadedBySector'] as Map<String, dynamic>? ??
+                      <String, dynamic>{});
+              final isExpanded = expandedYears.contains(year);
 
-      // Replace with your actual UI for data processing
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 180, // adjust to your layout; 160–200 works well
+                        child: Row(
+                          children: [
+                            Text('$year', style: const TextStyle(fontSize: 14)),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'total $total',
+                                textAlign: TextAlign.right,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontFeatures: [
+                                    FontFeature.tabularFigures(),
+                                  ], // align digits
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'Uploaded',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          Transform.scale(
+                            scale: 0.9,
+                            child: Checkbox(
+                              value: uploaded,
+                              visualDensity: VisualDensity.compact,
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
+                              onChanged: (v) {
+                                setState(() {
+                                  setYearUploaded(
+                                    data!,
+                                    int.parse(year),
+                                    v ?? false,
+                                  );
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildSectorTogglesRow(
+                          year,
+                          sectors,
+                          uploadedBySector,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectorTogglesRow(
+    String year,
+    Map<String, dynamic> sectors,
+    Map<String, dynamic> uploadedBySector,
+  ) {
+    final entries =
+        sectors.keys.toList()..sort((a, b) {
+          int ai = int.tryParse(a.replaceAll('s', '')) ?? 0;
+          int bi = int.tryParse(b.replaceAll('s', '')) ?? 0;
+          return ai.compareTo(bi);
+        });
+
+    return LayoutBuilder(
+      builder: (ctx, constraints) {
+        const spacing = 8.0;
+        const minCellWidth = 64.0; // compact but readable
+        final count = entries.length;
+        final available = constraints.maxWidth - spacing * (count - 1);
+        final proposed = available / count;
+        final useScroll = proposed < minCellWidth;
+        final cellWidth = useScroll ? minCellWidth : proposed;
+
+        final row = Row(
+          children: List.generate(count, (i) {
+            final key = entries[i];
+            final countVal = ((sectors[key] ?? 0) as num).toInt();
+            final uploaded = (uploadedBySector[key] ?? false) as bool;
+
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: cellWidth,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: uploaded ? Colors.green.withOpacity(0.15) : null,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Transform.scale(
+                        scale: 0.85,
+                        child: Checkbox(
+                          value: uploaded,
+                          visualDensity: VisualDensity.compact,
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          onChanged: (v) {
+                            setState(() {
+                              setSectorUploaded(
+                                data!,
+                                int.parse(year),
+                                key,
+                                v ?? false,
+                              );
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 2),
+                      Text(
+                        '${key.toUpperCase()}: $countVal',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontFeatures: [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (i < count - 1) const SizedBox(width: spacing),
+              ],
+            );
+          }),
+        );
+
+        return useScroll
+            ? SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: row,
+            )
+            : row;
+      },
+    );
+  }
+
+  Widget _buildSectorsGrid(
+    String year,
+    Map<String, dynamic> sectors,
+    Map<String, dynamic> uploadedBySector,
+  ) {
+    final entries =
+        sectors.keys.toList()..sort((a, b) {
+          // Sort by numeric sector value (s0..s10)
+          int ai = int.tryParse(a.replaceAll('s', '')) ?? 0;
+          int bi = int.tryParse(b.replaceAll('s', '')) ?? 0;
+          return ai.compareTo(bi);
+        });
+
+    return LayoutBuilder(
+      builder: (ctx, constraints) {
+        final isWide = constraints.maxWidth > 700;
+        final crossAxisCount = isWide ? 3 : 2;
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: entries.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            childAspectRatio: isWide ? 4.5 : 3.8,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
+          ),
+          itemBuilder: (ctx, i) {
+            final key = entries[i]; // 's0'...'s10'
+            final count = ((sectors[key] ?? 0) as num).toInt();
+            final uploaded = (uploadedBySector[key] ?? false) as bool;
+
+            return Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: Theme.of(ctx).dividerColor),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '$key: $count',
+                      style: const TextStyle(
+                        fontFeatures: [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ),
+                  Checkbox(
+                    value: uploaded,
+                    onChanged: (v) {
+                      setState(() {
+                        setSectorUploaded(
+                          data!,
+                          int.parse(year),
+                          key,
+                          v ?? false,
+                        );
+                      });
+                    },
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

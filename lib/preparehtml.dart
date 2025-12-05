@@ -225,10 +225,15 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
   }
 
   Future<void> retryFailedCelex(List celex, String indexName) async {
+    //failedCelex.clear();
     for (final cel in celex) {
       extractedCelex.add('${_completedUploads + 1}/$_totalUploads: $celex:');
 
-      await uploadSparqlForCelex(cel, newIndexName, "html");
+      var status = await uploadSparqlForCelex(cel, newIndexName, "html");
+      print(status);
+
+      //failedCelex.removeWhere((item) => item.contains(cel));
+      print("After retry, failedCelex: $failedCelex");
       if (failedCelex.contains(celex)) {
         extractedCelex.add('XHTML FAILED, WILL RETRY in HTML LATER');
       } else {}
@@ -258,11 +263,16 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
   }
 
   Future<void> pickAndLoadFile2() async {
+    setState(() {
+      extractedCelex.clear();
+      print("extractedCelex cleared at start of pickAndLoadFile2");
+    });
+
     FilePickerResult? result = await FilePicker.platform.pickFiles();
     if (!mounted) return;
     setState(() {
       celexNumbersExtracted.clear();
-      extractedCelex.clear();
+      //   extractedCelex.clear();
       failedCelex.clear();
       _progress = 0.01;
       _fileLoaded = false;

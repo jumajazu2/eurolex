@@ -395,7 +395,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     if (!mounted) return;
     setState(() {});
 
-    titlesForCelex();
+   //BUG too power hungry to get titles with titlesForCelex();
   }
 
   void _startSearch() async {

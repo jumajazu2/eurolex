@@ -506,7 +506,7 @@ Future uploadSparqlForCelex(
   //final lines = await fetchSectorXCelexTitles(sector, year);
   final downloadLinks = await fetchLinksForCelex(
     celex,
-    format
+    format,
   ); //this reads a map of celex->lang->links
 
   if (startPointer < 0 ||
@@ -601,9 +601,11 @@ Future uploadSparqlForCelex(
 Future uploadURLs(String indexName, [int startPointer = 0]) async {
   //final lines = await fetchSectorXCelexTitles(sector, year);
   final downloadLinks = <String, Map<String, String>>{
-    "WP254": {
-      "EN": "https://www.pts-translation.sk/Referential_ENutf8.htm",
-      "SK": "https://www.pts-translation.sk/Referential_SKutf8.htm",
+    "62023TJ0553_manual": {
+      "EN":
+          "http://publications.europa.eu/resource/cellar/83e7b287-88a0-11f0-9af8-01aa75ed71a1.0008.01/DOC_1",
+      "SK":
+          "http://publications.europa.eu/resource/cellar/83e7b287-88a0-11f0-9af8-01aa75ed71a1.0021.05/DOC_1",
     },
   };
   //this reads a map of celex->lang->links
@@ -632,7 +634,7 @@ Future uploadURLs(String indexName, [int startPointer = 0]) async {
   print(
     'Starting Harvest  for url $downloadLinks, total links: ${downloadLinks.length}, resumeFrom: $startPointer',
   );
-
+//TODO
   final celexIds =
       downloadLinks.keys
           .toList(); //create list of celex ids to access map by index
