@@ -27,6 +27,9 @@ String? lang3;
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 LocalIngestServer ingestServer = LocalIngestServer(port: 6175);
 
+final isAdminNotifier = ValueNotifier<bool>(isAdmin);
+
+bool isAdmin = false;
 void main() {
   runApp(MaterialApp(navigatorKey: navigatorKey, home: MainTabbedApp()));
 }
@@ -79,6 +82,9 @@ class _MainTabbedAppState extends State<MainTabbedApp>
       lang2 = jsonSettings['lang2']?.toString().toUpperCase();
       lang3 = jsonSettings['lang3']?.toString().toUpperCase();
     });
+    isAdmin =
+        jsonSettings['user_email']?.toString().toLowerCase() ==
+        'juraj.kuban.sk@gmail.com';
 
     startIngestServer().then((_) {
       ingestServer.onRequest = (payload) async {
@@ -103,37 +109,52 @@ class _MainTabbedAppState extends State<MainTabbedApp>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 1,
-
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: [
-            Tab(text: 'Search'),
-            Tab(text: 'Auto Analyser'),
-            Tab(text: 'Setup'),
-            Tab(text: 'Data Process'),
-            Tab(text: 'Data Upload'),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          Center(
-            child: SearchTabWidget(queryText: "", queryName: ""),
-          ), // Replace with your Search widget
-          Center(
-            child: AnalyserWidget(),
-          ), // Replace with your Auto Analyser widget
-          Center(child: indicesMaintenance()), // Replace with your Setup widget
-          BrowseFilesWidget(),
-          DataUploadPage(), // Replace with your Data rocess widget
-        ],
-      ),
+    return ValueListenableBuilder<bool>(
+      valueListenable: isAdminNotifier,
+      builder: (_, isAdmin, __) {
+        return DefaultTabController(
+          key: ValueKey(isAdmin), // recreate controller on admin flip
+          length: isAdmin ? 5 : 4, // tab count depends on admin
+          child: Scaffold(
+            appBar: AppBar(
+              toolbarHeight: 1,
+              bottom: TabBar(
+                onTap: (index) {
+                  // Setup tab is index 2 in both modes
+                  if (index == 2) {
+                    print("Setup tab clicked!");
+                    getListIndicesFull(server).then((_) {
+                      setState(() {
+                        print("Indices loaded details: $indicesFull");
+                      });
+                    });
+                  }
+                },
+                tabs: _buildTabs(isAdmin),
+              ),
+            ),
+            body: TabBarView(children: _buildTabViews(isAdmin)),
+          ),
+        );
+      },
     );
   }
+
+  List<Widget> _buildTabs(bool isAdmin) => [
+    const Tab(text: 'Search'),
+    const Tab(text: 'Auto Analyser'),
+    const Tab(text: 'Setup'),
+    if (isAdmin) const Tab(text: 'Data Process'),
+    const Tab(text: 'Data Upload'),
+  ];
+
+  List<Widget> _buildTabViews(bool isAdmin) => [
+    Center(child: SearchTabWidget(queryText: "", queryName: "")),
+    Center(child: AnalyserWidget()),
+    Center(child: indicesMaintenance()),
+    if (isAdmin) BrowseFilesWidget(),
+    DataUploadPage(),
+  ];
 
   void showTrialDialog() {
     final ctx = navigatorKey.currentContext;
@@ -196,6 +217,5 @@ Future<void> confirmAndDeleteOpenSearchIndex(
 
   if (confirmed == true) {
     await deleteOpenSearchIndex(index);
-    
   }
 }

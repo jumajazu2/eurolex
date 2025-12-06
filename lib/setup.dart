@@ -77,6 +77,12 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
     if (lang1 != null) jsonSettings['lang1'] = lang1;
     if (lang2 != null) jsonSettings['lang2'] = lang2;
     if (lang3 != null) jsonSettings['lang3'] = lang3;
+
+    final nowAdmin =
+        _emailCtrl.text.trim().toLowerCase() == 'juraj.kuban.sk@gmail.com';
+    isAdminNotifier.value = nowAdmin; // triggers tabs rebuild
+    isAdmin = nowAdmin;
+
     try {
       await writeSettingsToFile(jsonSettings);
       if (mounted) {

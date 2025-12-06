@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:eurolex/preparehtml.dart';
 import 'package:eurolex/processDOM.dart';
+import 'package:eurolex/setup.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -346,7 +347,8 @@ class BrowseFilesWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Show the interactive CelexYearsWidget instead of the batch processing UI
-    return const CelexYearsWidget();
+    if (isAdmin) return const CelexYearsWidget();
+    return Container();
   }
 }
 
