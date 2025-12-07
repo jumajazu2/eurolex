@@ -43,6 +43,7 @@ var manualCelex = [];
 var server = 'https://$osServer';
 var manualServer;
 var celexRefs;
+List<String> customIndices = [];
 
 //purpose: load File 1 containing SK in file name, then load File 2 containing EN in file name
 
@@ -756,6 +757,69 @@ class parseHtml {
   }
 }
 
+//id = passkey, custom indices name format: passkey_user-supplier-name in lowercase
+Future getCustomIndices(server, isAdmin, id) async {
+  // Function to get the list of indices from the server
+  await loadSettingsFromFile();
+  final username = 'admin';
+  final password = 'admin';
+  final basicAuth = 'Basic ${base64Encode(utf8.encode('$username:$password'))}';
+
+  try {
+    final response = await http.get(
+      Uri.parse('$server/_cat/indices?h=index'),
+      headers: {
+        'Authorization': basicAuth,
+        'x-api-key': jsonSettings['access_key'],
+      },
+    );
+    if (response.statusCode == 200) {
+      String responseBody = response.body;
+
+      if (isAdmin) {
+        print('Admin user detected, loading all indices.');
+        String responseBody = response.body;
+        indices =
+            responseBody
+                .split('\n') // Split the response into lines
+                .toList();
+        print('Indices loaded: $indices for server: $server');
+
+        print('Indices for server $server loaded successfully: $responseBody');
+
+        return responseBody; // Return the indices as a string
+      }
+      if (!isAdmin) {
+        if (jsonSettings['access_key'] == "trial") {
+          return "Not available in Trial";
+        }
+
+        print('Non-admin user detected, loading custom indices for id: $id');
+
+        indices =
+            responseBody
+                .split('\n') // Split the response into lines
+                .where(
+                  (item) => item.contains(id),
+                ) // Keep only items containing "eurolex"
+                .toList();
+        print('Indices loaded: $indices for server: $server');
+
+        print('Indices for server $server loaded successfully: $responseBody');
+
+        return responseBody; // Return the indices as a string
+      }
+    } else {
+      print('Failed to load indices. Status code: ${response.statusCode}');
+      indices = ["*"];
+      return 'Error loading indices: ${response.statusCode}';
+    }
+  } catch (e) {
+    print('Error loading indices: $e');
+    return 'Error loading indices: $e';
+  }
+}
+
 Future getListIndices(server) async {
   // Function to get the list of indices from the server
   await loadSettingsFromFile();
@@ -817,7 +881,8 @@ Future<List<List<String>>> getListIndicesFull(server) async {
           .where(
             (line) =>
                 line.trim().isNotEmpty &&
-                (line.contains('eurolex') || line.contains('imported')),
+                !line.startsWith('.') &&
+                !line.startsWith('top_queries'),
           );
 
       // Parse each line into [name, size, docs]

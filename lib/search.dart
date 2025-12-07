@@ -40,7 +40,7 @@ var contextEnSkCz;
 var queryText;
 var queryPattern;
 List enHighlightedResults = [];
-var activeIndex = 'eurolex4';
+var activeIndex = '*';
 var containsFilter = "";
 var celexFilter = "";
 var classFilter;
@@ -156,7 +156,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
 
   void _startPolling() async {
     return;
-
+    /*
     _pollingTimer = Timer.periodic(Duration(milliseconds: 500), (timer) {
       if (_isVisible || !_isVisible) {
         print("Timer triggered");
@@ -170,6 +170,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
         }
       }
     });
+  */
   }
 
   Future _httpUpdate(payload) async {
@@ -395,7 +396,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     if (!mounted) return;
     setState(() {});
 
-   //BUG too power hungry to get titles with titlesForCelex();
+    //BUG too power hungry to get titles with titlesForCelex();
   }
 
   void _startSearch() async {
@@ -584,10 +585,14 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
   Color backgroundColor = Colors.white12;
 
   void updateDropdown() async {
-    await getListIndices(server);
+    await getCustomIndices(
+      server,
+      isAdmin,
+      jsonSettings['access_key'] ?? ["trial"],
+    );
     setState(() {
       print(
-        "Dropdown tapped and indices updated from server $server, indices: $indices.",
+        "Dropdown tapped and indices updated from server $server, Admin user: $isAdmin, jsonSettings['access_key']: ${jsonSettings['access_key']}, indices: $indices.",
       );
     });
   }
@@ -709,8 +714,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                 flex: 2, // 1/10 of the row
                 child: InputDecorator(
                   decoration: InputDecoration(
-                    labelText:
-                        'Search Index ($osServer)', // Label embedded in the frame
+                    labelText: 'Search Index', // Label embedded in the frame
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -759,21 +763,41 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              ElevatedButton(
-                onPressed: _startSearch,
-                child: Text('Search (match_phrase)'),
+              Tooltip(
+                message:
+                    'Phrase search in English with tight matching in your custom index',
+                waitDuration: Duration(seconds: 1),
+                child: ElevatedButton(
+                  onPressed: _startSearch,
+                  child: Text('Search (match_phrase)'),
+                ),
               ),
-              ElevatedButton(
-                onPressed: _startSearch2,
-                child: Text('Search (multi_match)'),
+              Tooltip(
+                message:
+                    'Search across languages with flexible matching in your custom index',
+                waitDuration: Duration(seconds: 1),
+                child: ElevatedButton(
+                  onPressed: _startSearch2,
+                  child: Text('Search (multi_match)'),
+                ),
               ),
-              ElevatedButton(
-                onPressed: _startSearch3,
-                child: Text('Search (match+matchphrase)'),
+              Tooltip(
+                message:
+                    'Combine match and phrase search for better recall in your custom index',
+                waitDuration: Duration(seconds: 1),
+                child: ElevatedButton(
+                  onPressed: _startSearch3,
+                  child: Text('Search (match+matchphrase)'),
+                ),
               ),
-              ElevatedButton(
-                onPressed: _startSearchPhraseAll,
-                child: Text('Search (phrase all)'),
+              Tooltip(
+                message:
+                    'Phrase search across all language fields in Global Index (All EU law available)',
+                waitDuration: Duration(seconds: 1),
+                child: ElevatedButton(
+                  onPressed: _startSearchPhraseAll,
+                  child: Text('Search (phrase all)'),
+                ),
               ),
 
               SizedBox(
@@ -786,6 +810,11 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                     border: OutlineInputBorder(),
                     filled: true,
                     fillColor: _fillColor2,
+                    suffixIcon: Tooltip(
+                      message:
+                          'Enter CELEX ID (e.g., 32015R0459) or any part of it to filter results.  Press Enter to activate the filter (the field will turn orange).',
+                      child: Icon(Icons.info_outline, size: 13),
+                    ),
                   ),
                   onFieldSubmitted: (value) {
                     _controller2.text = value;
@@ -811,6 +840,11 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                     border: OutlineInputBorder(),
                     filled: true,
                     fillColor: _fillColor,
+                    suffixIcon: Tooltip(
+                      message:
+                          'Enter any text to filter results. Press Enter to activate the filter (the field will turn orange).',
+                      child: Icon(Icons.info_outline, size: 13),
+                    ),
                   ),
                   onFieldSubmitted: (value) {
                     _controller3.text = value;
@@ -830,18 +864,24 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
 
               Row(
                 children: [
-                  Checkbox(
-                    tristate: true,
-                    value: jsonSettings['display_lang1'],
-                    onChanged: (bool? newValue) {
-                      setState(() {
-                        jsonSettings['display_lang1'] = newValue ?? false;
-                        writeSettingsToFile(jsonSettings);
-                        print(
-                          "checkbox" + jsonSettings['display_lang1'].toString(),
-                        );
-                      });
-                    },
+                  Tooltip(
+                    message:
+                        'Select to display the first language based on your selection in Setup',
+                    waitDuration: Duration(seconds: 1),
+                    child: Checkbox(
+                      tristate: true,
+                      value: jsonSettings['display_lang1'],
+                      onChanged: (bool? newValue) {
+                        setState(() {
+                          jsonSettings['display_lang1'] = newValue ?? false;
+                          writeSettingsToFile(jsonSettings);
+                          print(
+                            "checkbox" +
+                                jsonSettings['display_lang1'].toString(),
+                          );
+                        });
+                      },
+                    ),
                   ),
                   Text(
                     jsonSettings['lang1'] ?? "N/A",
@@ -850,18 +890,24 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                     ), // Optional: Adjust the font size
                   ),
 
-                  Checkbox(
-                    tristate: true,
-                    value: jsonSettings['display_lang2'],
-                    onChanged: (bool? newValue) {
-                      setState(() {
-                        jsonSettings['display_lang2'] = newValue ?? false;
-                        writeSettingsToFile(jsonSettings);
-                        print(
-                          "checkbox" + jsonSettings['display_lang2'].toString(),
-                        );
-                      });
-                    },
+                  Tooltip(
+                    message:
+                        'Select to display the second language based on your selection in Setup',
+                    waitDuration: Duration(seconds: 1),
+                    child: Checkbox(
+                      tristate: true,
+                      value: jsonSettings['display_lang2'],
+                      onChanged: (bool? newValue) {
+                        setState(() {
+                          jsonSettings['display_lang2'] = newValue ?? false;
+                          writeSettingsToFile(jsonSettings);
+                          print(
+                            "checkbox" +
+                                jsonSettings['display_lang2'].toString(),
+                          );
+                        });
+                      },
+                    ),
                   ),
                   Text(
                     jsonSettings['lang2'] ?? "N/A",
@@ -870,18 +916,24 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                     ), // Optional: Adjust the font size
                   ),
 
-                  Checkbox(
-                    tristate: true,
-                    value: jsonSettings['display_lang3'],
-                    onChanged: (bool? newValue) {
-                      setState(() {
-                        jsonSettings['display_lang3'] = newValue ?? false;
-                        writeSettingsToFile(jsonSettings);
-                        print(
-                          "checkbox" + jsonSettings['display_lang3'].toString(),
-                        );
-                      });
-                    },
+                  Tooltip(
+                    message:
+                        'Select to display the third language based on your selection in Setup',
+                    waitDuration: Duration(seconds: 1),
+                    child: Checkbox(
+                      tristate: true,
+                      value: jsonSettings['display_lang3'],
+                      onChanged: (bool? newValue) {
+                        setState(() {
+                          jsonSettings['display_lang3'] = newValue ?? false;
+                          writeSettingsToFile(jsonSettings);
+                          print(
+                            "checkbox" +
+                                jsonSettings['display_lang3'].toString(),
+                          );
+                        });
+                      },
+                    ),
                   ),
                   Text(
                     jsonSettings['lang3'] ?? "N/A",
@@ -889,16 +941,22 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                       fontSize: 16,
                     ), // Optional: Adjust the font size
                   ),
-                  Checkbox(
-                    tristate: true,
-                    value: _matchedOnly,
-                    onChanged: (bool? newValue) {
-                      setState(() {
-                        _matchedOnly = newValue ?? false;
-
-                        print("checkbox " + _matchedOnly.toString());
-                      });
-                    },
+                  Tooltip(
+                    message:
+                        'Only show paragraphs from documents that are aligned across languages. Due to source inconsistencies, if documents are misaligned, click Expland Context to see the relevant segment. ',
+                    waitDuration: Duration(seconds: 1),
+                    triggerMode:
+                        TooltipTriggerMode
+                            .longPress, // tap/longPress for mobile
+                    child: Checkbox(
+                      tristate: true,
+                      value: _matchedOnly,
+                      onChanged: (bool? newValue) {
+                        setState(() {
+                          _matchedOnly = newValue ?? false;
+                        });
+                      },
+                    ),
                   ),
                   Text(
                     'Aligned',
@@ -906,18 +964,19 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                       fontSize: 16,
                     ), // Optional: Adjust the font size
                   ),
-                  Checkbox(
-                    tristate: true,
-                    value: jsonSettings['display_meta'],
-                    onChanged: (bool? newValue) {
-                      setState(() {
-                        jsonSettings['display_meta'] = newValue ?? false;
-                        writeSettingsToFile(jsonSettings);
-                        print(
-                          "checkbox " + jsonSettings['display_meta'].toString(),
-                        );
-                      });
-                    },
+                  Tooltip(
+                    message: 'Show metadata column (CELEX, date, class...)',
+                    waitDuration: Duration(seconds: 1),
+                    child: Checkbox(
+                      tristate: true,
+                      value: jsonSettings['display_meta'],
+                      onChanged: (bool? newValue) {
+                        setState(() {
+                          jsonSettings['display_meta'] = newValue ?? false;
+                          writeSettingsToFile(jsonSettings);
+                        });
+                      },
+                    ),
                   ),
                   Text(
                     'Meta',
@@ -926,18 +985,23 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                     ), // Optional: Adjust the font size
                   ),
 
-                  Checkbox(
-                    tristate: true,
-                    value: jsonSettings['auto_lookup'],
-                    onChanged: (bool? newValue) {
-                      setState(() {
-                        jsonSettings['auto_lookup'] = newValue ?? false;
-                        writeSettingsToFile(jsonSettings);
-                        print(
-                          "checkbox" + jsonSettings['auto_lookup'].toString(),
-                        );
-                      });
-                    },
+                  Tooltip(
+                    message:
+                        'Select to enable automatic lookup when a segment is selected in Trados Studio (the LegisTracerEU plugin must be installed and running in Trados Studio)',
+                    waitDuration: Duration(seconds: 1),
+                    child: Checkbox(
+                      tristate: true,
+                      value: jsonSettings['auto_lookup'],
+                      onChanged: (bool? newValue) {
+                        setState(() {
+                          jsonSettings['auto_lookup'] = newValue ?? false;
+                          writeSettingsToFile(jsonSettings);
+                          print(
+                            "checkbox" + jsonSettings['auto_lookup'].toString(),
+                          );
+                        });
+                      },
+                    ),
                   ),
                   Text(
                     "Auto",
@@ -1274,7 +1338,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                                 );
                                               },
                                               child: Text(
-                                                '${lang2}-${lang3}',
+                                                '${lang1}-${lang3}',
                                                 style: TextStyle(
                                                   decoration:
                                                       TextDecoration.underline,

@@ -11,8 +11,8 @@ Clear: clearSnackbars(context); clearBanners(context);
 
 */
 
-
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 SnackBar _buildSnackBar(
   String message, {
@@ -73,22 +73,36 @@ void clearSnackbars(BuildContext context) {
 void showBanner(
   BuildContext context, {
   required String message,
+  bool dismisable = true,
   List<Widget>? actions,
   Color? backgroundColor,
 }) {
   ScaffoldMessenger.of(context).showMaterialBanner(
     MaterialBanner(
       backgroundColor: backgroundColor ?? Colors.yellow.shade100,
+
       content: Text(message),
       actions:
           actions ??
           [
-            TextButton(
-              onPressed:
-                  () =>
-                      ScaffoldMessenger.of(context).hideCurrentMaterialBanner(),
-              child: const Text('Dismiss'),
-            ),
+            dismisable
+                ? TextButton(
+                  onPressed:
+                      () =>
+                          ScaffoldMessenger.of(
+                            context,
+                          ).hideCurrentMaterialBanner(),
+                  child: const Text('Dismiss'),
+                )
+                : TextButton(
+                  onPressed: () {
+                    launchUrl(
+                      Uri.parse('https://www.pts-translation.sk/#pricing'),
+                      mode: LaunchMode.externalApplication,
+                    );
+                  },
+                  child: const Text('Purchase Subscription'),
+                ),
           ],
     ),
   );

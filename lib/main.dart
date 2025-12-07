@@ -1,6 +1,7 @@
 import 'package:eurolex/dataupload.dart';
 import 'package:eurolex/file_handling.dart';
 import 'package:eurolex/setup.dart';
+import 'package:eurolex/ui_notices.dart';
 import 'package:flutter/material.dart';
 import 'package:eurolex/preparehtml.dart';
 import 'package:eurolex/browseFiles.dart';
@@ -50,7 +51,7 @@ class _MainTabbedAppState extends State<MainTabbedApp>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this, initialIndex: 0);
+    /*/   _tabController = TabController(length: 5, vsync: this, initialIndex: 0);
 
     _tabController.addListener(() {
       // Setup tab is index 2 (third tab)
@@ -65,7 +66,7 @@ class _MainTabbedAppState extends State<MainTabbedApp>
         });
       }
     });
-
+*/
     getListIndices(server).then((_) {
       setState(() {
         print("Indices loaded: $indices");
@@ -76,15 +77,25 @@ class _MainTabbedAppState extends State<MainTabbedApp>
         // Ensure a context exists
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) showTrialDialog();
+          if (mounted)
+            showBanner(
+              context,
+              message:
+                  "You are using Trial Mode. You have 7 free searches per day. For unlimited access, enter your Passkey in Setup tab or click Purchase Subscription to visit Pricing page.",
+              dismisable: false,
+              backgroundColor: Colors.orange.shade200,
+            );
         });
       }
       lang1 = jsonSettings['lang1']?.toString().toUpperCase();
       lang2 = jsonSettings['lang2']?.toString().toUpperCase();
       lang3 = jsonSettings['lang3']?.toString().toUpperCase();
+      isAdmin =
+          jsonSettings['user_email']?.toString().toLowerCase() ==
+          'juraj.kuban.sk@gmail.com';
+      isAdminNotifier.value = isAdmin;
+      print("isAdmin: $isAdmin");
     });
-    isAdmin =
-        jsonSettings['user_email']?.toString().toLowerCase() ==
-        'juraj.kuban.sk@gmail.com';
 
     startIngestServer().then((_) {
       ingestServer.onRequest = (payload) async {
@@ -114,7 +125,7 @@ class _MainTabbedAppState extends State<MainTabbedApp>
       builder: (_, isAdmin, __) {
         return DefaultTabController(
           key: ValueKey(isAdmin), // recreate controller on admin flip
-          length: isAdmin ? 5 : 4, // tab count depends on admin
+          length: isAdmin ? 5 : 3, // tab count depends on isAdmin
           child: Scaffold(
             appBar: AppBar(
               toolbarHeight: 1,
@@ -142,7 +153,7 @@ class _MainTabbedAppState extends State<MainTabbedApp>
 
   List<Widget> _buildTabs(bool isAdmin) => [
     const Tab(text: 'Search'),
-    const Tab(text: 'Auto Analyser'),
+    if (isAdmin) const Tab(text: 'Auto Analyser'),
     const Tab(text: 'Setup'),
     if (isAdmin) const Tab(text: 'Data Process'),
     const Tab(text: 'Data Upload'),
@@ -150,7 +161,7 @@ class _MainTabbedAppState extends State<MainTabbedApp>
 
   List<Widget> _buildTabViews(bool isAdmin) => [
     Center(child: SearchTabWidget(queryText: "", queryName: "")),
-    Center(child: AnalyserWidget()),
+    if (isAdmin) Center(child: AnalyserWidget()),
     Center(child: indicesMaintenance()),
     if (isAdmin) BrowseFilesWidget(),
     DataUploadPage(),

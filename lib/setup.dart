@@ -10,6 +10,7 @@ import 'package:eurolex/display.dart';
 import 'package:eurolex/preparehtml.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:eurolex/ui_notices.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -82,6 +83,21 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
         _emailCtrl.text.trim().toLowerCase() == 'juraj.kuban.sk@gmail.com';
     isAdminNotifier.value = nowAdmin; // triggers tabs rebuild
     isAdmin = nowAdmin;
+
+    if (!userPasskey.contains('trial') && userPasskey.isNotEmpty) {
+      // Remove trial banner if exists
+      ScaffoldMessenger.of(context).clearMaterialBanners();
+    }
+    if (userPasskey.contains('trial') || userPasskey.isEmpty) {
+      // Show trial banner
+      showBanner(
+        context,
+        message:
+            "You are using Trial Mode. You have 7 free searches per day. For unlimited access, enter your Passkey in Setup tab or click Purchase Subscription to visit Pricing page.",
+        dismisable: false,
+        backgroundColor: Colors.orange.shade200,
+      );
+    }
 
     try {
       await writeSettingsToFile(jsonSettings);
