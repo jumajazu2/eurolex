@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:eurolex/browseFiles.dart';
 import 'package:eurolex/preparehtml.dart';
 import 'package:eurolex/processDOM.dart';
+import 'package:eurolex/setup.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -18,7 +19,6 @@ import 'package:path/path.dart' as path;
 import 'package:eurolex/logger.dart';
 
 bool debugMode = false; // global debug mode flag
-
 
 class DataUploadTab extends StatefulWidget {
   const DataUploadTab({
@@ -58,7 +58,7 @@ class _DataUploadTabState extends State<DataUploadTab> {
   final logger = LogManager(fileName: 'bulkupload.log');
   String _selectedIndex = '';
   bool simulateUpload = false;
- // checkbox state
+  // checkbox state
 
   @override
   void initState() {
@@ -145,16 +145,17 @@ class _DataUploadTabState extends State<DataUploadTab> {
           TextField(
             controller: _manualIndexController,
             decoration: const InputDecoration(
-              labelText: 'Index Name (Press Enter to Confirm):',
+              labelText: 'Index Name (Press Enter to Confirm!):',
               border: OutlineInputBorder(),
             ),
             onSubmitted: (value) {
               setState(() {
-                final composed =
-                    value.startsWith('eurolex_') ? value : 'eurolex_$value';
+                final composed = '${userPasskey}_$value';
                 _manualIndexController.text = composed;
                 newIndexName = composed;
                 _selectedIndex = newIndexName;
+
+                print('Entered manual index name for bulk upload: $composed');
               });
             },
           ),

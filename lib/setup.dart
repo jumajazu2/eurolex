@@ -264,7 +264,11 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                           // Move Confirm outside the three Expanded dropdowns
                           const SizedBox(width: 12),
                           ElevatedButton(
-                            onPressed: _confirmSettings,
+                            onPressed: () async {
+                              await _confirmSettings();
+                              await getListIndicesFull(server, isAdmin);
+                              if (mounted) setState(() {});
+                            },
                             child: const Text('Confirm'),
                           ),
                         ],
@@ -278,94 +282,94 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
             const SizedBox(height: 24),
 
             // Maintenance (admin only)
-            if (isAdmin) ...[
-              const Text(
-                'Maintenance',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            const Text(
+              'List of Indices for Maintenance',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: indicesFull.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3, // Two columns
+                childAspectRatio: 15, // Adjust for row height
+                mainAxisSpacing: 4,
+                crossAxisSpacing: 4,
               ),
-              const SizedBox(height: 8),
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: indicesFull.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3, // Two columns
-                  childAspectRatio: 15, // Adjust for row height
-                  mainAxisSpacing: 4,
-                  crossAxisSpacing: 4,
-                ),
-                itemBuilder: (BuildContext context, int index) {
-                  return Card(
-                    margin: EdgeInsets.zero,
-                    child: ListTile(
-                      dense: true,
-                      title: Row(
-                        children: [
-                          Text(
-                            indicesFull[index][0],
-                            style: const TextStyle(fontSize: 14),
-                            overflow: TextOverflow.ellipsis,
-                          ),
+              itemBuilder: (BuildContext context, int index) {
+                return Card(
+                  margin: EdgeInsets.zero,
+                  child: ListTile(
+                    dense: true,
+                    title: Row(
+                      children: [
+                        Text(
+                          indicesFull[index][0],
+                          style: const TextStyle(fontSize: 14),
+                          overflow: TextOverflow.ellipsis,
+                        ),
 
-                          Text(
-                            ' (' + indicesFull[index][1] + ' ',
-                            style: const TextStyle(fontSize: 14),
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                        Text(
+                          ' (' + indicesFull[index][1] + ' ',
+                          style: const TextStyle(fontSize: 14),
+                          overflow: TextOverflow.ellipsis,
+                        ),
 
-                          Text(
-                            indicesFull[index][2] + ' units)',
-                            style: const TextStyle(fontSize: 14),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                      trailing:
-                          indicesFull[index][0].contains("sparql")
-                              ? null
-                              : IconButton(
-                                icon: const Icon(Icons.delete, size: 18),
-                                onPressed: () {
-                                  setState(() {
-                                    confirmAndDeleteOpenSearchIndex(
-                                      context,
-                                      indicesFull[index][0],
-                                    ).then((_) {
-                                      setState(() {
-                                        getListIndicesFull(server).then((_) {
-                                          setState(() {
-                                            print(
-                                              "Indices reloaded details: $indicesFull",
-                                            );
-                                          });
+                        Text(
+                          indicesFull[index][2] + ' units)',
+                          style: const TextStyle(fontSize: 14),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                    trailing:
+                        indicesFull[index][0].contains("sparql")
+                            ? null
+                            : IconButton(
+                              icon: const Icon(Icons.delete, size: 18),
+                              onPressed: () {
+                                setState(() {
+                                  confirmAndDeleteOpenSearchIndex(
+                                    context,
+                                    indicesFull[index][0],
+                                  ).then((_) {
+                                    setState(() {
+                                      getListIndicesFull(server, isAdmin).then((
+                                        _,
+                                      ) {
+                                        setState(() {
+                                          print(
+                                            "Indices reloaded details: $indicesFull",
+                                          );
                                         });
                                       });
                                     });
                                   });
-                                  setState(() {
-                                    getListIndicesFull(server).then((_) {
-                                      setState(() {
-                                        print(
-                                          "Indices reloaded details: $indicesFull",
-                                        );
-                                      });
+                                });
+                                setState(() {
+                                  getListIndicesFull(server, isAdmin).then((_) {
+                                    setState(() {
+                                      print(
+                                        "isAdmin: $isAdmin , Indices reloaded details: $indicesFull",
+                                      );
                                     });
                                   });
-                                },
-                              ),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Current Settings JSON saved in:',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              Text(File(getFilePath('settings.json')).path),
-              Text(jsonSettings.toString()),
-            ],
+                                });
+                              },
+                            ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Current Settings JSON saved in:',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Text(File(getFilePath('settings.json')).path),
+            Text(jsonSettings.toString()),
           ],
         ),
       ),

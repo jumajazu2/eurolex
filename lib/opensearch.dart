@@ -1,4 +1,5 @@
 import 'package:eurolex/preparehtml.dart';
+import 'package:eurolex/setup.dart';
 import 'package:http/http.dart' as http;
 
 Future deleteOpenSearchIndex(index) async {
@@ -6,7 +7,7 @@ Future deleteOpenSearchIndex(index) async {
   print('Remaining indices before delete: $indicesBefore');
   final resp = await http.delete(
     Uri.parse('https://search.pts-translation.sk/$index'),
-    headers: {'x-api-key': '1234'},
+    headers: {'x-api-key': userPasskey},
   );
 
   print('DELETE: ${resp.statusCode}');

@@ -411,7 +411,7 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
             ),
             onSubmitted: (value) {
               setState(() {
-                newIndexName = "eurolex_" + value;
+                newIndexName = '${userPasskey}_$value';
                 // indices.add(newIndexName); // Update the index name
               });
             },
@@ -560,6 +560,11 @@ class _manualCelexListState extends State<manualCelexList> {
                       );
                     }).toList(),
 
+                onTap: () async {
+                  await getCustomIndices(server, isAdmin, userPasskey);
+                  if (!mounted) return;
+                  setState(() {});
+                },
                 onChanged: (String? newValue) {
                   setState(() {
                     newIndexName = newValue!;
@@ -573,12 +578,12 @@ class _manualCelexListState extends State<manualCelexList> {
           SizedBox(height: 10),
           TextField(
             decoration: InputDecoration(
-              labelText: 'Index Name (Press Enter to Confirm):',
+              labelText: 'Index Name (Press Enter to Confirm!):',
               border: OutlineInputBorder(),
             ),
             onSubmitted: (value) {
               setState(() {
-                newIndexName = "eurolex_" + value;
+                newIndexName = '${userPasskey}_$value';
                 // indices.add(newIndexName); // Update the index name
               });
             },
@@ -861,12 +866,12 @@ Future getListIndices(server) async {
   }
 }
 
-Future<List<List<String>>> getListIndicesFull(server) async {
+Future<List<List<String>>> getListIndicesFull(server, isAdmin) async {
   final username = 'admin';
   final password = 'admin';
   final basicAuth = 'Basic ${base64Encode(utf8.encode('$username:$password'))}';
   print("userPasskey for getListIndicesFull: $userPasskey");
-
+  List<List<String>> indicesList = [];
   try {
     final response = await http.get(
       Uri.parse('$server/_cat/indices?h=index,store.size,docs.count'),
@@ -876,29 +881,60 @@ Future<List<List<String>>> getListIndicesFull(server) async {
       String responseBody = response.body;
 
       // Each line: indexName store.size docs.count
-      final lines = responseBody
-          .split('\n')
-          .where(
-            (line) =>
-                line.trim().isNotEmpty &&
-                !line.startsWith('.') &&
-                !line.startsWith('top_queries'),
-          );
+      if (isAdmin) {
+        final lines = responseBody
+            .split('\n')
+            .where(
+              (line) =>
+                  line.trim().isNotEmpty &&
+                  !line.startsWith('.') &&
+                  !line.startsWith('top_queries'),
+            );
+        final _indicesList =
+            lines
+                .map((line) {
+                  final parts = line.split(RegExp(r'\s+'));
+                  if (parts.length >= 3) {
+                    // Cast to List<String>
+                    return <String>[parts[0], parts[1], parts[2]];
+                  } else {
+                    return <String>[];
+                  }
+                })
+                .where((sublist) => sublist.isNotEmpty)
+                .toList();
+        indicesList = _indicesList;
+      } else {
+        print(
+          'Non-admin user detected, filtering indices for userPasskey: $userPasskey',
+        );
+        final lines = responseBody
+            .split('\n')
+            .where(
+              (line) =>
+                  line.trim().isNotEmpty &&
+                  !line.startsWith('.') &&
+                  !line.startsWith('top_queries') &&
+                  line.contains(userPasskey),
+            );
+        final _indicesList =
+            lines
+                .map((line) {
+                  final parts = line.split(RegExp(r'\s+'));
+                  if (parts.length >= 3) {
+                    // Cast to List<String>
+                    return <String>[parts[0], parts[1], parts[2]];
+                  } else {
+                    return <String>[];
+                  }
+                })
+                .where((sublist) => sublist.isNotEmpty)
+                .toList();
+
+        indicesList = _indicesList;
+      }
 
       // Parse each line into [name, size, docs]
-      final indicesList =
-          lines
-              .map((line) {
-                final parts = line.split(RegExp(r'\s+'));
-                if (parts.length >= 3) {
-                  // Cast to List<String>
-                  return <String>[parts[0], parts[1], parts[2]];
-                } else {
-                  return <String>[];
-                }
-              })
-              .where((sublist) => sublist.isNotEmpty)
-              .toList();
 
       print('Indices details loaded: $indicesList for server: $server');
       indicesFull = indicesList;

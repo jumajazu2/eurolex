@@ -134,7 +134,7 @@ class _MainTabbedAppState extends State<MainTabbedApp>
                   // Setup tab is index 2 in both modes
                   if (index == 2) {
                     print("Setup tab clicked!");
-                    getListIndicesFull(server).then((_) {
+                    getListIndicesFull(server, isAdmin).then((_) {
                       setState(() {
                         print("Indices loaded details: $indicesFull");
                       });
