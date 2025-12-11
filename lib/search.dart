@@ -86,8 +86,19 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
 
     // Load settings before using jsonSettings
     loadSettingsFromFile().then((_) {
-      setState(() {
-        // Now jsonSettings should have correct values
+      // Load indices with proper filtering after settings are loaded
+      getCustomIndices(
+        server,
+        isAdmin,
+        jsonSettings['access_key'] ?? 'trial',
+      ).then((_) {
+        if (mounted) {
+          setState(() {
+            print(
+              "SearchTab initialized - Indices loaded: $indices for isAdmin: $isAdmin",
+            );
+          });
+        }
       });
     });
 

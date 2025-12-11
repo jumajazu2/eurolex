@@ -67,11 +67,6 @@ class _MainTabbedAppState extends State<MainTabbedApp>
       }
     });
 */
-    getListIndices(server).then((_) {
-      setState(() {
-        print("Indices loaded: $indices");
-      });
-    });
     loadSettingsFromFile().then((_) {
       if (jsonSettings["access_key"] == "trial") {
         // Ensure a context exists
@@ -95,6 +90,19 @@ class _MainTabbedAppState extends State<MainTabbedApp>
           'juraj.kuban.sk@gmail.com';
       isAdminNotifier.value = isAdmin;
       print("isAdmin: $isAdmin");
+      
+      // Load indices after settings are loaded so isAdmin and access_key are available
+      getCustomIndices(
+        server,
+        isAdmin,
+        jsonSettings['access_key'] ?? 'trial',
+      ).then((_) {
+        if (mounted) {
+          setState(() {
+            print("Indices loaded: $indices for isAdmin: $isAdmin");
+          });
+        }
+      });
     });
 
     startIngestServer().then((_) {
@@ -131,6 +139,21 @@ class _MainTabbedAppState extends State<MainTabbedApp>
               toolbarHeight: 1,
               bottom: TabBar(
                 onTap: (index) {
+                  // Refresh indices when switching tabs to ensure correct filtering
+                  getCustomIndices(
+                    server,
+                    isAdmin,
+                    jsonSettings['access_key'] ?? 'trial',
+                  ).then((_) {
+                    if (mounted) {
+                      setState(() {
+                        print(
+                          "Tab $index switched - Indices refreshed: $indices for isAdmin: $isAdmin",
+                        );
+                      });
+                    }
+                  });
+                  
                   // Setup tab is index 2 in both modes
                   if (index == 2) {
                     print("Setup tab clicked!");
