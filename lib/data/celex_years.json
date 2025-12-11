@@ -1,0 +1,1089 @@
+{
+  "version": 1,
+  "range": {
+    "start": 1990,
+    "end": 2025
+  },
+  "years": {
+    "1990": {
+      "total": 12648,
+      "sectors": {
+        "s0": 444,
+        "s1": 0,
+        "s2": 120,
+        "s3": 4975,
+        "s4": 43,
+        "s5": 1873,
+        "s6": 435,
+        "s7": 242,
+        "s8": 81,
+        "s9": 4435,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": false,
+        "s3": false,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "1991": {
+      "total": 12585,
+      "sectors": {
+        "s0": 380,
+        "s1": 0,
+        "s2": 95,
+        "s3": 4731,
+        "s4": 42,
+        "s5": 1772,
+        "s6": 491,
+        "s7": 373,
+        "s8": 73,
+        "s9": 4628,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": false,
+        "s3": false,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "1992": {
+      "total": 14261,
+      "sectors": {
+        "s0": 728,
+        "s1": 678,
+        "s2": 153,
+        "s3": 4865,
+        "s4": 44,
+        "s5": 1923,
+        "s6": 470,
+        "s7": 490,
+        "s8": 53,
+        "s9": 4857,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": false,
+        "s3": false,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "1993": {
+      "total": 13601,
+      "sectors": {
+        "s0": 725,
+        "s1": 6,
+        "s2": 129,
+        "s3": 4708,
+        "s4": 27,
+        "s5": 1836,
+        "s6": 558,
+        "s7": 265,
+        "s8": 52,
+        "s9": 5295,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": false,
+        "s3": false,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "1994": {
+      "total": 11455,
+      "sectors": {
+        "s0": 489,
+        "s1": 417,
+        "s2": 345,
+        "s3": 4799,
+        "s4": 21,
+        "s5": 1765,
+        "s6": 639,
+        "s7": 279,
+        "s8": 50,
+        "s9": 2651,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": false,
+        "s3": false,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "1995": {
+      "total": 12261,
+      "sectors": {
+        "s0": 508,
+        "s1": 0,
+        "s2": 168,
+        "s3": 4049,
+        "s4": 34,
+        "s5": 1766,
+        "s6": 653,
+        "s7": 220,
+        "s8": 47,
+        "s9": 4816,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": false,
+        "s3": false,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "1996": {
+      "total": 12896,
+      "sectors": {
+        "s0": 601,
+        "s1": 0,
+        "s2": 252,
+        "s3": 3703,
+        "s4": 21,
+        "s5": 1816,
+        "s6": 661,
+        "s7": 471,
+        "s8": 47,
+        "s9": 5324,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": false,
+        "s3": false,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "1997": {
+      "total": 13906,
+      "sectors": {
+        "s0": 633,
+        "s1": 680,
+        "s2": 304,
+        "s3": 3939,
+        "s4": 50,
+        "s5": 1751,
+        "s6": 710,
+        "s7": 323,
+        "s8": 60,
+        "s9": 5456,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": false,
+        "s3": false,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "1998": {
+      "total": 13731,
+      "sectors": {
+        "s0": 552,
+        "s1": 0,
+        "s2": 233,
+        "s3": 4248,
+        "s4": 46,
+        "s5": 2017,
+        "s6": 701,
+        "s7": 437,
+        "s8": 65,
+        "s9": 5432,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": false,
+        "s3": false,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "1999": {
+      "total": 11467,
+      "sectors": {
+        "s0": 768,
+        "s1": 0,
+        "s2": 330,
+        "s3": 4332,
+        "s4": 31,
+        "s5": 1681,
+        "s6": 783,
+        "s7": 389,
+        "s8": 52,
+        "s9": 3101,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": false,
+        "s3": false,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "2000": {
+      "total": 13331,
+      "sectors": {
+        "s0": 802,
+        "s1": 0,
+        "s2": 394,
+        "s3": 4400,
+        "s4": 36,
+        "s5": 1986,
+        "s6": 785,
+        "s7": 543,
+        "s8": 67,
+        "s9": 4318,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": false,
+        "s3": false,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "2001": {
+      "total": 12929,
+      "sectors": {
+        "s0": 830,
+        "s1": 48,
+        "s2": 467,
+        "s3": 4110,
+        "s4": 22,
+        "s5": 2435,
+        "s6": 610,
+        "s7": 626,
+        "s8": 54,
+        "s9": 3727,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": false,
+        "s3": false,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "2002": {
+      "total": 13787,
+      "sectors": {
+        "s0": 955,
+        "s1": 395,
+        "s2": 419,
+        "s3": 3887,
+        "s4": 20,
+        "s5": 3094,
+        "s6": 248,
+        "s7": 790,
+        "s8": 42,
+        "s9": 3937,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": false,
+        "s3": false,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "2003": {
+      "total": 13456,
+      "sectors": {
+        "s0": 802,
+        "s1": 368,
+        "s2": 439,
+        "s3": 3730,
+        "s4": 16,
+        "s5": 2905,
+        "s6": 111,
+        "s7": 958,
+        "s8": 49,
+        "s9": 4078,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": false,
+        "s3": false,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "2004": {
+      "total": 12329,
+      "sectors": {
+        "s0": 945,
+        "s1": 541,
+        "s2": 353,
+        "s3": 3868,
+        "s4": 21,
+        "s5": 2564,
+        "s6": 128,
+        "s7": 764,
+        "s8": 53,
+        "s9": 3092,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": false,
+        "s3": false,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "2005": {
+      "total": 13801,
+      "sectors": {
+        "s0": 734,
+        "s1": 248,
+        "s2": 361,
+        "s3": 3645,
+        "s4": 26,
+        "s5": 2848,
+        "s6": 261,
+        "s7": 632,
+        "s8": 34,
+        "s9": 5012,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": false,
+        "s3": false,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "2006": {
+      "total": 16216,
+      "sectors": {
+        "s0": 885,
+        "s1": 445,
+        "s2": 376,
+        "s3": 3673,
+        "s4": 47,
+        "s5": 3344,
+        "s6": 685,
+        "s7": 882,
+        "s8": 39,
+        "s9": 5840,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": false,
+        "s3": false,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "2007": {
+      "total": 16015,
+      "sectors": {
+        "s0": 631,
+        "s1": 150,
+        "s2": 318,
+        "s3": 3063,
+        "s4": 27,
+        "s5": 3404,
+        "s6": 1317,
+        "s7": 437,
+        "s8": 43,
+        "s9": 6625,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": false,
+        "s3": false,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "2008": {
+      "total": 18725,
+      "sectors": {
+        "s0": 833,
+        "s1": 562,
+        "s2": 265,
+        "s3": 2959,
+        "s4": 35,
+        "s5": 3616,
+        "s6": 2294,
+        "s7": 1076,
+        "s8": 28,
+        "s9": 7057,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": false,
+        "s3": false,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "2009": {
+      "total": 17111,
+      "sectors": {
+        "s0": 780,
+        "s1": 0,
+        "s2": 264,
+        "s3": 2884,
+        "s4": 15,
+        "s5": 3199,
+        "s6": 2136,
+        "s7": 1171,
+        "s8": 40,
+        "s9": 6622,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": false,
+        "s3": false,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "2010": {
+      "total": 20868,
+      "sectors": {
+        "s0": 574,
+        "s1": 817,
+        "s2": 237,
+        "s3": 2690,
+        "s4": 74,
+        "s5": 3232,
+        "s6": 2468,
+        "s7": 718,
+        "s8": 58,
+        "s9": 10000,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": false,
+        "s3": true,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "2011": {
+      "total": 20983,
+      "sectors": {
+        "s0": 660,
+        "s1": 0,
+        "s2": 291,
+        "s3": 2949,
+        "s4": 29,
+        "s5": 3528,
+        "s6": 2682,
+        "s7": 802,
+        "s8": 42,
+        "s9": 10000,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": false,
+        "s3": true,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "2012": {
+      "total": 20511,
+      "sectors": {
+        "s0": 467,
+        "s1": 869,
+        "s2": 353,
+        "s3": 2709,
+        "s4": 35,
+        "s5": 3205,
+        "s6": 2432,
+        "s7": 422,
+        "s8": 19,
+        "s9": 10000,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": false,
+        "s3": true,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "2013": {
+      "total": 20377,
+      "sectors": {
+        "s0": 460,
+        "s1": 0,
+        "s2": 335,
+        "s3": 2836,
+        "s4": 25,
+        "s5": 3389,
+        "s6": 2790,
+        "s7": 515,
+        "s8": 27,
+        "s9": 10000,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": false,
+        "s3": true,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "2014": {
+      "total": 15942,
+      "sectors": {
+        "s0": 581,
+        "s1": 0,
+        "s2": 368,
+        "s3": 3114,
+        "s4": 34,
+        "s5": 2957,
+        "s6": 2905,
+        "s7": 742,
+        "s8": 50,
+        "s9": 5191,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": false,
+        "s3": true,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "2015": {
+      "total": 8388,
+      "sectors": {
+        "s0": 242,
+        "s1": 0,
+        "s2": 195,
+        "s3": 2846,
+        "s4": 19,
+        "s5": 1914,
+        "s6": 2870,
+        "s7": 255,
+        "s8": 47,
+        "s9": 0,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": false,
+        "s3": true,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "2016": {
+      "total": 9027,
+      "sectors": {
+        "s0": 233,
+        "s1": 776,
+        "s2": 298,
+        "s3": 2755,
+        "s4": 16,
+        "s5": 1838,
+        "s6": 2808,
+        "s7": 274,
+        "s8": 29,
+        "s9": 0,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": false,
+        "s3": true,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "2017": {
+      "total": 8541,
+      "sectors": {
+        "s0": 187,
+        "s1": 0,
+        "s2": 409,
+        "s3": 2761,
+        "s4": 10,
+        "s5": 2126,
+        "s6": 2812,
+        "s7": 235,
+        "s8": 1,
+        "s9": 0,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": false,
+        "s3": true,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "2018": {
+      "total": 8384,
+      "sectors": {
+        "s0": 50,
+        "s1": 0,
+        "s2": 317,
+        "s3": 2276,
+        "s4": 26,
+        "s5": 2554,
+        "s6": 2847,
+        "s7": 314,
+        "s8": 0,
+        "s9": 0,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": true,
+        "s3": true,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "2019": {
+      "total": 8644,
+      "sectors": {
+        "s0": 10,
+        "s1": 5,
+        "s2": 370,
+        "s3": 2306,
+        "s4": 30,
+        "s5": 2287,
+        "s6": 3267,
+        "s7": 369,
+        "s8": 0,
+        "s9": 0,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": true,
+        "s3": true,
+        "s4": false,
+        "s5": false,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "2020": {
+      "total": 7912,
+      "sectors": {
+        "s0": 0,
+        "s1": 5,
+        "s2": 365,
+        "s3": 2245,
+        "s4": 22,
+        "s5": 2524,
+        "s6": 2638,
+        "s7": 113,
+        "s8": 0,
+        "s9": 0,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": true,
+        "s3": true,
+        "s4": false,
+        "s5": true,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "2021": {
+      "total": 8284,
+      "sectors": {
+        "s0": 0,
+        "s1": 0,
+        "s2": 261,
+        "s3": 2406,
+        "s4": 39,
+        "s5": 2682,
+        "s6": 2813,
+        "s7": 83,
+        "s8": 0,
+        "s9": 0,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": true,
+        "s3": true,
+        "s4": false,
+        "s5": true,
+        "s6": true,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "2022": {
+      "total": 8450,
+      "sectors": {
+        "s0": 0,
+        "s1": 0,
+        "s2": 395,
+        "s3": 2523,
+        "s4": 10,
+        "s5": 2643,
+        "s6": 2752,
+        "s7": 127,
+        "s8": 0,
+        "s9": 0,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": true,
+        "s3": true,
+        "s4": false,
+        "s5": true,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "2023": {
+      "total": 9333,
+      "sectors": {
+        "s0": 0,
+        "s1": 0,
+        "s2": 779,
+        "s3": 2478,
+        "s4": 14,
+        "s5": 3001,
+        "s6": 3001,
+        "s7": 60,
+        "s8": 0,
+        "s9": 0,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": true,
+        "s3": true,
+        "s4": false,
+        "s5": true,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "2024": {
+      "total": 8704,
+      "sectors": {
+        "s0": 0,
+        "s1": 0,
+        "s2": 916,
+        "s3": 2687,
+        "s4": 19,
+        "s5": 3092,
+        "s6": 1926,
+        "s7": 64,
+        "s8": 0,
+        "s9": 0,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": true,
+        "s3": true,
+        "s4": false,
+        "s5": true,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    },
+    "2025": {
+      "total": 5362,
+      "sectors": {
+        "s0": 0,
+        "s1": 0,
+        "s2": 323,
+        "s3": 2103,
+        "s4": 17,
+        "s5": 1982,
+        "s6": 928,
+        "s7": 9,
+        "s8": 0,
+        "s9": 0,
+        "s10": 0
+      },
+      "uploaded": false,
+      "uploadedBySector": {
+        "s0": false,
+        "s1": false,
+        "s2": true,
+        "s3": true,
+        "s4": false,
+        "s5": true,
+        "s6": false,
+        "s7": false,
+        "s8": false,
+        "s9": false,
+        "s10": false
+      }
+    }
+  }
+}
