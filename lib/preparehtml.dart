@@ -259,7 +259,11 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
       }
 
       _recalcProgress(); // should hit 100%
-      getCustomIndices(server, isAdmin, jsonSettings['access_key'] ?? 'trial');
+      getCustomIndices(
+        server,
+        isAdmin,
+        jsonSettings['access_key'] ?? DEFAULT_ACCESS_KEY,
+      );
     });
   }
 
@@ -344,7 +348,11 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
       }
 
       _recalcProgress(); // should hit 100%
-      getCustomIndices(server, isAdmin, jsonSettings['access_key'] ?? 'trial');
+      getCustomIndices(
+        server,
+        isAdmin,
+        jsonSettings['access_key'] ?? DEFAULT_ACCESS_KEY,
+      );
     });
 
     //try retry for failed celex numbers using HTML harvesting instead of XHTML
@@ -517,7 +525,11 @@ class _manualCelexListState extends State<manualCelexList> {
     if (!mounted) return;
     setState(() {
       extractedCelex.add('COMPLETED');
-      getCustomIndices(server, isAdmin, jsonSettings['access_key'] ?? 'trial');
+      getCustomIndices(
+        server,
+        isAdmin,
+        jsonSettings['access_key'] ?? DEFAULT_ACCESS_KEY,
+      );
     });
   }
 
