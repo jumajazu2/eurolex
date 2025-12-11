@@ -1,0 +1,439 @@
+import 'dart:async';
+import 'dart:io';
+import 'package:eurolex/main.dart';
+import 'package:eurolex/search.dart';
+import 'package:eurolex/preparehtml.dart';
+import 'package:eurolex/setup.dart';
+import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:eurolex/search.dart';
+import 'package:eurolex/processDOM.dart';
+import 'dart:math';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
+StreamSubscription<Map<String, dynamic>>? _sub1;
+var nGrams = [];
+Map nGramsResults = {"N/A": "N/A"};
+var nGramResultList = [];
+String httpPassAnalyzer = "";
+
+Future<List> searchQuery(query, queryString) async {
+  queryPattern = query;
+  print("In ANALYSER searchQuery, query: $query, queryString: $queryString");
+  var resultsOS = await sendToOpenSearch(
+    'https://$osServer/$activeIndex/_search',
+    [jsonEncode(query)],
+  );
+  var decodedResults = jsonDecode(resultsOS);
+  print(
+    "In ANALYSER searchQuery, query: $query, queryString: $queryString, Results: $resultsOS",
+  );
+  //if query returns error, stop processing, display error
+  if (decodedResults['error'] != null) {
+    print("Error in OpenSearch response: ${decodedResults['error']}");
+
+    enHighlightedResults = [
+      TextSpan(
+        children:
+            ([decodedResults['error'].toString()]).map((text) {
+              return TextSpan(
+                text: text,
+                style: TextStyle(color: Colors.black),
+              );
+            }).toList(),
+      ),
+    ];
+
+    return ["error"];
+  }
+
+  var hits = decodedResults['hits']['hits'] as List;
+
+  lang2Results =
+      hits.map((hit) => hit['_source']['sk_text'].toString()).toList();
+  lang1Results =
+      hits.map((hit) => hit['_source']['en_text'].toString()).toList();
+  lang3Results =
+      hits.map((hit) => hit['_source']['cz_text'].toString()).toList();
+
+  metaCelex = hits.map((hit) => hit['_source']['celex'].toString()).toList();
+  metaCellar = hits.map((hit) => hit['_source']['dir_id'].toString()).toList();
+  sequenceNo =
+      hits.map((hit) => hit['_source']['sequence_id'].toString()).toList();
+  parNotMatched =
+      hits
+          .map((hit) => hit['_source']['paragraphsNotMatched'].toString())
+          .toList();
+  pointerPar =
+      hits.map((hit) => hit['_source']['sequence_id'].toString()).toList();
+
+  className = hits.map((hit) => hit['_source']['class'].toString()).toList();
+
+  docDate = hits.map((hit) => hit['_source']['date'].toString()).toList();
+
+  print(
+    "Query?: $query, Results SK = $lang2Results, Results EN = $lang1Results",
+  );
+
+  return [lang1Results, lang2Results];
+}
+
+class AnalyserWidget extends StatefulWidget {
+  @override
+  _FileDisplayWidgetState createState() => _FileDisplayWidgetState();
+}
+
+class _FileDisplayWidgetState extends State<AnalyserWidget>
+    with WidgetsBindingObserver {
+  String _fileContent = "Loading...";
+  Timer? _pollingTimer;
+  bool _isVisible = true;
+  var lastFileContent = "";
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    if (jsonSettings["auto_lookup"] == true) {
+      _sub1 = ingestServer.stream.listen((payload) {
+        // Replace with your custom code
+        print('HTTP Incoming: $payload');
+        if (!mounted) return;
+        print('HTTP Incoming: passed mounted test');
+        _startPolling(payload);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _pollingTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startPolling(payload) async {
+    if (_isVisible || !_isVisible) {
+      print("Timer triggered");
+
+      httpPassAnalyzer = payload['source'] ?? '';
+
+      _updateState(httpPassAnalyzer);
+    }
+  }
+
+  void _updateState(content) async {
+    setState(() {
+      lastFileContent = httpPassAnalyzer;
+
+      _fileContent = lastFileContent;
+      //   List subsegments = subsegmentFile(_fileContent);
+
+      nGrams = generateNGrams(httpPassAnalyzer, 5);
+      nGrams.addAll(generateNGrams(_fileContent, 4));
+      if (_fileContent.split(RegExp(r'[^\w\s]')).length <= 3)
+        nGrams.addAll(generateNGrams(_fileContent, 3));
+      if (_fileContent.split(RegExp(r'[^\w\s]')).length <= 2)
+        nGrams.addAll(generateNGrams(_fileContent, 2));
+      if (_fileContent.split(RegExp(r'[^\w\s]')).length <= 2)
+        nGrams.addAll(_fileContent.split(RegExp(r'[^\w\s]')));
+
+      print("NGrams: ${nGrams.length}");
+    });
+
+    //
+    var queryAnalyser = {
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "multi_match": {
+                "query": lastFileContent,
+                "fields": [
+                  "${lang1?.toLowerCase()}_text",
+                  "${lang2?.toLowerCase()}_text",
+                  "${lang3?.toLowerCase()}_text",
+                ],
+                "fuzziness": "AUTO",
+                "minimum_should_match": "65%",
+              },
+            },
+            {
+              "term": {"paragraphsNotMatched": false},
+            },
+          ],
+        },
+      },
+      "size": 50,
+    };
+    //
+    // await searchQuery(queryAnalyser, lastFileContent); //
+    //await SearchTabWidget(queryName: "a",  queryText: "").processQuery(queryAnalyser);//
+    //
+    //
+    //
+    // var wholeSegment = search
+    nGrams.insert(0, lastFileContent);
+    nGramsResults = await searchNGrams(nGrams);
+    nGramResultList =
+        nGramsResults.entries.map((e) => "${e.key} => ${e.value}").toList();
+    setState(() {}); // You may need to call setState again to update the UI
+  }
+
+  /// Splits the input string `content` into subsegments based on commas.
+  ///
+  /// Each non-empty segment found between commas in the input string
+  /// is added to the list of subsegments. The resulting list of subsegments
+  /// is returned.
+  ///
+  /// The function also prints the list of subsegments to the console.
+  ///
+  /// [content]: A string containing segments separated by commas.
+  /// Returns: A list of non-empty subsegments extracted from the input string.
+
+  List subsegmentFile(String content) {
+    List<String> segments = content.split(','); //split at commas
+    List<String> subsegments = [];
+    for (String segment in segments) {
+      if (segment.isNotEmpty) {
+        subsegments.add(segment);
+      }
+    }
+    print("Subsegments: $subsegments");
+    return subsegments;
+  }
+
+  /// Generates a list of n-grams from a given text.
+  ///
+  /// An n-gram is a sequence of n consecutive words from the input text.
+  /// The function splits the input text into words, then iterates over the
+  /// list of words to generate sequences of n words. The resulting list of
+  /// n-grams is returned.
+  ///
+  /// [text]: The input text from which n-grams are generated.
+  /// [n]: The size of the n-grams to generate.
+  /// Returns: A list of n-grams extracted from the input string.
+  List<String> generateNGrams(String text, int n) {
+    final words = text.split(' ');
+    List<String> ngrams = [];
+    for (int i = 0; i <= words.length - n; i++) {
+      ngrams.add(words.sublist(i, i + n).join(' '));
+    }
+    return ngrams;
+  }
+
+  /* Future<String> _readFile() async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('C:/Temp/segment_output.txt');
+      final content = await file.readAsString();
+      if (mounted) {
+        setState(() {
+          _fileContent = content;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _fileContent = "Error reading file.";
+        });
+      }
+    }
+    return _fileContent;
+  }
+*/
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _isVisible = state == AppLifecycleState.resumed;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          padding: EdgeInsets.all(16),
+          color: Colors.blue[50],
+          width: double.infinity,
+          child: SelectableText(_fileContent, style: TextStyle(fontSize: 16)),
+        ),
+        SizedBox(height: 16),
+        Text(activeIndex),
+        SizedBox(height: 16),
+
+        //  Text("EN: ${enResults.isEmpty ? "N/A" : enResults[0]}"),
+        // SizedBox(height: 8),
+        // Text("SK: ${skResults.isEmpty ? "N/A" : skResults[0]}"),
+        // SizedBox(height: 8),
+        Row(
+          children: [
+            /*
+            Expanded(
+              child: Container(
+                height: 500,
+                color: Colors.green[100],
+                child: Center(
+                  child: ListView.builder(
+                    padding: EdgeInsets.all(8),
+                    shrinkWrap: true,
+                    itemCount: nGrams.length,
+                    itemBuilder: (BuildContext context, int index) {
+                      return ListTile(
+                        title: SelectableText(nGrams[index]),
+                        onTap: () {
+                          // Handle tap on nGram
+                          print("Tapped on nGram: ${nGrams[index]}");
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(width: 8),
+            */
+            Expanded(
+              child: Container(
+                height: 500,
+                color: Colors.orange[100],
+                child: Center(
+                  child: ListView.builder(
+                    padding: EdgeInsets.all(8),
+                    shrinkWrap: true,
+                    itemCount: nGramResultList.length,
+                    itemBuilder: (BuildContext context, int index) {
+                      return !(nGramResultList[index].toString().contains(
+                            "no match",
+                          ))
+                          ? ListTile(
+                            title: SelectableText(nGramResultList[index]),
+                            onTap: () {
+                              // Handle tap on nGram
+                              print(
+                                "Tapped on nGram: ${nGramResultList[index]}",
+                              );
+                            },
+                          )
+                          : SizedBox.shrink();
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+Future<Map> searchNGrams(List<dynamic> ngrams) async {
+  final opensearchUrl = Uri.parse("https://$osServer/$activeIndex/_msearch");
+  final headers = {"Content-Type": "application/x-ndjson", 'x-api-key': '1234'};
+
+  // Step 1: Build NDJSON request body
+  final buffer = StringBuffer();
+  for (final ngram in ngrams) {
+    buffer.writeln('{}'); // metadata line
+    buffer.writeln(
+      jsonEncode({
+        "query": {
+          "bool": {
+            "must": [
+              {
+                "match_phrase": {
+                  "${lang1?.toLowerCase()}_text": {
+                    "query": ngram,
+                    // Allow some flexibility in word order
+                    // Boost the phrase match
+                  },
+                },
+              },
+              {
+                "term": {"paragraphsNotMatched": false},
+              },
+            ],
+          },
+        },
+        "highlight": {
+          "fields": {
+            "${lang1?.toLowerCase()}_text": {"type": "plain"},
+          },
+        },
+        "size": 1, // Only top result
+      }),
+    );
+  }
+  print("Buffer content: ${buffer.toString()}");
+  // Step 2: Send request
+
+  if (buffer.isEmpty) {
+    print("No ngrams to search, returning empty results.");
+    return {};
+  }
+  final response = await http.post(
+    opensearchUrl,
+    headers: headers,
+    body: buffer.toString(),
+  );
+
+  if (response.statusCode != 200) {
+    print('Error from OpenSearch: ${response.statusCode}');
+    print(response.body);
+    return {"error": "Error: ${response.statusCode}"};
+  }
+
+  final jsonResponse = jsonDecode(response.body);
+  print("JSON Response: $jsonResponse");
+  // Step 3: Map responses to original ngrams
+  final results = <String, String>{};
+
+  final responses = jsonResponse['responses'] as List;
+  for (int i = 0; i < responses.length; i++) {
+    final ngram = ngrams[i] + " ";
+    final hits = responses[i]['hits']['hits'] as List;
+    if (hits.isNotEmpty) {
+      var bestMatch = hits[0]['_source']['sk_text'];
+      var bestMatchEN = hits[0]['_source']['en_text'];
+      var highlightedString = hits[0]['highlight']['en_text']?.first ?? '';
+
+      print("Highlighted string: $highlightedString, best match: $bestMatch");
+      var highlightedStartOffset =
+          (highlightedString.split('<em>')[0].length) - 30;
+      if (highlightedStartOffset < 0) {
+        highlightedStartOffset = 0;
+      }
+      var highlightedEndOffset = (highlightedString.lastIndexOf('</em>')) + 50;
+      while (bestMatch[highlightedStartOffset] != " " &&
+          highlightedStartOffset > 1) {
+        print("Highlighted start offset: $highlightedStartOffset");
+        highlightedStartOffset -= 1;
+      }
+
+      while (highlightedEndOffset < bestMatch.length &&
+          bestMatch[highlightedEndOffset] != " ") {
+        highlightedEndOffset += 1;
+      }
+
+      var bestMatchSub = bestMatch.substring(
+        max(highlightedStartOffset, 0),
+        min(highlightedEndOffset, (bestMatch.length)),
+      );
+
+      var bestMatchEnSub = bestMatchEN.substring(
+        max(highlightedStartOffset, 0),
+        min(highlightedEndOffset, (bestMatchEN.length)),
+      );
+
+      results[ngram] = bestMatchEnSub + " /// " + bestMatchSub;
+    } else {
+      results[ngram] = "<no match>";
+    }
+  }
+
+  // Step 4: Output
+  results.forEach((ngram, match) {
+    print('N-gram: "$ngram" => Match: "$match"');
+  });
+  return results;
+}

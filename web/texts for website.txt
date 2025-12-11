@@ -1,0 +1,53 @@
+LegisTracerEU			Features 	Pricing		Data Sources	      Privacy
+
+
+
+
+EU Law Search 
+Toolbox for Linguists and Lawyers
+
+
+Fast full-text search in the bulk of EU law. Tailored for translators, post-editors, legal analysts and lawyers. Designed to minimise search time. Custom search on a predefined set of laws.
+
+
+
+Why choose LegisTracerEU
+Our service provides an efficient way to search across EU legal norms to find accurate terms and exact or fuzzy phrases.
+
+Advanced Law Search
+Search through tens of thousands of EU regulations and directives in a moment. See the results in context. Use filtering options to narrow down relevant content.
+
+Consistency is a must
+Find exact quotes from various legal norms to ensure consistency in legal translation. Save effort by reusing content already translated in other legal texts. 
+
+
+
+(Based on) real-world translator experience
+
+
+Designed by translators for translators. Keep a fast pace with accurate legal references available just when you need them. Designed for workflows and linguistic/security requirements EU legal translators have to comply with.
+
+Highly affordable pricing
+Save up to 60% compared to similar offerings and unlock premier features such as own search indices and autoAnalyst connected with a Trados Studio plugin for on-the fly references between your translated content and EU law.
+
+Focus on privacy and security
+Meet strict requirements for EU legal translation in terms of privacy and security. Search queries are not stored and are immediately discarded after search to avoid leakage of any bits of source documents. 
+
+
+
+
+
+
+
+
+The legal content in this service is based on the authoritative and high-quality source of EU legal content – the Eur-Lex portal and the IATE terminology management system. EU law is generally available freely, using Eur-Lex search feature or as a bulk download via the Eur-Lex website. The European Commission’s document reuse policy is based on Decision 2011/833/EU. Unless otherwise specified, one can re-use the legal documents published in EUR-Lex for commercial or non-commercial purposes. For more information about EU Law reuse, please visit this page. For information about IATE reuse, please visit this page. 
+While the European Commission’s legal documents are publicly available, due to their enormous volume and a highly complicated web of cross-references it is far from easy to search in them efficiently, be it during translation work, legal research or study. 
+With actual EU legal translator experience in mind, we have reused the above legal content to develop a blazing fast and efficient search engine tailored to how translators, linguistic and lawyers prefer to work with this content.
+For each search result, you can always see it in content, i.e. a broader scope of the document it comes from is just one-click away and also a link to the full document on the Eur-Lex site is provided for all search results.
+
+The sheer scope in itself is a challenge
+Naturally, the more data we have, the better, one would say. But in real-word situations, such an amount may be overwhelming. Therefore this service provides a powerful customization options where users can create their own sets of legal documents that they prefer to work with. This ensures that they receive results that are as relevant as possible. EU legal translators often receive a list of legal references they have to follow in their work – often as a list of documents (or their Celex numbers). You can easily import this list into our tool and choose to search only in this list or in the whole database, just as it suits you.
+
+
+
+
