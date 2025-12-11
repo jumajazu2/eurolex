@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <title>Privacy Policy - LegisTracerEU</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="Privacy Policy and GDPR compliance information for LegisTracerEU." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-66JRRH14F8"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-66JRRH14F8');
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container flex between center-v gap-m">
+      <a class="brand" href="/">
+        <span class="brand__logo" aria-hidden="true">⚖️</span>
+        <span class="brand__text">LegisTracerEU</span>
+      </a>
+      <nav class="primary-nav" aria-label="Main navigation">
+        <ul class="nav-list">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="search.html">Search</a></li>
+          <li><a href="index.html#pricing">Pricing</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="section">
+      <div class="container">
+        <header class="section-header">
+          <h1>Privacy Policy</h1>
+          <p class="section-lead">How we collect, use, and protect your data in compliance with GDPR and other privacy regulations.</p>
+        </header>
+
+        <div class="privacy-content">
+          <h2>Data Collection and Usage</h2>
+          <p><strong>Last updated:</strong> October 6, 2025</p>
+          
+          <h3>What data we collect:</h3>
+          <ul>
+            <li><strong>Search queries:</strong> Temporarily processed for search functionality, then immediately discarded</li>
+            <li><strong>Payment information:</strong> Processed securely through Stripe (we do not store payment data)</li>
+            <li><strong>Usage analytics:</strong> Anonymous usage statistics via Google Analytics</li>
+            <li><strong>IP address:</strong> For security and quota management purposes</li>
+          </ul>
+
+          <h3>Cookies we use:</h3>
+          <ul>
+            <li><strong>Essential cookies:</strong> For payment processing and service functionality</li>
+            <li><strong>Analytics cookies:</strong> Google Analytics for improving our service</li>
+            <li><strong>Stripe cookies:</strong> For secure payment processing</li>
+          </ul>
+
+          <h3>Your rights under GDPR:</h3>
+          <ul>
+            <li>Right to access your personal data</li>
+            <li>Right to rectification (correction) of your data</li>
+            <li>Right to erasure ("right to be forgotten")</li>
+            <li>Right to restrict processing</li>
+            <li>Right to data portability</li>
+            <li>Right to object to processing</li>
+          </ul>
+
+          <h3>Data retention:</h3>
+          <p>Search queries are processed in real-time and immediately discarded. We do not store or log your search content. Payment information is handled exclusively by Stripe according to their privacy policy.</p>
+
+          <h3>Contact for privacy concerns:</h3>
+          <p>For any privacy-related questions or to exercise your GDPR rights, please contact: <a href="mailto:juraj.kuban.sk@gmail.com">juraj.kuban.sk@gmail.com</a></p>
+
+          <h3>Third-party services:</h3>
+          <ul>
+            <li><strong>Stripe:</strong> Payment processing - <a href="https://stripe.com/privacy" target="_blank">Stripe Privacy Policy</a></li>
+            <li><strong>Google Analytics:</strong> Usage analytics - <a href="https://policies.google.com/privacy" target="_blank">Google Privacy Policy</a></li>
+          </ul>
+
+          <p><em>This privacy policy will be updated as our service evolves. Major changes will be communicated to existing users.</em></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; <span id="year"></span> LegisTracerEU. All rights reserved. | <a href="privacy.html">Privacy Policy</a></p>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>

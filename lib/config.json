@@ -1,0 +1,15 @@
+{
+  "default_index": "eurolex",
+  "default_language": "EN",
+  "last_opened_dir": "",
+  "last_uploaded_file": "",
+  "last_used_index": "eurolex",
+  "last_search_query": "",
+  "last_search_language": "EN",
+  "upload_batch_size": 100,
+  "auto_lookup": true,
+  "os_server": "192.168.1.14:9200",
+  "os_indices": [
+    "*"
+  ]
+}
