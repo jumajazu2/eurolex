@@ -107,6 +107,11 @@ Future getContext(celex, pointer) async {
         ],
       },
     },
+    "sort": [
+      {
+        "sequence_id": {"order": "asc"}
+      }
+    ],
     "size": 50,
   };
   print(
