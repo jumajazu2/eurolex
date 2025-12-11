@@ -265,6 +265,8 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                           const SizedBox(width: 12),
                           ElevatedButton(
                             onPressed: () async {
+                              indices.clear();
+                              indicesFull.clear();
                               await _confirmSettings();
                               await getListIndicesFull(server, isAdmin);
                               if (mounted) setState(() {});
@@ -326,7 +328,8 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                     trailing:
                         indicesFull[index][0].contains("sparql")
                             ? null
-                            : IconButton(
+                            : (isAdmin)
+                            ? IconButton(
                               icon: const Icon(Icons.delete, size: 18),
                               onPressed: () {
                                 setState(() {
@@ -357,7 +360,8 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                                   });
                                 });
                               },
-                            ),
+                            )
+                            : null,
                   ),
                 );
               },

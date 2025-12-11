@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
 import 'dart:convert';
 
+/*
 TextSpan highlightFoundWords(returnedResult, foundWords) {
   List<TextSpan> spans = [];
 
@@ -37,7 +38,7 @@ TextSpan highlightFoundWords(returnedResult, foundWords) {
   print(spans);
   return TextSpan(children: spans);
 }
-
+*/
 TextSpan highlightFoundWords2(String returnedResult, List<String> foundWords) {
   List<TextSpan> spans = [];
 
@@ -149,4 +150,100 @@ Future getContext(celex, pointer) async {
 
     return [contextLang1, contextLang2, contextLang3, sequenceID];
   }
+}
+
+
+
+
+class HighlightResult {
+  final TextSpan span;
+  final int? start;  // char offset from start of segment
+  final int? length; // length of the matched phrase
+  HighlightResult({required this.span, this.start, this.length});
+}
+
+const Set<String> _standaloneStopWords = {
+  'a','an','the','and','or','to','of','in','on','at','for'
+};
+
+
+/*
+//TODO
+Replace calls to highlightFoundWords2(...) with:
+final res = highlightPhrasePreservingLayout(returnedResult, foundWords);
+Use res.span to render; use res.start and res.length for eye-guides across lang2/lang3.
+
+*/
+
+
+HighlightResult highlightPhrasePreservingLayout(
+  String segment,
+  List<String> foundPhrases,
+  {
+    TextStyle normalStyle = const TextStyle(fontWeight: FontWeight.normal),
+    TextStyle highlightStyle = const TextStyle(fontWeight: FontWeight.bold),
+  }
+) {
+  if (segment.isEmpty || foundPhrases.isEmpty) {
+    return HighlightResult(span: TextSpan(text: segment, style: normalStyle), start: null, length: null);
+  }
+
+  final lower = segment.toLowerCase();
+  // Normalize phrases: trim and collapse internal spaces
+  final normalizedPhrases = foundPhrases
+      .map((p) => p.trim())
+      .where((p) => p.isNotEmpty)
+      .toList();
+
+  // Find the first occurrence among phrases by earliest start
+  int? bestStart;
+  int? bestLen;
+  String? bestOriginalSlice;
+
+  for (final phrase in normalizedPhrases) {
+    final lcPhrase = phrase.toLowerCase();
+
+    // Ignore single-word stop words unless the phrase contains a space (multi-word)
+    final isSingleWord = !lcPhrase.contains(' ');
+    if (isSingleWord && _standaloneStopWords.contains(lcPhrase)) {
+      continue;
+    }
+
+    // Simple case-insensitive search
+    final pos = lower.indexOf(lcPhrase);
+    if (pos >= 0) {
+      // Prefer earliest start; if equal, prefer longer phrase
+      final len = lcPhrase.length;
+      if (bestStart == null || pos < bestStart || (pos == bestStart && len > (bestLen ?? 0))) {
+        bestStart = pos;
+        bestLen = len;
+        bestOriginalSlice = segment.substring(pos, pos + len); // preserve original punctuation/case
+      }
+    }
+  }
+
+  if (bestStart == null || bestLen == null) {
+    // No match: return whole segment as normal
+    return HighlightResult(span: TextSpan(text: segment, style: normalStyle), start: null, length: null);
+  }
+
+  final start = bestStart;
+  final end = bestStart + bestLen;
+
+  // Build spans from slices to preserve exact spaces/punctuation
+  final pre = segment.substring(0, start);
+  final hit = bestOriginalSlice ?? segment.substring(start, end);
+  final post = segment.substring(end);
+
+  final children = <InlineSpan>[
+    if (pre.isNotEmpty) TextSpan(text: pre, style: normalStyle),
+    TextSpan(text: hit, style: highlightStyle),
+    if (post.isNotEmpty) TextSpan(text: post, style: normalStyle),
+  ];
+
+  return HighlightResult(
+    span: TextSpan(children: children),
+    start: start,
+    length: hit.length,
+  );
 }

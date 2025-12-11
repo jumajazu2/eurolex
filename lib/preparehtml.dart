@@ -392,6 +392,11 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
                         child: Text(value),
                       );
                     }).toList(),
+                onTap: () async {
+                  await getCustomIndices(server, isAdmin, userPasskey);
+                  if (!mounted) return;
+                  setState(() {});
+                },
 
                 onChanged: (String? newValue) {
                   setState(() {
