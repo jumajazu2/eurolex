@@ -90,7 +90,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
       getCustomIndices(
         server,
         isAdmin,
-        jsonSettings['access_key'] ?? 'trial',
+        jsonSettings['access_key'] ?? DEFAULT_ACCESS_KEY,
       ).then((_) {
         if (mounted) {
           setState(() {
@@ -599,7 +599,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     await getCustomIndices(
       server,
       isAdmin,
-      jsonSettings['access_key'] ?? ["trial"],
+      jsonSettings['access_key'] ?? DEFAULT_ACCESS_KEY,
     );
     setState(() {
       print(

@@ -19,6 +19,8 @@ String osServer = 'search.pts-translation.sk'; // AWS server
 List<String> indices = ['*'];
 List<List<String>> indicesFull = [];
 
+const String DEFAULT_ACCESS_KEY = 'trial';
+
 Map<String, dynamic> jsonSettings = {};
 Map<String, dynamic> jsonConfig = {};
 Map<String, dynamic> jsonData = {};
@@ -95,7 +97,7 @@ class _MainTabbedAppState extends State<MainTabbedApp>
       getCustomIndices(
         server,
         isAdmin,
-        jsonSettings['access_key'] ?? 'trial',
+        jsonSettings['access_key'] ?? DEFAULT_ACCESS_KEY,
       ).then((_) {
         if (mounted) {
           setState(() {
@@ -143,7 +145,7 @@ class _MainTabbedAppState extends State<MainTabbedApp>
                   getCustomIndices(
                     server,
                     isAdmin,
-                    jsonSettings['access_key'] ?? 'trial',
+                    jsonSettings['access_key'] ?? DEFAULT_ACCESS_KEY,
                   ).then((_) {
                     if (mounted) {
                       setState(() {
