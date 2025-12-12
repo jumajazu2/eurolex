@@ -64,11 +64,19 @@ class _DataUploadTabState extends State<DataUploadTab> {
   void initState() {
     super.initState();
     _selectedIndex = widget.initialSelectedIndex;
-    getListIndices(server).then((_) {
-      setState(() {
-        // Refresh the UI after indices are loaded
-      });
-    });
+    getCustomIndices(
+      server,
+      isAdmin,
+      jsonSettings['access_key'] ?? DEFAULT_ACCESS_KEY,
+    ).then(
+      (_) {
+        if (mounted) {
+          setState(() {
+            // Refresh the UI after indices are loaded
+          });
+        }
+      },
+    );
   }
 
   String get _effectiveIndex {
