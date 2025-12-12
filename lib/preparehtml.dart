@@ -259,7 +259,11 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
       }
 
       _recalcProgress(); // should hit 100%
-      getListIndices(server);
+      getCustomIndices(
+        server,
+        isAdmin,
+        jsonSettings['access_key'] ?? DEFAULT_ACCESS_KEY,
+      );
     });
   }
 
@@ -344,7 +348,11 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
       }
 
       _recalcProgress(); // should hit 100%
-      getListIndices(server);
+      getCustomIndices(
+        server,
+        isAdmin,
+        jsonSettings['access_key'] ?? DEFAULT_ACCESS_KEY,
+      );
     });
 
     //try retry for failed celex numbers using HTML harvesting instead of XHTML
@@ -522,7 +530,11 @@ class _manualCelexListState extends State<manualCelexList> {
     if (!mounted) return;
     setState(() {
       extractedCelex.add('COMPLETED');
-      getListIndices(server);
+      getCustomIndices(
+        server,
+        isAdmin,
+        jsonSettings['access_key'] ?? DEFAULT_ACCESS_KEY,
+      );
     });
   }
 
@@ -801,7 +813,10 @@ Future getCustomIndices(server, isAdmin, id) async {
       }
       if (!isAdmin) {
         if (jsonSettings['access_key'] == "trial") {
-          return "Not available in Trial";
+          // In trial mode, show only the global index "*"
+          indices = ["*"];
+          print('Trial mode detected, showing only global index: $indices');
+          return "Trial mode - limited indices";
         }
 
         print('Non-admin user detected, loading custom indices for id: $id');
