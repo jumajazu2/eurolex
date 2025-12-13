@@ -14,8 +14,8 @@ import 'package:eurolex/http.dart';
 import 'package:eurolex/opensearch.dart';
 
 //String osServer = 'localhost:9200'; // add to Settings or Autolookup
-String osServer = 'search.pts-translation.sk'; // AWS server
-//String osServer = '192.168.1.14:9200';
+String osServer = 'search.pts-translation.sk'; 
+
 List<String> indices = ['*'];
 List<List<String>> indicesFull = [];
 
@@ -92,7 +92,7 @@ class _MainTabbedAppState extends State<MainTabbedApp>
           'juraj.kuban.sk@gmail.com';
       isAdminNotifier.value = isAdmin;
       print("isAdmin: $isAdmin");
-      
+
       // Load indices after settings are loaded so isAdmin and access_key are available
       getCustomIndices(
         server,
@@ -155,7 +155,7 @@ class _MainTabbedAppState extends State<MainTabbedApp>
                       });
                     }
                   });
-                  
+
                   // Setup tab is index 2 in both modes
                   if (index == 2) {
                     print("Setup tab clicked!");

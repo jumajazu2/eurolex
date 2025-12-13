@@ -568,7 +568,7 @@ class _manualCelexListState extends State<manualCelexList> {
                 value:
                     indices.contains(newIndexName)
                         ? newIndexName
-                        : null, // Default selected value
+                        : indices.first, // Default selected value
                 items:
                     indices.map((String value) {
                       return DropdownMenuItem<String>(

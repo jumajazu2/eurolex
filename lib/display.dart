@@ -110,8 +110,8 @@ Future getContext(celex, pointer) async {
     },
     "sort": [
       {
-        "sequence_id": {"order": "asc"}
-      }
+        "sequence_id": {"order": "asc"},
+      },
     ],
     "size": 50,
   };
@@ -157,20 +157,26 @@ Future getContext(celex, pointer) async {
   }
 }
 
-
-
-
 class HighlightResult {
   final TextSpan span;
-  final int? start;  // char offset from start of segment
+  final int? start; // char offset from start of segment
   final int? length; // length of the matched phrase
   HighlightResult({required this.span, this.start, this.length});
 }
 
 const Set<String> _standaloneStopWords = {
-  'a','an','the','and','or','to','of','in','on','at','for'
+  'a',
+  'an',
+  'the',
+  'and',
+  'or',
+  'to',
+  'of',
+  'in',
+  'on',
+  'at',
+  'for',
 };
-
 
 /*
 //TODO
@@ -180,75 +186,111 @@ Use res.span to render; use res.start and res.length for eye-guides across lang2
 
 */
 
-
 HighlightResult highlightPhrasePreservingLayout(
   String segment,
-  List<String> foundPhrases,
-  {
-    TextStyle normalStyle = const TextStyle(fontWeight: FontWeight.normal),
-    TextStyle highlightStyle = const TextStyle(fontWeight: FontWeight.bold),
-  }
-) {
+  List<String> foundPhrases, {
+  TextStyle normalStyle = const TextStyle(fontWeight: FontWeight.normal),
+  TextStyle highlightStyle = const TextStyle(fontWeight: FontWeight.bold),
+}) {
   if (segment.isEmpty || foundPhrases.isEmpty) {
-    return HighlightResult(span: TextSpan(text: segment, style: normalStyle), start: null, length: null);
+    return HighlightResult(
+      span: TextSpan(text: segment, style: normalStyle),
+      start: null,
+      length: null,
+    );
   }
 
   final lower = segment.toLowerCase();
-  // Normalize phrases: trim and collapse internal spaces
-  final normalizedPhrases = foundPhrases
-      .map((p) => p.trim())
-      .where((p) => p.isNotEmpty)
-      .toList();
 
-  // Find the first occurrence among phrases by earliest start
-  int? bestStart;
-  int? bestLen;
-  String? bestOriginalSlice;
+  // Normalize phrases
+  final normalized =
+      foundPhrases.map((p) => p.trim()).where((p) => p.isNotEmpty).toList();
 
-  for (final phrase in normalizedPhrases) {
-    final lcPhrase = phrase.toLowerCase();
+  final multiWord =
+      normalized
+          .where((p) => p.contains(RegExp(r'\s+')))
+          .map((p) => p.toLowerCase())
+          .toList();
 
-    // Ignore single-word stop words unless the phrase contains a space (multi-word)
-    final isSingleWord = !lcPhrase.contains(' ');
-    if (isSingleWord && _standaloneStopWords.contains(lcPhrase)) {
-      continue;
-    }
+  final singleWord =
+      normalized
+          .where((p) => !p.contains(RegExp(r'\s+')))
+          .map((p) => p.toLowerCase())
+          .toList();
 
-    // Simple case-insensitive search
-    final pos = lower.indexOf(lcPhrase);
-    if (pos >= 0) {
-      // Prefer earliest start; if equal, prefer longer phrase
-      final len = lcPhrase.length;
-      if (bestStart == null || pos < bestStart || (pos == bestStart && len > (bestLen ?? 0))) {
-        bestStart = pos;
-        bestLen = len;
-        bestOriginalSlice = segment.substring(pos, pos + len); // preserve original punctuation/case
-      }
+  // Exclude single-word stopwords when they are alone;
+  // they will still be covered inside multi-word phrases.
+  final singleWordFiltered =
+      singleWord.where((w) => !_standaloneStopWords.contains(w)).toList();
+
+  // Collect matches as named records
+  final matches = <({int start, int end})>[];
+
+  // 1) Multi-word phrases: simple case-insensitive indexOf for all occurrences
+  for (final p in multiWord) {
+    var from = 0;
+    while (true) {
+      final pos = lower.indexOf(p, from);
+      if (pos < 0) break;
+      matches.add((start: pos, end: pos + p.length));
+      from = pos + p.length;
     }
   }
 
-  if (bestStart == null || bestLen == null) {
-    // No match: return whole segment as normal
-    return HighlightResult(span: TextSpan(text: segment, style: normalStyle), start: null, length: null);
+  // 2) Single-word (non-stopword) phrases: word-boundary regex
+  for (final w in singleWordFiltered) {
+    final re = RegExp(r'\b' + RegExp.escape(w) + r'\b', caseSensitive: false);
+    for (final m in re.allMatches(segment)) {
+      matches.add((start: m.start, end: m.end));
+    }
   }
 
-  final start = bestStart;
-  final end = bestStart + bestLen;
+  if (matches.isEmpty) {
+    return HighlightResult(
+      span: TextSpan(text: segment, style: normalStyle),
+      start: null,
+      length: null,
+    );
+  }
 
-  // Build spans from slices to preserve exact spaces/punctuation
-  final pre = segment.substring(0, start);
-  final hit = bestOriginalSlice ?? segment.substring(start, end);
-  final post = segment.substring(end);
+  // Sort by start; at same start prefer longer
+  matches.sort((a, b) {
+    final byStart = a.start.compareTo(b.start);
+    return byStart != 0 ? byStart : (b.end - b.start) - (a.end - a.start);
+  });
 
-  final children = <InlineSpan>[
-    if (pre.isNotEmpty) TextSpan(text: pre, style: normalStyle),
-    TextSpan(text: hit, style: highlightStyle),
-    if (post.isNotEmpty) TextSpan(text: post, style: normalStyle),
-  ];
+  // Resolve overlaps: keep non-overlapping, prefer longer when overlapping
+  final chosen = <({int start, int end})>[];
+  for (final m in matches) {
+    if (chosen.isEmpty || m.start >= chosen.last.end) {
+      chosen.add(m);
+    } else if ((m.end - m.start) > (chosen.last.end - chosen.last.start)) {
+      chosen[chosen.length - 1] = m;
+    }
+  }
 
+  // Build spans preserving exact text
+  final children = <InlineSpan>[];
+  var cursor = 0;
+  for (final m in chosen) {
+    if (cursor < m.start) {
+      children.add(
+        TextSpan(text: segment.substring(cursor, m.start), style: normalStyle),
+      );
+    }
+    children.add(
+      TextSpan(text: segment.substring(m.start, m.end), style: highlightStyle),
+    );
+    cursor = m.end;
+  }
+  if (cursor < segment.length) {
+    children.add(TextSpan(text: segment.substring(cursor), style: normalStyle));
+  }
+
+  final first = chosen.first;
   return HighlightResult(
     span: TextSpan(children: children),
-    start: start,
-    length: hit.length,
+    start: first.start,
+    length: first.end - first.start,
   );
 }
