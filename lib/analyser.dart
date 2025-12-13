@@ -11,6 +11,7 @@ import 'package:eurolex/processDOM.dart';
 import 'dart:math';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:eurolex/ui_notices.dart';
 
 StreamSubscription<Map<String, dynamic>>? _sub1;
 var nGrams = [];
@@ -32,7 +33,12 @@ Future<List> searchQuery(query, queryString) async {
   //if query returns error, stop processing, display error
   if (decodedResults['error'] != null) {
     print("Error in OpenSearch response: ${decodedResults['error']}");
+    showInfo(
+      navigatorKey.currentContext!,
+      'Error in OpenSearch response: ${decodedResults['error']}',
+    );
 
+    /*
     enHighlightedResults = [
       TextSpan(
         children:
@@ -43,7 +49,7 @@ Future<List> searchQuery(query, queryString) async {
               );
             }).toList(),
       ),
-    ];
+    ];*/
 
     return ["error"];
   }

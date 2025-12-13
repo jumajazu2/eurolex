@@ -11,6 +11,7 @@ import 'package:eurolex/display.dart';
 import 'package:eurolex/preparehtml.dart';
 import 'package:eurolex/analyser.dart';
 import 'package:eurolex/http.dart';
+import 'package:eurolex/ui_notices.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
@@ -39,7 +40,7 @@ var pointerPar;
 var contextEnSkCz;
 var queryText;
 var queryPattern;
-List enHighlightedResults = [];
+List<HighlightResult> enHighlightedResults = [];
 var activeIndex = '*';
 var containsFilter = "";
 var celexFilter = "";
@@ -315,8 +316,10 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     if (decodedResults['error'] != null) {
       print("Error in OpenSearch response: ${decodedResults['error']}");
 
+      showInfo(context, 'Error in OpenSearch response: ${decodedResults['error']}');
+
       setState(() {
-        enHighlightedResults = [
+        /*    enHighlightedResults = [
           TextSpan(
             children:
                 ([decodedResults['error'].toString()]).map((text) {
@@ -326,7 +329,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                   );
                 }).toList(),
           ),
-        ];
+        ];*/
       });
 
       return;
@@ -393,12 +396,9 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     print("Query Words: $queryWords");
 
     for (var hit in lang1Results) {
-      var enHighlight = highlightFoundWords2(hit, queryWords);
-
+      final res = highlightPhrasePreservingLayout(hit, queryWords);
+      enHighlightedResults.add(res);
       // You can store these highlights in a list or map if needed
-      print("EN Highlight: $enHighlight");
-      enHighlightedResults.add(enHighlight);
-      print("EN Highlight: $enHighlight, $enHighlightedResults");
     }
     print(
       "EN Highlight all: ${enHighlightedResults.length}, $enHighlightedResults",
@@ -738,9 +738,13 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                     child: DropdownButton<String>(
                       isExpanded: true,
                       value:
-                          indices.contains(activeIndex)
+                          indices.contains(
+                                activeIndex,
+                              ) //TODO active index is inited with "*", which indices does contain, so nothing is shown, save last index
                               ? activeIndex
-                              : null, // Default selected value
+                              : indices.isNotEmpty
+                              ? indices[0]
+                              : "*", // Default selected value
                       items:
                           indices.map((String value) {
                             return DropdownMenuItem<String>(
@@ -1132,6 +1136,11 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
           child: ListView.builder(
             itemCount: enHighlightedResults.length,
             itemBuilder: (context, index) {
+              final TextSpan span =
+                  (enHighlightedResults.length > index)
+                      ? enHighlightedResults[index].span
+                      : const TextSpan();
+
               return ((lang1Results.isNotEmpty &&
                               index < lang1Results.length &&
                               lang1Results[index].toLowerCase().contains(
@@ -1167,10 +1176,8 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                       horizontal: 8.0,
                                     ),
                                     child: SelectableText.rich(
-                                      style: TextStyle(fontSize: 18.0),
-                                      enHighlightedResults.length > index
-                                          ? enHighlightedResults[index]
-                                          : TextSpan(),
+                                      style: const TextStyle(fontSize: 18.0),
+                                      span,
                                     ),
                                   ),
                                 )

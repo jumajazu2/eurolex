@@ -68,15 +68,13 @@ class _DataUploadTabState extends State<DataUploadTab> {
       server,
       isAdmin,
       jsonSettings['access_key'] ?? DEFAULT_ACCESS_KEY,
-    ).then(
-      (_) {
-        if (mounted) {
-          setState(() {
-            // Refresh the UI after indices are loaded
-          });
-        }
-      },
-    );
+    ).then((_) {
+      if (mounted) {
+        setState(() {
+          // Refresh the UI after indices are loaded
+        });
+      }
+    });
   }
 
   String get _effectiveIndex {
@@ -124,7 +122,10 @@ class _DataUploadTabState extends State<DataUploadTab> {
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
                 isExpanded: true,
-                value: indices.contains(_selectedIndex) ? _selectedIndex : null,
+                value:
+                    indices.contains(_selectedIndex)
+                        ? _selectedIndex
+                        : indices.first,
                 items:
                     indices
                         .map(
