@@ -14,7 +14,7 @@ import 'package:eurolex/http.dart';
 import 'package:eurolex/opensearch.dart';
 
 //String osServer = 'localhost:9200'; // add to Settings or Autolookup
-String osServer = 'search.pts-translation.sk'; 
+String osServer = 'search.pts-translation.sk';
 
 List<String> indices = ['*'];
 List<List<String>> indicesFull = [];
@@ -101,7 +101,8 @@ class _MainTabbedAppState extends State<MainTabbedApp>
       ).then((_) {
         if (mounted) {
           setState(() {
-            print("Indices loaded: $indices for isAdmin: $isAdmin");
+            print("Indices loaded FULL: $indices for isAdmin: $isAdmin");
+            getListIndicesFull(server, isAdmin);
           });
         }
       });
