@@ -41,6 +41,9 @@ var contextEnSkCz;
 var queryText;
 var queryPattern;
 List<HighlightResult> enHighlightedResults = [];
+List<HighlightResult> lang1HighlightedResults = [];
+List<HighlightResult> lang2HighlightedResults = [];
+List<HighlightResult> lang3HighlightedResults = [];
 var activeIndex = '*';
 var containsFilter = "";
 var celexFilter = "";
@@ -49,6 +52,786 @@ Key _searchKey = UniqueKey();
 bool _isContentExpanded = false;
 bool _autoAnalyse = false;
 bool _matchedOnly = false;
+
+const Map<String, Set<String>> stopwordsEU = {
+  'bg': {
+    'и',
+    'в',
+    'във',
+    'на',
+    'по',
+    'с',
+    'за',
+    'от',
+    'до',
+    'защо',
+    'как',
+    'че',
+    'които',
+    'който',
+    'която',
+    'което',
+    'тази',
+    'тези',
+    'това',
+    'онзи',
+    'онези',
+    'не',
+    'да',
+    'ще',
+    'беше',
+    'са',
+    'съм',
+    'бях',
+    'биха',
+  },
+  'cs': {
+    'a',
+    'ale',
+    'anebo',
+    'aby',
+    'co',
+    'jak',
+    'že',
+    'který',
+    'která',
+    'které',
+    'ti',
+    'ty',
+    'tento',
+    'tato',
+    'tyto',
+    'je',
+    'jsou',
+    'byl',
+    'byla',
+    'byli',
+    'být',
+    'bez',
+    'do',
+    'k',
+    'ke',
+    'na',
+    'nad',
+    'o',
+    'od',
+    'po',
+    'pod',
+    'pro',
+    'při',
+    's',
+    'se',
+    'u',
+    'v',
+    've',
+    'z',
+    'ze',
+  },
+  'da': {
+    'og',
+    'eller',
+    'at',
+    'af',
+    'i',
+    'på',
+    'for',
+    'til',
+    'fra',
+    'med',
+    'om',
+    'under',
+    'over',
+    'mellem',
+    'den',
+    'det',
+    'de',
+    'en',
+    'et',
+    'som',
+    'der',
+    'hvad',
+    'hvem',
+    'ikke',
+    'er',
+    'var',
+    'bliver',
+    'blev',
+  },
+  'de': {
+    'und',
+    'oder',
+    'zu',
+    'aus',
+    'in',
+    'im',
+    'ins',
+    'am',
+    'an',
+    'auf',
+    'für',
+    'von',
+    'mit',
+    'nach',
+    'bei',
+    'über',
+    'unter',
+    'der',
+    'die',
+    'das',
+    'dem',
+    'den',
+    'des',
+    'ein',
+    'eine',
+    'eines',
+    'einem',
+    'einen',
+    'wie',
+    'wer',
+    'nicht',
+    'ist',
+    'sind',
+    'war',
+    'waren',
+    'wird',
+    'wurden',
+  },
+  'el': {
+    'και',
+    'ή',
+    'να',
+    'σε',
+    'από',
+    'με',
+    'για',
+    'ως',
+    'χωρίς',
+    'κατά',
+    'προς',
+    'υπό',
+    'άνω',
+    'κάτω',
+    'ο',
+    'η',
+    'το',
+    'οι',
+    'τι',
+    'ποιος',
+    'δεν',
+    'είναι',
+    'ήταν',
+    'είμαστε',
+  },
+  'en': {
+    'a',
+    'an',
+    'the',
+    'and',
+    'or',
+    'to',
+    'of',
+    'in',
+    'on',
+    'at',
+    'for',
+    'by',
+    'with',
+    'from',
+    'as',
+    'that',
+    'this',
+    'these',
+    'those',
+    'is',
+    'are',
+    'was',
+    'were',
+    'be',
+    'been',
+    'being',
+    'do',
+    'does',
+    'did',
+    'not',
+    'but',
+    'if',
+    'than',
+    'then',
+    'so',
+    'such',
+    'which',
+    'who',
+    'whom',
+  },
+  'es': {
+    'y',
+    'o',
+    'a',
+    'de',
+    'del',
+    'la',
+    'el',
+    'los',
+    'las',
+    'en',
+    'por',
+    'para',
+    'con',
+    'sin',
+    'sobre',
+    'entre',
+    'hasta',
+    'desde',
+    'que',
+    'como',
+    'quién',
+    'cuál',
+    'no',
+    'sí',
+    'es',
+    'son',
+    'era',
+    'eran',
+    'ser',
+    'estar',
+    'fue',
+    'fueron',
+  },
+  'et': {
+    'ja',
+    'või',
+    'et',
+    'koos',
+    'ilma',
+    'kuni',
+    'alates',
+    'sees',
+    'peal',
+    'juures',
+    'pool',
+    'alla',
+    'üle',
+    'vahel',
+    'see',
+    'seal',
+    'tema',
+    'kes',
+    'mis',
+    'ei',
+    'on',
+    'oli',
+    'olema',
+  },
+  'fi': {
+    'ja',
+    'tai',
+    'että',
+    'kun',
+    'jos',
+    'mutta',
+    'sekä',
+    'ilman',
+    'kanssa',
+    'asti',
+    'lähtien',
+    'sisällä',
+    'päällä',
+    'se',
+    'joka',
+    'mitä',
+    'kuka',
+    'ei',
+    'on',
+    'oli',
+    'ovat',
+    'olla',
+  },
+  'fr': {
+    'et',
+    'ou',
+    'à',
+    'de',
+    'des',
+    'du',
+    'la',
+    'le',
+    'les',
+    'en',
+    'par',
+    'pour',
+    'avec',
+    'sans',
+    'sur',
+    'entre',
+    'jusqu’',
+    'depuis',
+    'que',
+    'qui',
+    'comme',
+    'ne',
+    'pas',
+    'est',
+    'sont',
+    'était',
+    'étaient',
+    'être',
+    'ayant',
+  },
+  'hr': {
+    'i',
+    'ili',
+    'da',
+    'do',
+    'od',
+    'za',
+    'u',
+    'na',
+    'po',
+    'pod',
+    'prema',
+    's',
+    'sa',
+    'među',
+    'između',
+    'koji',
+    'koja',
+    'koje',
+    'što',
+    'tko',
+    'nije',
+    'je',
+    'su',
+    'bio',
+    'bila',
+    'bili',
+    'biti',
+  },
+  'hu': {
+    'és',
+    'vagy',
+    'hogy',
+    'mint',
+    'aki',
+    'ami',
+    'amely',
+    'nem',
+    'van',
+    'volt',
+    'vannak',
+    'lenni',
+    'a',
+    'az',
+    'egy',
+    'egyik',
+    'ba',
+    'be',
+    'ban',
+    'ben',
+    'ra',
+    're',
+    'nak',
+    'nek',
+    'hoz',
+    'hez',
+    'höz',
+    'tól',
+    'től',
+    'ról',
+    'ről',
+    'között',
+    'alatt',
+    'felett',
+  },
+  'it': {
+    'e',
+    'o',
+    'a',
+    'di',
+    'del',
+    'della',
+    'dei',
+    'degli',
+    'delle',
+    'in',
+    'su',
+    'per',
+    'con',
+    'senza',
+    'tra',
+    'fra',
+    'da',
+    'al',
+    'alla',
+    'che',
+    'come',
+    'chi',
+    'non',
+    'è',
+    'sono',
+    'era',
+    'erano',
+    'essere',
+    'stato',
+  },
+  'lt': {
+    'ir',
+    'ar',
+    'kad',
+    'kaip',
+    'kuris',
+    'kuri',
+    'kurie',
+    'ne',
+    'yra',
+    'buvo',
+    'būti',
+    'į',
+    'iš',
+    'su',
+    'be',
+    'nuo',
+    'iki',
+    'prie',
+    'ant',
+    'po',
+    'per',
+    'tarp',
+  },
+  'lv': {
+    'un',
+    'vai',
+    'ka',
+    'kā',
+    'kurš',
+    'kura',
+    'kuri',
+    'ne',
+    'ir',
+    'bija',
+    'būt',
+    'uz',
+    'no',
+    'ar',
+    'bez',
+    'līdz',
+    'kopš',
+    'pie',
+    'virs',
+    'zem',
+    'pa',
+    'starp',
+  },
+  'mt': {
+    'u',
+    'jew',
+    'li',
+    'min',
+    'ta',
+    'għal',
+    'ma',
+    'biex',
+    'fuq',
+    'fuqha',
+    'f’',
+    'bejn',
+    'bla',
+    'sa',
+    'mill',
+    'sal',
+    'mal',
+    'ma’',
+    'dak',
+    'dik',
+    'dawk',
+    'liema',
+    'mhux',
+    'hu',
+    'huma',
+    'kien',
+    'kienu',
+    'ikun',
+  },
+  'nl': {
+    'en',
+    'of',
+    'te',
+    'van',
+    'de',
+    'het',
+    'een',
+    'in',
+    'op',
+    'aan',
+    'voor',
+    'door',
+    'met',
+    'zonder',
+    'over',
+    'tussen',
+    'tot',
+    'vanaf',
+    'naar',
+    'bij',
+    'onder',
+    'boven',
+    'dat',
+    'die',
+    'wie',
+    'wat',
+    'niet',
+    'is',
+    'zijn',
+    'was',
+    'waren',
+    'wordt',
+    'werden',
+  },
+  'pl': {
+    'i',
+    'lub',
+    'że',
+    'jak',
+    'który',
+    'która',
+    'które',
+    'to',
+    'ten',
+    'ta',
+    'ci',
+    'nie',
+    'jest',
+    'są',
+    'był',
+    'była',
+    'byli',
+    'być',
+    'w',
+    'we',
+    'na',
+    'nad',
+    'pod',
+    'za',
+    'do',
+    'od',
+    'po',
+    'przez',
+    'bez',
+    'z',
+    'ze',
+    'między',
+  },
+  'pt': {
+    'e',
+    'ou',
+    'a',
+    'o',
+    'os',
+    'as',
+    'de',
+    'do',
+    'da',
+    'dos',
+    'das',
+    'em',
+    'por',
+    'para',
+    'com',
+    'sem',
+    'sobre',
+    'entre',
+    'até',
+    'desde',
+    'que',
+    'como',
+    'quem',
+    'não',
+    'sim',
+    'é',
+    'são',
+    'era',
+    'eram',
+    'ser',
+    'estar',
+    'foi',
+    'foram',
+  },
+  'ro': {
+    'și',
+    'sau',
+    'la',
+    'de',
+    'din',
+    'în',
+    'pe',
+    'pentru',
+    'cu',
+    'fără',
+    'despre',
+    'între',
+    'până',
+    'de la',
+    'către',
+    'care',
+    'ce',
+    'cine',
+    'nu',
+    'este',
+    'sunt',
+    'era',
+    'erau',
+    'a fi',
+  },
+  'sk': {
+    'a',
+    'aj',
+    'alebo',
+    'aby',
+    'ako',
+    'že',
+    'ktorý',
+    'ktorá',
+    'ktoré',
+    'tento',
+    'táto',
+    'tieto',
+    'nie',
+    'je',
+    'sú',
+    'bol',
+    'bola',
+    'boli',
+    'byť',
+    'bez',
+    'do',
+    'k',
+    'ku',
+    'na',
+    'nad',
+    'o',
+    'od',
+    'po',
+    'pod',
+    'pre',
+    'pri',
+    's',
+    'so',
+    'u',
+    'v',
+    'vo',
+    'z',
+    'zo',
+  },
+  'sl': {
+    'in',
+    'ali',
+    'da',
+    'kot',
+    'kateri',
+    'katera',
+    'katere',
+    'ne',
+    'je',
+    'so',
+    'bil',
+    'bila',
+    'bili',
+    'biti',
+    'brez',
+    'do',
+    'k',
+    'h',
+    'na',
+    'nad',
+    'o',
+    'od',
+    'po',
+    'pod',
+    'za',
+    'pri',
+    's',
+    'z',
+    'u',
+    'v',
+    'med',
+  },
+  'sv': {
+    'och',
+    'eller',
+    'att',
+    'som',
+    'inte',
+    'är',
+    'var',
+    'bli',
+    'blir',
+    'vara',
+    'i',
+    'på',
+    'av',
+    'för',
+    'med',
+    'utan',
+    'om',
+    'mellan',
+    'till',
+    'från',
+    'över',
+    'under',
+    'hos',
+    'den',
+    'det',
+    'de',
+    'en',
+    'ett',
+    'vilken',
+    'vem',
+    'vad',
+  },
+  'ga': {
+    'agus',
+    'nó',
+    'go',
+    'le',
+    'gan',
+    'i',
+    'ar',
+    'de',
+    'do',
+    'faoi',
+    'idir',
+    'ó',
+    'chuig',
+    'trí',
+    'an',
+    'na',
+    'seo',
+    'sin',
+    'ní',
+    'is',
+    'bhí',
+    'atá',
+    'a bheith',
+    'a bhí',
+    'cé',
+    'cad',
+  },
+};
+
+Set<String> stopwordsForLangs({String? lang1, String? lang2, String? lang3}) {
+  final acc = <String>{};
+  void add(String? code) {
+    final c = code?.toLowerCase();
+    if (c != null) {
+      final sw = stopwordsEU[c];
+      if (sw != null) acc.addAll(sw);
+    }
+  }
+
+  add(lang1);
+  add(lang2);
+  add(lang3);
+  return acc;
+}
 
 class SearchTabWidget extends StatefulWidget {
   final String queryText;
@@ -191,6 +974,9 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     _results.clear();
 
     enHighlightedResults.clear();
+    lang1HighlightedResults.clear();
+    lang2HighlightedResults.clear();
+    lang3HighlightedResults.clear();
     //   List subsegments = subsegmentFile(_fileContent);
 
     String _httpSource = payload['source'] ?? '';
@@ -242,6 +1028,9 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
       _results.clear();
 
       enHighlightedResults.clear();
+      lang1HighlightedResults.clear();
+      lang2HighlightedResults.clear();
+      lang3HighlightedResults.clear();
       //   List subsegments = subsegmentFile(_fileContent);
     });
 
@@ -305,6 +1094,14 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
   Future processQuery(query, searchTerm, index) async {
     queryPattern = query;
 
+    lang1Results.clear;
+    lang2Results.clear;
+    lang3Results.clear;
+    lang1HighlightedResults.clear();
+    lang2HighlightedResults.clear();
+    lang3HighlightedResults.clear();
+    enHighlightedResults.clear();
+
     final resultsOS = await sendToOpenSearch(
       'https://$osServer/$index/_search',
       [jsonEncode(query)],
@@ -316,7 +1113,10 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     if (decodedResults['error'] != null) {
       print("Error in OpenSearch response: ${decodedResults['error']}");
 
-      showInfo(context, 'Error in OpenSearch response: ${decodedResults['error']}');
+      showInfo(
+        context,
+        'Error in OpenSearch response: ${decodedResults['error']}',
+      );
 
       setState(() {
         /*    enHighlightedResults = [
@@ -342,22 +1142,28 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
           hits
               .map(
                 (hit) =>
-                    hit['_source']['${lang2?.toLowerCase()}_text'].toString(),
+                    (hit['_source']?['${lang2?.toLowerCase()}_text'] as String?)
+                        ?.trim(),
               )
+              .map((s) => (s == null || s.isEmpty) ? 'N/A' : s)
               .toList();
       lang1Results =
           hits
               .map(
                 (hit) =>
-                    hit['_source']['${lang1?.toLowerCase()}_text'].toString(),
+                    (hit['_source']?['${lang1?.toLowerCase()}_text'] as String?)
+                        ?.trim(),
               )
+              .map((s) => (s == null || s.isEmpty) ? 'N/A' : s)
               .toList();
       lang3Results =
           hits
               .map(
                 (hit) =>
-                    hit['_source']['${lang3?.toLowerCase()}_text'].toString(),
+                    (hit['_source']?['${lang3?.toLowerCase()}_text'] as String?)
+                        ?.trim(),
               )
+              .map((s) => (s == null || s.isEmpty) ? 'N/A' : s)
               .toList();
 
       metaCelex =
@@ -386,18 +1192,36 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
 
     queryText = searchTerm; //_searchController.text;
     //converting the results to TextSpans for highlighting
-    var queryWords =
+    final queryWords =
         queryText
-            .replaceAll(RegExp(r'[^\w\s]'), '') // remove punctuation
-            .split(RegExp(r'\s+')) // split by whitespace
-            .where((String word) => word.isNotEmpty) // remove empty entries
+            .replaceAll(RegExp(r"[^\p{L}\p{M}\p{N}\s'’\-‑]", unicode: true), '')
+            .split(RegExp(r"\s+", unicode: true))
+            .where((String w) => w.isNotEmpty)
             .toList();
+    queryWords.add(
+      queryText,
+    ); //the whole phrase added to facilitate highlighting
 
     print("Query Words: $queryWords");
 
     for (var hit in lang1Results) {
       final res = highlightPhrasePreservingLayout(hit, queryWords);
       enHighlightedResults.add(res);
+      lang1HighlightedResults.add(res);
+      // You can store these highlights in a list or map if needed
+    }
+
+    for (var hit in lang2Results) {
+      final res = highlightPhrasePreservingLayout(hit, queryWords);
+
+      lang2HighlightedResults.add(res);
+      // You can store these highlights in a list or map if needed
+    }
+
+    for (var hit in lang3Results) {
+      final res = highlightPhrasePreservingLayout(hit, queryWords);
+
+      lang3HighlightedResults.add(res);
       // You can store these highlights in a list or map if needed
     }
     print(
@@ -725,7 +1549,8 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                 flex: 2, // 1/10 of the row
                 child: InputDecorator(
                   decoration: InputDecoration(
-                    labelText: 'Search Index', // Label embedded in the frame
+                    labelText:
+                        'Search Index ($activeIndex)', // Label embedded in the frame
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -1141,6 +1966,21 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                       ? enHighlightedResults[index].span
                       : const TextSpan();
 
+              final TextSpan spanLang1 =
+                  (lang1HighlightedResults.length > index)
+                      ? lang1HighlightedResults[index].span
+                      : const TextSpan();
+
+              final TextSpan spanLang2 =
+                  (lang2HighlightedResults.length > index)
+                      ? lang2HighlightedResults[index].span
+                      : const TextSpan();
+
+              final TextSpan spanLang3 =
+                  (lang3HighlightedResults.length > index)
+                      ? lang3HighlightedResults[index].span
+                      : const TextSpan();
+
               return ((lang1Results.isNotEmpty &&
                               index < lang1Results.length &&
                               lang1Results[index].toLowerCase().contains(
@@ -1177,7 +2017,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                     ),
                                     child: SelectableText.rich(
                                       style: const TextStyle(fontSize: 18.0),
-                                      span,
+                                      spanLang1,
                                     ),
                                   ),
                                 )
@@ -1193,11 +2033,9 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 8.0,
                                     ),
-                                    child: SelectableText(
+                                    child: SelectableText.rich(
                                       style: TextStyle(fontSize: 18.0),
-                                      lang2Results.length > index
-                                          ? lang2Results[index + offsetlang2]
-                                          : '',
+                                      spanLang2,
                                     ),
                                   ),
                                 )
@@ -1209,11 +2047,9 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 8.0,
                                     ),
-                                    child: SelectableText(
+                                    child: SelectableText.rich(
                                       style: TextStyle(fontSize: 18.0),
-                                      lang3Results.length > index
-                                          ? lang3Results[index + offsetlang3]
-                                          : '',
+                                      spanLang3,
                                     ),
                                   ),
                                 )

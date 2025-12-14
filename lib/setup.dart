@@ -328,40 +328,176 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                     trailing:
                         indicesFull[index][0].contains("sparql")
                             ? null
-                            : (isAdmin)
-                            ? IconButton(
-                              icon: const Icon(Icons.delete, size: 18),
-                              onPressed: () {
-                                setState(() {
-                                  confirmAndDeleteOpenSearchIndex(
-                                    context,
-                                    indicesFull[index][0],
-                                  ).then((_) {
-                                    setState(() {
-                                      getListIndicesFull(server, isAdmin).then((
-                                        _,
-                                      ) {
-                                        setState(() {
-                                          print(
-                                            "Indices reloaded details: $indicesFull",
-                                          );
+                            : Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Info icon (available to both admin and owner)
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.info_outline,
+                                    size: 18,
+                                  ),
+                                  tooltip: 'Index details',
+                                  onPressed: () {
+                                    final name = indicesFull[index][0];
+                                    final shardCount = indicesFull[index][1];
+                                    final unitCount = indicesFull[index][2];
+
+                                    showDialog(
+                                      context: context,
+                                      builder: (_) {
+                                        return AlertDialog(
+                                          title: Text(
+                                            'Your Custom Index: $name',
+                                          ),
+                                          content: FutureBuilder<List<String>>(
+                                            future: getDistinctCelexForIndex(
+                                              name,
+                                            ),
+                                            builder: (ctx, snap) {
+                                              final loading =
+                                                  snap.connectionState ==
+                                                  ConnectionState.waiting;
+                                              final error = snap.hasError;
+                                              final celexes =
+                                                  snap.data ?? const <String>[];
+
+                                              return SizedBox(
+                                                width: 480,
+                                                child: Column(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      'Size: ${shardCount.toString().toUpperCase()}',
+                                                    ),
+                                                    Text('Units: $unitCount'),
+
+                                                    const Divider(),
+                                                    Text(
+                                                      'Documents (${celexes.length}):',
+                                                      style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                    if (loading)
+                                                      const Padding(
+                                                        padding:
+                                                            EdgeInsets.only(
+                                                              top: 8,
+                                                            ),
+                                                        child:
+                                                            LinearProgressIndicator(),
+                                                      ),
+                                                    if (error)
+                                                      const Padding(
+                                                        padding:
+                                                            EdgeInsets.only(
+                                                              top: 8,
+                                                            ),
+                                                        child: Text(
+                                                          'Failed to load CELEX list',
+                                                        ),
+                                                      ),
+                                                    if (!loading && !error)
+                                                      Flexible(
+                                                        child:
+                                                            celexes.isEmpty
+                                                                ? const Padding(
+                                                                  padding:
+                                                                      EdgeInsets.only(
+                                                                        top: 8,
+                                                                      ),
+                                                                  child: Text(
+                                                                    'No CELEX values found.',
+                                                                  ),
+                                                                )
+                                                                : ListView.builder(
+                                                                  shrinkWrap:
+                                                                      true,
+                                                                  itemCount:
+                                                                      celexes
+                                                                          .length,
+                                                                  itemBuilder: (
+                                                                    _,
+                                                                    i,
+                                                                  ) {
+                                                                    final c =
+                                                                        celexes[i];
+                                                                    final d =
+                                                                        ((i + 1).toString() +
+                                                                            ". " +
+                                                                            c);
+                                                                    i + 1;
+                                                                    return ListTile(
+                                                                      dense:
+                                                                          true,
+                                                                      title:
+                                                                          SelectableText(
+                                                                            d,
+                                                                          ),
+                                                                    );
+                                                                  },
+                                                                ),
+                                                      ),
+                                                  ],
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed:
+                                                  () =>
+                                                      Navigator.of(
+                                                        context,
+                                                      ).pop(),
+                                              child: const Text('Close'),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    );
+                                  },
+                                ),
+
+                                // Delete icon (admin or owner only)
+                                if (isAdmin ||
+                                    indicesFull[index][0].contains(userPasskey))
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.delete,
+                                      size: 18,
+                                      color: Colors.redAccent,
+                                    ),
+                                    tooltip: 'Delete index',
+                                    onPressed: () {
+                                      setState(() {
+                                        confirmAndDeleteOpenSearchIndex(
+                                          context,
+                                          indicesFull[index][0],
+                                        ).then((_) {
+                                          setState(() {
+                                            getListIndicesFull(
+                                              server,
+                                              isAdmin,
+                                            ).then((_) {
+                                              setState(() {
+                                                print(
+                                                  "Indices reloaded details: $indicesFull",
+                                                );
+                                              });
+                                            });
+                                          });
                                         });
                                       });
-                                    });
-                                  });
-                                });
-                                setState(() {
-                                  getListIndicesFull(server, isAdmin).then((_) {
-                                    setState(() {
-                                      print(
-                                        "isAdmin: $isAdmin , Indices reloaded details: $indicesFull",
-                                      );
-                                    });
-                                  });
-                                });
-                              },
-                            )
-                            : null,
+                                    },
+                                  ),
+                              ],
+                            ),
                   ),
                 );
               },
@@ -378,5 +514,47 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
         ),
       ),
     );
+  }
+}
+
+//TODO fetch Titles for these celexes
+Future<List<String>> getDistinctCelexForIndex(String index) async {
+  final uri = Uri.parse('https://$osServer/$index/_search');
+
+  final body = jsonEncode({
+    "size": 0,
+    "aggs": {
+      "celexes": {
+        "terms": {
+          "field":
+              "celex.keyword", // fallback to "celex" if no keyword sub-field
+          "size": 10000, // raise if your index holds more unique docs
+        },
+      },
+    },
+  });
+
+  try {
+    final resp = await http
+        .post(
+          uri,
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": userPasskey,
+          },
+          body: body,
+        )
+        .timeout(const Duration(seconds: 15));
+    if (resp.statusCode != 200) return [];
+
+    final decoded = jsonDecode(resp.body) as Map<String, dynamic>;
+    final buckets =
+        (decoded["aggregations"]?["celexes"]?["buckets"] as List?) ?? [];
+    return buckets
+        .map((b) => (b["key"] ?? "").toString())
+        .where((s) => s.isNotEmpty)
+        .toList();
+  } catch (_) {
+    return [];
   }
 }

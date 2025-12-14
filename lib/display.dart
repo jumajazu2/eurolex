@@ -178,6 +178,8 @@ const Set<String> _standaloneStopWords = {
   'for',
 };
 
+//const Set<String> _standaloneStopWords = {" "};
+
 /*
 //TODO
 Replace calls to highlightFoundWords2(...) with:
@@ -220,20 +222,22 @@ HighlightResult highlightPhrasePreservingLayout(
 
   // Exclude single-word stopwords when they are alone;
   // they will still be covered inside multi-word phrases.
-  final singleWordFiltered =
-      singleWord.where((w) => !_standaloneStopWords.contains(w)).toList();
+
+  final sw = stopwordsForLangs(lang1: lang1, lang2: lang2, lang3: lang3);
+  print("Stopwords for highlighting: $sw");
+  final singleWordFiltered = singleWord.where((w) => !sw.contains(w)).toList();
 
   // Collect matches as named records
   final matches = <({int start, int end})>[];
 
   // 1) Multi-word phrases: simple case-insensitive indexOf for all occurrences
   for (final p in multiWord) {
-    var from = 0;
-    while (true) {
-      final pos = lower.indexOf(p, from);
-      if (pos < 0) break;
-      matches.add((start: pos, end: pos + p.length));
-      from = pos + p.length;
+    // Build a whitespace-flexible, case-insensitive regex for the phrase
+    final pattern = p.split(RegExp(r'\s+')).map(RegExp.escape).join(r'\s+');
+    final re = RegExp(pattern, caseSensitive: false);
+
+    for (final m in re.allMatches(segment)) {
+      matches.add((start: m.start, end: m.end));
     }
   }
 
