@@ -895,7 +895,11 @@ Future<List<List<String>>> getListIndicesFull(server, isAdmin) async {
   try {
     final response = await http.get(
       Uri.parse('$server/_cat/indices?h=index,store.size,docs.count'),
-      headers: {'Authorization': basicAuth, 'x-api-key': userPasskey},
+      headers: {
+        'Authorization': basicAuth,
+        'x-api-key': jsonSettings['access_key'],
+        'x-email': jsonSettings['user_email'],
+      },
     );
     if (response.statusCode == 200) {
       String responseBody = response.body;
