@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:eurolex/file_handling.dart';
 import 'package:eurolex/main.dart';
 import 'package:eurolex/opensearch.dart';
+import 'package:eurolex/sparql.dart';
 import 'package:flutter/material.dart';
 import 'package:eurolex/processDOM.dart';
 import 'package:eurolex/display.dart';
@@ -60,6 +61,11 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
         lang3 = v3;
         _emailCtrl.text = userEmail;
       });
+    });
+
+    isAdminNotifier.addListener(() async {
+      await getListIndicesFull(server, isAdminNotifier.value);
+      if (mounted) setState(() {});
     });
   }
 
@@ -128,8 +134,9 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
             .map((l) => DropdownMenuItem<String>(value: l, child: Text(l)))
             .toList();
 
-    final isAdmin =
-        _emailCtrl.text.trim().toLowerCase() == 'juraj.kuban.sk@gmail.com';
+    //final isAdmin =  _emailCtrl.text.trim().toLowerCase() == 'juraj.kuban.sk@gmail.com';
+
+    final isAdmin = isAdminNotifier.value;
 
     return Scaffold(
       // appBar: AppBar(title: const Text('Setup')),
@@ -208,7 +215,7 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                           // 1) Lang 1
                           Expanded(
                             child: DropdownButtonFormField<String>(
-                              value: lang1,
+                              initialValue: lang1,
                               items: items,
                               isExpanded: true, // fill available width
                               decoration: const InputDecoration(
@@ -227,7 +234,7 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                           // 2) Lang 2
                           Expanded(
                             child: DropdownButtonFormField<String>(
-                              value: lang2,
+                              initialValue: lang2,
                               items: items,
                               isExpanded: true,
                               decoration: const InputDecoration(
@@ -246,7 +253,7 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                           // 3) Lang 3
                           Expanded(
                             child: DropdownButtonFormField<String>(
-                              value: lang3,
+                              initialValue: lang3,
                               items: items,
                               isExpanded: true,
                               decoration: const InputDecoration(
@@ -265,11 +272,11 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                           const SizedBox(width: 12),
                           ElevatedButton(
                             onPressed: () async {
-                              indices.clear();
-                              indicesFull.clear();
                               await _confirmSettings();
-                              await getListIndicesFull(server, isAdmin);
-                              if (mounted) setState(() {});
+                              await getListIndicesFull(server, isAdminNotifier.value);
+                              if (mounted) {
+                                setState(() {});
+                              }
                             },
                             child: const Text('Confirm'),
                           ),
@@ -363,7 +370,7 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                                                   snap.data ?? const <String>[];
 
                                               return SizedBox(
-                                                width: 480,
+                                                width: 1200,
                                                 child: Column(
                                                   mainAxisSize:
                                                       MainAxisSize.min,
@@ -434,7 +441,7 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                                                                     i + 1;
                                                                     return ListTile(
                                                                       dense:
-                                                                          true,
+                                                                          false,
                                                                       title:
                                                                           SelectableText(
                                                                             d,
@@ -517,7 +524,6 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
   }
 }
 
-//TODO fetch Titles for these celexes
 Future<List<String>> getDistinctCelexForIndex(String index) async {
   final uri = Uri.parse('https://$osServer/$index/_search');
 
@@ -541,6 +547,7 @@ Future<List<String>> getDistinctCelexForIndex(String index) async {
           headers: {
             "Content-Type": "application/json",
             "x-api-key": userPasskey,
+            'x-email': '${jsonSettings['user_email']}',
           },
           body: body,
         )
@@ -550,10 +557,26 @@ Future<List<String>> getDistinctCelexForIndex(String index) async {
     final decoded = jsonDecode(resp.body) as Map<String, dynamic>;
     final buckets =
         (decoded["aggregations"]?["celexes"]?["buckets"] as List?) ?? [];
-    return buckets
-        .map((b) => (b["key"] ?? "").toString())
-        .where((s) => s.isNotEmpty)
-        .toList();
+    final preferredLang = (lang1 ?? 'EN').toUpperCase();
+    final items = <String>[];
+
+    for (final b in buckets) {
+      final key = b['key']?.toString();
+      final count = b['doc_count'];
+      if (key == null || count == null) continue;
+
+      final titleMap = await fetchTitlesForCelex(key); // await the Future
+      final title1 =
+          titleMap[preferredLang] ??
+          titleMap['EN'] ??
+          (titleMap.isNotEmpty ? titleMap.values.first : '');
+
+      final title2 = titleMap[lang2?.toUpperCase()] ?? '';
+
+      items.add('$key ($count):\n$title1\n$title2');
+    }
+
+    return items;
   } catch (_) {
     return [];
   }
