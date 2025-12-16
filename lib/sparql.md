@@ -123,7 +123,7 @@ ORDER BY ?celex
 
 ***************************
 
-BUG -WORKING 17-11-2025
+ -WORKING 17-11-2025
 returns filtered by ENG, but missing some (52025DC0030)
 
 prefix cdm: <http://publications.europa.eu/ontology/cdm#>

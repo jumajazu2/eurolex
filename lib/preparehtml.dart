@@ -1,25 +1,25 @@
 //import 'dart:nativewrappers/_internal/vm/lib/internal_patch.dart';
 import 'dart:ui';
 
-import 'package:eurolex/browseFiles.dart';
-import 'package:eurolex/file_handling.dart';
-import 'package:eurolex/processDOM.dart';
-import 'package:eurolex/search.dart';
-import 'package:eurolex/setup.dart';
+import 'package:LegisTracerEU/browseFiles.dart';
+import 'package:LegisTracerEU/file_handling.dart';
+import 'package:LegisTracerEU/processDOM.dart';
+import 'package:LegisTracerEU/search.dart';
+import 'package:LegisTracerEU/setup.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:eurolex/bulkupload.dart';
+import 'package:LegisTracerEU/bulkupload.dart';
 import 'dart:convert';
 
 import 'package:html/parser.dart' as html_parser;
 
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
-import 'package:eurolex/logger.dart';
-import 'package:eurolex/testHtmlDumps.dart';
+import 'package:LegisTracerEU/logger.dart';
+import 'package:LegisTracerEU/testHtmlDumps.dart';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
-import 'package:eurolex/main.dart';
+import 'package:LegisTracerEU/main.dart';
 import 'package:path/path.dart' as path;
 
 String fileContentSK = '';

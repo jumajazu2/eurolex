@@ -1,17 +1,17 @@
-import 'package:eurolex/dataupload.dart';
-import 'package:eurolex/file_handling.dart';
-import 'package:eurolex/setup.dart';
-import 'package:eurolex/ui_notices.dart';
+import 'package:LegisTracerEU/dataupload.dart';
+import 'package:LegisTracerEU/file_handling.dart';
+import 'package:LegisTracerEU/setup.dart';
+import 'package:LegisTracerEU/ui_notices.dart';
 import 'package:flutter/material.dart';
-import 'package:eurolex/preparehtml.dart';
-import 'package:eurolex/browseFiles.dart';
+import 'package:LegisTracerEU/preparehtml.dart';
+import 'package:LegisTracerEU/browseFiles.dart';
 import 'package:html/parser.dart' as html_parser;
-import 'package:eurolex/browseFiles.dart';
-import 'package:eurolex/search.dart';
-import 'package:eurolex/analyser.dart';
+import 'package:LegisTracerEU/browseFiles.dart';
+import 'package:LegisTracerEU/search.dart';
+import 'package:LegisTracerEU/analyser.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:eurolex/http.dart';
-import 'package:eurolex/opensearch.dart';
+import 'package:LegisTracerEU/http.dart';
+import 'package:LegisTracerEU/opensearch.dart';
 
 //String osServer = 'localhost:9200'; // add to Settings or Autolookup
 String osServer = 'search.pts-translation.sk';

@@ -2,24 +2,24 @@ import 'dart:convert';
 import 'dart:math';
 //import 'dart:nativewrappers/_internal/vm/lib/internal_patch.dart';
 
-import 'package:eurolex/main.dart';
-import 'package:eurolex/setup.dart';
-import 'package:eurolex/sparql.dart';
+import 'package:LegisTracerEU/main.dart';
+import 'package:LegisTracerEU/setup.dart';
+import 'package:LegisTracerEU/sparql.dart';
 import 'package:flutter/material.dart';
-import 'package:eurolex/processDOM.dart';
-import 'package:eurolex/display.dart';
-import 'package:eurolex/preparehtml.dart';
-import 'package:eurolex/analyser.dart';
-import 'package:eurolex/http.dart';
-import 'package:eurolex/ui_notices.dart';
+import 'package:LegisTracerEU/processDOM.dart';
+import 'package:LegisTracerEU/display.dart';
+import 'package:LegisTracerEU/preparehtml.dart';
+import 'package:LegisTracerEU/analyser.dart';
+import 'package:LegisTracerEU/http.dart';
+import 'package:LegisTracerEU/ui_notices.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
 
 import 'dart:isolate';
 import 'dart:io';
-import 'package:eurolex/file_handling.dart';
-import 'package:eurolex/testHtmlDumps.dart';
+import 'package:LegisTracerEU/file_handling.dart';
+import 'package:LegisTracerEU/testHtmlDumps.dart';
 import 'package:xml/xml.dart' as xml;
 
 import 'package:path_provider/path_provider.dart';
@@ -1235,7 +1235,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
   }
 
   void _startSearch() async {
-    // TODO: Implement your search logic here
+   
     setState(() {
       _results.clear();
 
@@ -1259,7 +1259,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
   }
 
   void _startSearch2() async {
-    // TODO: Implement your search logic here
+    // : Implement your search logic here
     setState(() {
       _results.clear();
       enHighlightedResults.clear();
@@ -1312,7 +1312,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
   }
 
   void _startSearch3() async {
-    // TODO: Implement your search logic here
+    // : Implement your search logic here
     setState(() {
       _results.clear();
 

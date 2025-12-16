@@ -1,10 +1,10 @@
-import 'package:eurolex/search.dart';
+import 'package:LegisTracerEU/search.dart';
 import 'package:flutter/material.dart';
 
-import 'package:eurolex/main.dart';
+import 'package:LegisTracerEU/main.dart';
 
-import 'package:eurolex/setup.dart';
-import 'package:eurolex/processDOM.dart';
+import 'package:LegisTracerEU/setup.dart';
+import 'package:LegisTracerEU/processDOM.dart';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
 import 'dart:convert';
@@ -181,7 +181,7 @@ const Set<String> _standaloneStopWords = {
 //const Set<String> _standaloneStopWords = {" "};
 
 /*
-//TODO
+//
 Replace calls to highlightFoundWords2(...) with:
 final res = highlightPhrasePreservingLayout(returnedResult, foundWords);
 Use res.span to render; use res.start and res.length for eye-guides across lang2/lang3.

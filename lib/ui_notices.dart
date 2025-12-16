@@ -2,7 +2,7 @@
 
 Usage:
 
-Import in your widgets: import 'package:eurolex/ui_notices.dart';
+Import in your widgets: import 'package:LegisTracerEU/ui_notices.dart';
 Show success: showSuccess(context, 'Saved changes');
 Show error: showError(context, 'Upload failed');
 Show info: showInfo(context, 'Loading…');

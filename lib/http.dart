@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+// UI notifications should be provided via callbacks; avoid direct UI imports here.
 
 // 1. Define the handler type (Function signature)
 typedef RequestHandler =
@@ -12,6 +13,8 @@ class LocalIngestServer {
 
   // 2. Add the callback property here
   RequestHandler? onRequest;
+  // Optional UI notifier (e.g., to show SnackBars)
+  void Function(String message)? onNotify;
 
   // Broadcast so multiple listeners can subscribe.
   final StreamController<Map<String, dynamic>> _controller =
@@ -23,7 +26,27 @@ class LocalIngestServer {
 
   Future<void> start() async {
     if (_server != null) return;
-    _server = await HttpServer.bind(InternetAddress.loopbackIPv4, port);
+    try {
+      _server = await HttpServer.bind(InternetAddress.loopbackIPv4, port);
+    } on SocketException catch (e) {
+      final code = e.osError?.errorCode;
+      final msg = 'Local ingest server not started: port $port is in use';
+      //TODO Show this error message in the UI snackbar, now not working, context missing
+
+      // Notify UI if provided, otherwise log only
+      onNotify?.call(msg);
+
+      print('$msg${code != null ? ' (OS error $code)' : ''}');
+
+      _server = null;
+      return; // Gracefully continue app without the local server
+    } catch (e) {
+      final msg = 'Local ingest server failed to start: $e';
+      onNotify?.call(msg);
+      print(msg);
+      _server = null;
+      return;
+    }
     _listen();
     print('Local ingest server listening on http://127.0.0.1:$port');
   }

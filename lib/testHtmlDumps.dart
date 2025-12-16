@@ -6,11 +6,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' as html_parser;
-import 'package:eurolex/processDOM.dart';
-import 'package:eurolex/preparehtml.dart';
-import 'package:eurolex/file_handling.dart';
-import 'package:eurolex/logger.dart';
-import 'package:eurolex/sparql.dart';
+import 'package:LegisTracerEU/processDOM.dart';
+import 'package:LegisTracerEU/preparehtml.dart';
+import 'package:LegisTracerEU/file_handling.dart';
+import 'package:LegisTracerEU/logger.dart';
+import 'package:LegisTracerEU/sparql.dart';
 import 'package:http/http.dart' as http;
 // ...existing code...
 
@@ -245,7 +245,7 @@ Future<Map<String, List<List<String>>>> createUploadArrayFromCelexSingle(
       //print("Harvest Fetched Lang: $lang, Pairs: $pairs");
       out[lang] = pairs;
       print("Harvest Lang: $lang, Pairs: ${pairs.length}");
-      await Future.delayed(const Duration(milliseconds: 400));
+      //  await Future.delayed(const Duration(milliseconds: 400)); //wait removed to check if needed
     } catch (e) {
       print('Error fetching $celex/$lang: $e');
       rethrow;
@@ -490,9 +490,9 @@ void uploadTestSparqlSectorYear(
       // return;
     }
 
-    // Light pacing between CELEXes
-    await Future.delayed(Duration(milliseconds: 800 + Random().nextInt(600)));
-    print('Harvest pointer: $pointer, Waiting a bit to avoid throttling...');
+    // Light pacing between CELEXes REMOVED
+    //  await Future.delayed(Duration(milliseconds: 800 + Random().nextInt(600)));
+    // print('Harvest pointer: $pointer, Waiting a bit to avoid throttling...');
   }
 }
 
@@ -504,10 +504,34 @@ Future uploadSparqlForCelex(
   int startPointer = 0,
 ]) async {
   //final lines = await fetchSectorXCelexTitles(sector, year);
+
+  final htmlDownloadLinks = await fetchLinksForCelex(celex, "html");
+
+  final xhtmlDownloadLinks = await fetchLinksForCelex(celex, "xhtml");
+  var downloadLinks = <String, Map<String, String>>{};
+
+  final htmlCount = htmlDownloadLinks[celex]?.length ?? 0;
+  final xhtmlCount = xhtmlDownloadLinks[celex]?.length ?? 0;
+  print(
+    'Using links for $celex, html count: $htmlCount, xhtml count: $xhtmlCount',
+  );
+  if (htmlCount >= xhtmlCount) {
+    downloadLinks = htmlDownloadLinks;
+  } else {
+    downloadLinks = xhtmlDownloadLinks;
+  }
+
+  /* 
   final downloadLinks = await fetchLinksForCelex(
     celex,
     format,
   ); //this reads a map of celex->lang->links
+*/
+
+  if (downloadLinks.isEmpty || xhtmlCount == 0 && htmlCount == 0) {
+    print('No download links found for $celex in either format.');
+    return;
+  }
 
   if (startPointer < 0 ||
       startPointer >=
@@ -592,9 +616,9 @@ Future uploadSparqlForCelex(
       // return;
     }
 
-    // Light pacing between CELEXes
-    await Future.delayed(Duration(milliseconds: 800 + Random().nextInt(600)));
-    print('Harvest pointer: $pointer, Waiting a bit to avoid throttling...');
+    // Light pacing between CELEXes REMOVED
+    //  await Future.delayed(Duration(milliseconds: 800 + Random().nextInt(600)));
+    //   print('Harvest pointer: $pointer, Waiting a bit to avoid throttling...');
   }
 }
 
@@ -634,7 +658,7 @@ Future uploadURLs(String indexName, [int startPointer = 0]) async {
   print(
     'Starting Harvest  for url $downloadLinks, total links: ${downloadLinks.length}, resumeFrom: $startPointer',
   );
-//TODO
+  //
   final celexIds =
       downloadLinks.keys
           .toList(); //create list of celex ids to access map by index
@@ -694,8 +718,8 @@ Future uploadURLs(String indexName, [int startPointer = 0]) async {
     }
 
     // Light pacing between CELEXes
-    await Future.delayed(Duration(milliseconds: 800 + Random().nextInt(600)));
-    print('Harvest pointer: $pointer, Waiting a bit to avoid throttling...');
+    //    await Future.delayed(Duration(milliseconds: 800 + Random().nextInt(600)));
+    //   print('Harvest pointer: $pointer, Waiting a bit to avoid throttling...');
   }
 }
 

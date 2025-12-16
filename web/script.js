@@ -8,6 +8,12 @@ let userIP = 'N/A';
 let userFingerprint = 'N/A';
 let searchCount = 0;
 
+// Newsletter config (email destination and optional backend endpoint)
+const NEWSLETTER_TO = 'juraj.kuban.sk@gmail.com';
+// If you add a serverless endpoint (e.g., Formspree/Netlify Function), set it here.
+// Example: const NEWSLETTER_ENDPOINT = 'https://formspree.io/f/xxxxxx';
+const NEWSLETTER_ENDPOINT = '';
+
 document.addEventListener('DOMContentLoaded', () => {
   const yearEl = document.getElementById('year');
   if (yearEl) yearEl.textContent = new Date().getFullYear();
@@ -59,13 +65,36 @@ document.addEventListener('DOMContentLoaded', () => {
   // Newsletter form
   const newsletterForm = document.getElementById('newsletterForm');
   if (newsletterForm) {
-    newsletterForm.addEventListener('submit', e => {
+    newsletterForm.addEventListener('submit', async e => {
       e.preventDefault();
       const email = newsletterForm.querySelector('input[type="email"]')?.value;
       if (!email) return;
-      console.log('Newsletter signup:', email);
-      newsletterForm.reset();
-      alert('Thanks! You will receive updates soon.');
+      try {
+        const subject = 'Newsletter signup for LegisTracerEU';
+        const body = `Please add me to the newsletter.\n\nEmail: ${email}`;
+
+        // Always open the user's email client with a prefilled message
+        window.location.href = `mailto:${encodeURIComponent(NEWSLETTER_TO)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+        // If an endpoint is configured, also submit in the background without blocking or alerting
+        if (NEWSLETTER_ENDPOINT) {
+          try {
+            fetch(NEWSLETTER_ENDPOINT, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email }),
+              keepalive: true
+            });
+          } catch (bgErr) {
+            console.warn('Background newsletter submission failed:', bgErr);
+          }
+        }
+      } catch (err) {
+        alert('Could not submit your request. Please try again later.');
+        console.error('Newsletter submission failed:', err);
+      } finally {
+        newsletterForm.reset();
+      }
     });
   }
 
@@ -283,8 +312,8 @@ function showQuotaExceeded(errorMessage) {
       <p>${escapeHtml(errorMessage)}</p>
       <p>To continue searching and access advanced features:</p>
       <div class="quota-actions">
-        <a href="#pricing" class="btn primary">View Pricing</a>
-        <a href="https://www.pts-translation.sk/" class="btn outline">Get Subscription</a>
+        <a href="index.html#pricing" class="btn primary">View Pricing</a>
+        <a href="https://www.pts-translation.sk/#pricing" class="btn outline" target="_blank" rel="noopener noreferrer">Get Subscription</a>
       </div>
     </div>
   `;

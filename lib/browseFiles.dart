@@ -1,8 +1,8 @@
 import 'dart:ui';
 
-import 'package:eurolex/preparehtml.dart';
-import 'package:eurolex/processDOM.dart';
-import 'package:eurolex/setup.dart';
+import 'package:LegisTracerEU/preparehtml.dart';
+import 'package:LegisTracerEU/processDOM.dart';
+import 'package:LegisTracerEU/setup.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -13,9 +13,9 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
-import 'package:eurolex/main.dart';
-import 'package:eurolex/logger.dart';
-import 'package:eurolex/file_handling.dart';
+import 'package:LegisTracerEU/main.dart';
+import 'package:LegisTracerEU/logger.dart';
+import 'package:LegisTracerEU/file_handling.dart';
 import 'package:path/path.dart' as path;
 
 String pathDirEN =
