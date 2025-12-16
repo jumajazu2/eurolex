@@ -1,12 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:eurolex/setup.dart';
+import 'package:LegisTracerEU/setup.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:flutter/foundation.dart';
-import 'package:eurolex/logger.dart';
-import 'package:eurolex/main.dart';
+import 'package:LegisTracerEU/logger.dart';
+import 'package:LegisTracerEU/main.dart';
 
 String getExecutableDir() {
   return File(Platform.resolvedExecutable).parent.path;
@@ -192,9 +192,6 @@ Future<void> debugToFile(Map<String, dynamic> newJsonData) async {
   }
 }
 
-
-
-
 Future<Map<String, dynamic>> loadCelexYears([
   String path = 'data/celex_years.json',
 ]) async {
@@ -323,4 +320,3 @@ void extendRange(Map<String, dynamic> data, int newEndYear) {
   }
   range['end'] = newEndYear;
 }
-

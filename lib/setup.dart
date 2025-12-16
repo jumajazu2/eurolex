@@ -1,17 +1,17 @@
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:eurolex/file_handling.dart';
-import 'package:eurolex/main.dart';
-import 'package:eurolex/opensearch.dart';
-import 'package:eurolex/sparql.dart';
+import 'package:LegisTracerEU/file_handling.dart';
+import 'package:LegisTracerEU/main.dart';
+import 'package:LegisTracerEU/opensearch.dart';
+import 'package:LegisTracerEU/sparql.dart';
 import 'package:flutter/material.dart';
-import 'package:eurolex/processDOM.dart';
-import 'package:eurolex/display.dart';
-import 'package:eurolex/preparehtml.dart';
+import 'package:LegisTracerEU/processDOM.dart';
+import 'package:LegisTracerEU/display.dart';
+import 'package:LegisTracerEU/preparehtml.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
-import 'package:eurolex/ui_notices.dart';
+import 'package:LegisTracerEU/ui_notices.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -273,7 +273,10 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                           ElevatedButton(
                             onPressed: () async {
                               await _confirmSettings();
-                              await getListIndicesFull(server, isAdminNotifier.value);
+                              await getListIndicesFull(
+                                server,
+                                isAdminNotifier.value,
+                              );
                               if (mounted) {
                                 setState(() {});
                               }
@@ -511,12 +514,12 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
             ),
             const SizedBox(height: 20),
             const Text(
-              'Current Settings JSON saved in:',
+              'Current Settings saved in:',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             Text(File(getFilePath('settings.json')).path),
-            Text(jsonSettings.toString()),
+            if (isAdminNotifier.value) Text(jsonSettings.toString()),
           ],
         ),
       ),

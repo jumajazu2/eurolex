@@ -1,15 +1,15 @@
 //import 'dart:ffi';
-import 'package:eurolex/main.dart'; // ensu re showSubscrip tionDialog is visible
+import 'package:LegisTracerEU/main.dart'; // ensu re showSubscrip tionDialog is visible
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
 import 'dart:convert';
 import 'package:xml/xml.dart' as xml;
-import 'package:eurolex/logger.dart';
+import 'package:LegisTracerEU/logger.dart';
 
 import 'package:html/dom.dart' as dom;
-import 'package:eurolex/preparehtml.dart';
-import 'package:eurolex/preparehtml.dart' show loadHtmlFromCelex;
+import 'package:LegisTracerEU/preparehtml.dart';
+import 'package:LegisTracerEU/preparehtml.dart' show loadHtmlFromCelex;
 import 'dart:async'; // for TimeoutException
 import 'dart:io';
 import 'package:url_launcher/url_launcher.dart';
@@ -241,6 +241,8 @@ List<String> extractPlainTextLines(String html) {
   const blockTags = {
     'p',
     'li',
+    'ul',
+    'ol',
     'td',
     'th',
     'tr',
@@ -266,6 +268,10 @@ List<String> extractPlainTextLines(String html) {
     'address',
     'figure',
     'figcaption',
+    'dl',
+    'dt',
+    'dd',
+    'hr',
     'div',
   };
 
@@ -287,6 +293,13 @@ List<String> extractPlainTextLines(String html) {
       final top = blockStack.last;
       if (top.classes.isNotEmpty) {
         cls = top.classes.join(' ');
+      } else {
+        final id = top.attributes['id'];
+        if (id != null && id.trim().isNotEmpty) {
+          cls = '#' + id.trim();
+        } else {
+          cls = top.localName ?? 'unknown';
+        }
       }
     }
     lines.add('$s$delimiter$cls');

@@ -2,16 +2,137 @@
 <html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
-  <title>LegisTracerEU – EU Law Toolbox for Linguists and Legal Professionals</title>
+  <title>Full-Text EU Law Search for Legal Translation | LegisTracerEU</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="description" content="Professional EU Law search toolbox for translators, linguists, and lawyers. Full-text search across European Union legislation with advanced features and CAT tool integration." />
+  <meta name="description" content="Fast multilingual EU law search for translators, linguists & lawyers. Fuzzy & phrase search across EU regulations and directives with Trados Studio/CAT integration." />
   <meta name="keywords"
-    content="EUR-Lex search, EU law, legal translation, translation memory, CAT tool, terminology, Juremy, legal tech, Slovak, Czech, English, EU legislation search, EU Law Toolbox, translators, linguists, lawyers, machine translation post-editing, legal drafting, legal analysis, affordable Juremy alternative, právny preklad, prekladateľská pamäť, legislatíva EÚ, nástroje pre prekladateľov, právní překlad, překladatelská paměť, legislativa EU, nástroje pro překladatele">
-  <meta property="og:title" content="LegisTracerEU – EU Law Toolbox" />
+    content="EUR-Lex search, EU law, legal translation, translation memory, CAT tool, terminology, Juremy, legal tech, Slovak, Czech, English, EU legislation search, EU Law Toolbox, translators, linguists, lawyers, machine translation post-editing, legal drafting, legal analysis, affordable Juremy alternative, právny preklad, prekladateľská pamäť, legislatíva EÚ, nástroje pre prekladateľov, právní překlad, překladatelská paměť, legislativa EU, nástroje pro překladatele, právny prekladač, právo európskej únie, predpisy eu, právne predpisy, legislatíva eú, európska legislatíva, právnická terminológia, law search engines, search law, search laws, eu search engines, new eu law, eur-lex search, eur-lex europa, eur-lex database, law toolbox, eu law, european union laws, european union rules, eu law analysis, law analysis, legal linguist, law linguist, linguist lawyer, law student, eur-lex suche, eu gesetze, eu verordnungen, eu verordnungen und richtlinien, eu verordnung englisch">
+  <meta property="og:title" content="Full-Text EU Law Search for Legal Translation | LegisTracerEU" />
   <meta property="og:description" content="Advanced search tool for professionals working with EU law, offering powerful features for legal translation and research." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://www.pts-translation.sk" />
   <meta property="og:image" content="https://www.pts-translation.sk/og-image.png" />
+  
+  <!-- Structured Data: Organization, SoftwareApplication (with Offers), WebSite (SearchAction), FAQPage -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://www.pts-translation.sk/#org",
+        "name": "LegisTracerEU",
+        "url": "https://www.pts-translation.sk/",
+        "logo": "https://www.pts-translation.sk/og-image.png",
+        "description": "Provider of a fast multilingual EU law search and translation support toolbox for translators, linguists and legal professionals.",
+        "contactPoint": [{
+          "@type": "ContactPoint",
+          "contactType": "customer support",
+          "availableLanguage": ["en"],
+          "email": "juraj.kuban.sk@gmail.com"
+        }]
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://www.pts-translation.sk/#app",
+        "name": "LegisTracerEU",
+        "operatingSystem": "Windows, Web",
+        "applicationCategory": "BusinessApplication",
+        "creator": { "@id": "https://www.pts-translation.sk/#org" },
+        "offers": [
+          {
+            "@type": "Offer",
+            "name": "Trial Plan",
+            "price": "0",
+            "priceCurrency": "EUR",
+            "category": "trial",
+            "url": "https://www.pts-translation.sk/#pricing",
+            "description": "Free trial with 7 searches per day via web interface."
+          },
+            {
+            "@type": "Offer",
+            "name": "Regular Annual Subscription",
+            "price": "60",
+            "priceCurrency": "EUR",
+            "priceSpecification": {
+              "@type": "PriceSpecification",
+              "price": "60",
+              "priceCurrency": "EUR",
+              "billingIncrement": 1,
+              "unitCode": "ANN"  
+            },
+            "url": "https://www.pts-translation.sk/#pricing",
+            "description": "Annual subscription enabling high daily search allowance, multilingual modes and integration features.",
+            "availability": "https://schema.org/InStock"
+          }
+        ],
+        "description": "Fast multilingual EU law search and translation support  with fuzzy & phrase search, highlighting, Trados integration, and professional workflow features.",
+        "url": "https://www.pts-translation.sk/"
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://www.pts-translation.sk/#website",
+        "url": "https://www.pts-translation.sk/",
+        "name": "LegisTracerEU",
+        "publisher": { "@id": "https://www.pts-translation.sk/#org" },
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": "https://www.pts-translation.sk/search.html?q={search_term_string}"
+          },
+          "query-input": "required name=search_term_string"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://www.pts-translation.sk/#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Where does our legal data come from?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "From publicly available authoritative EU sources, primarily the EUR-Lex portal for legislation and the IATE terminology database, reused under the European Commission's document reuse policy. Each result links back to the official EUR-Lex document."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is the service customizable?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Users can focus searches on highly relevant subsets via custom indices (desktop app) rather than the entire corpus to improve precision and workflow efficiency."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does it help in translation work?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "It accelerates retrieval of exact citations and consistent terminology across EU legal acts, supporting accuracy and productivity in professional legal translation workflows."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is AI on board?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Not yet. The focus is on precise authoritative sourcing and privacy. Future AI features may support terminology or context analysis using only publicly available data."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How is this project evolving?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The project is actively developed, tested in real professional translation workflows, and expanded based on feedback from translators and legal professionals."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <!-- Professional distinctive font -->
@@ -31,7 +152,7 @@
   <!-- Stripe Buy Button -->
   <script async src="https://js.stripe.com/v3/buy-button.js"></script>
   
-  <script defer src="script.js"></script>
+  <script defer src="script.js?v=20251216b"></script>
 </head>
 <body>
   <!-- Accessible skip link -->
@@ -183,7 +304,7 @@ Search for Linguists and Lawyers
             <a href="#demo" class="btn outline">How to Use the Form</a>
           </div>
           <div class="data-source-card">
-            <h3>Desktop App</h3>
+            <h3>Desktop App<span class="tooltip" data-tooltip="The desktop app is undergoing maintenance, it will be available for download by the end of October. If you buy subscription by the end of October, it will be valid for 13 months to compensate for this temporary unavailablity of the desktor app. Please use the web form in the meantime.">*</span></h3>
             <p>Enjoy full-feature access<span class="tooltip" data-tooltip="7 searches a day without subscription. 2,000 searches a day with subscription, which is beyond what is practically possible for individual use, the cap is to prevent abuse of the service. Access may be revoked if abuse is detected.">*</span> with a desktop app (currently for Windows). Follow these steps install the app and use search form in it, with filtering options, result highlighting and showing each result in the context of the underlying legal act. For extra features, such as ThinkAhead, install a Trados Studio plugin and see smart results the moment you open a segment in Trados Studio.</p>
             <a href="https://www.pts-translation.sk/" target="_blank" rel="noopener noreferrer" class="btn outline">How to Install and Use the App</a>
           </div>
@@ -260,7 +381,7 @@ Search for Linguists and Lawyers
                 data-tooltip="Capped at 2,000 searches a day.">*</span></li>
               <li>Single user</li>
               <li>All search modes</li>
-              <li>Multi-language support</li>
+              <li>Multi-language support (Currently English, Slovak, Czech)</li>
               <li>CAT tool integration</li>
               <li>Advanced features<span class="tooltip" data-tooltip="In the desktop app"  >*</span></li>
               
@@ -398,6 +519,10 @@ Search for Linguists and Lawyers
         
           </p>
         </details>
+        <details class="faq-item" id="who-is-behind">
+          <summary>Who is  this project?</summary>
+          <p>This section will soon provide background information about the author, professional experience in legal translation, and the motivations for building LegisTracerEU. For now, you can reach out directly via the Contact link in the footer or the feedback button above.</p>
+        </details>
       </div>
     </section>
   </main>
@@ -409,7 +534,7 @@ Search for Linguists and Lawyers
           <span class="brand__logo">⚖️</span>
           <span class="brand__text">LegisTracerEU</span>
         </div>
-        <p class="foot-note">EU Law Toolbox for linguists, translators, and legal professionals.</p>
+        <p class="foot-note">EU Law Search and Terminology for linguists, translators, and legal professionals.</p>
         <p class="foot-copy">© <span id="year"></span> LegisTracerEU. All rights reserved.</p>
       </div>
       <div class="footer-col">
@@ -418,32 +543,22 @@ Search for Linguists and Lawyers
           <li><a href="#features">Features</a></li>
           <li><a href="#pricing">Pricing</a></li>
           <li><a href="#demo">Try Demo</a></li>
-          <li><a href="https://www.pts-translation.sk/">Full Version</a></li>
         </ul>
       </div>
       <div class="footer-col">
         <h4>Resources</h4>
         <ul>
-          <li><a href="#faq">FAQ</a></li>
-          <li><a href="#data-sources">Data Sources</a></li>
-          <li><a href="https://eur-lex.europa.eu/">EUR-Lex</a></li>
-          <li><a href="https://www.pts-translation.sk/">Contact</a></li>
+          <li><a href="#data-sources-faq">Data Sources</a></li>
+          <li><a href="#who-is-behind">Contact</a></li>
           <li><a href="#use-cases">Use Cases</a></li>
-        </ul>
-      </div>
-      <div class="footer-col">
-        <h4>Legal</h4>
-        <ul>
-          <li><a href="https://eur-lex.europa.eu/content/help/data-reuse/reuse-contents-eurlex-details.html">Data Terms</a></li>
-          <li><a href="https://www.pts-translation.sk/">Privacy Policy</a></li>
-          <li><a href="https://www.pts-translation.sk/">Terms of Service</a></li>
+          <li><a href="privacy.html">Privacy Policy</a></li>
         </ul>
       </div>
       <div class="footer-col">
         <h4>Stay Updated</h4>
         <form class="newsletter-form" id="newsletterForm">
           <label for="emailInput" class="sr-only">Email address</label>
-            <input type="email" id="emailInput" placeholder="you@company.com" required />
+          <input type="email" id="emailInput" placeholder="you@company.com" required />
           <button class="btn small primary" type="submit">Subscribe</button>
         </form>
       </div>

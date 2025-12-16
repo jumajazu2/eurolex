@@ -1,0 +1,25 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Generate Windows Icons (transparent)",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy", "Bypass",
+        "-File", "${workspaceFolder}/tools/generate-icons.ps1",
+        "-Source", "${input:iconPng}",
+        "-RemoveWhiteBackground"
+      ],
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "iconPng",
+      "type": "promptString",
+      "description": "Path to a transparent PNG (or PNG with white background to remove)",
+      "default": "${workspaceFolder}/web/icons/logo.png"
+    }
+  ]
+}

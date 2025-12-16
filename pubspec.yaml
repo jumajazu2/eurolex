@@ -1,5 +1,5 @@
-name: eurolex
-description: "A new Flutter project."
+name: LegisTracerEU
+description: "Access and Search EU Law"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 0.9.0+0
 
 environment:
   sdk: ^3.7.2
@@ -37,6 +37,8 @@ dependencies:
   file_picker: ^5.0.1
   xml: ^6.5.0
   url_launcher: ^6.3.0
+  
+
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -45,16 +47,28 @@ dependencies:
 
 
 dev_dependencies:
+  msix: ^3.16.2
+
+
   flutter_test:
     sdk: flutter
 
-
+msix:
+  display_name: LegisTracerEU
+  publisher_display_name: Jumajazu
+  identity_name: Jumajazu.LegisTracerEU     # From Partner Center app reservation
+  publisher: CN=9687351F-CD29-4738-A1E5-91A13D3AEBB4           # From Partner Center publisher ID
+  logo_path: windows/runner/resources/app_icon.ico
+  store: true                             # Generates Store-ready manifest
+  # Optional:
+  # description: EU law search and highlight client
+  # architecture: x64                      # defaults to auto-detect
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^5.0.0
+flutter_lints: ^5.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
