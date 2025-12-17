@@ -357,7 +357,7 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                                       context: context,
                                       builder: (_) {
                                         return AlertDialog(
-                                          title: Text(
+                                          title: SelectableText(
                                             'Your Custom Index: $name',
                                           ),
                                           content: FutureBuilder<List<String>>(

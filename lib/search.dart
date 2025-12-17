@@ -989,6 +989,9 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     print(
       "Http testing, source: $_httpSource, target: $_httpTarget, segmentID: $_httpSegmentID, timestamp: $_httpTimestamp",
     );
+    setState(() {
+      _progressColor = Colors.redAccent; //when auto lookup from Studio, the progress bar color is redAccent
+    });
 
     //
     var queryAnalyser = {
@@ -1101,6 +1104,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     lang2HighlightedResults.clear();
     lang3HighlightedResults.clear();
     enHighlightedResults.clear();
+    if (mounted) setState(() => _isLoading = true);
 
     final resultsOS = await sendToOpenSearch(
       'https://$osServer/$index/_search',
@@ -1119,19 +1123,10 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
       );
 
       setState(() {
-        /*    enHighlightedResults = [
-          TextSpan(
-            children:
-                ([decodedResults['error'].toString()]).map((text) {
-                  return TextSpan(
-                    text: text,
-                    style: TextStyle(color: Colors.black),
-                  );
-                }).toList(),
-          ),
-        ];*/
+        _progressColor = Colors.redAccent; // indicate error via color
       });
 
+      if (mounted) setState(() => _isLoading = false);
       return;
     }
 
@@ -1230,6 +1225,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
 
     if (!mounted) return;
     setState(() {});
+    if (mounted) setState(() => _isLoading = false);
 
     //BUG too power hungry to get titles with titlesForCelex();
   }
@@ -1417,6 +1413,8 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
   }
 
   Color backgroundColor = Colors.white12;
+  bool _isLoading = false;
+  Color _progressColor = Colors.blue; // default loading color
 
   void updateDropdown() async {
     await getCustomIndices(
@@ -1607,7 +1605,10 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                     'Phrase search in English with tight matching in your custom index',
                 waitDuration: Duration(seconds: 1),
                 child: ElevatedButton(
-                  onPressed: _startSearch,
+                  onPressed: () {
+                    setState(() => _progressColor = Colors.blue);
+                    _startSearch();
+                  },
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -1623,7 +1624,10 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                     'Search across languages with flexible matching in your custom index',
                 waitDuration: Duration(seconds: 1),
                 child: ElevatedButton(
-                  onPressed: _startSearch2,
+                  onPressed: () {
+                    setState(() => _progressColor = Colors.green);
+                    _startSearch2();
+                  },
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -1639,7 +1643,10 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                     'Combine match and phrase search for better recall in your custom index',
                 waitDuration: Duration(seconds: 1),
                 child: ElevatedButton(
-                  onPressed: _startSearch3,
+                  onPressed: () {
+                    setState(() => _progressColor = Colors.purple);
+                    _startSearch3();
+                  },
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -1655,7 +1662,10 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                     'Phrase search across all language fields in Global Index (All EU law available)',
                 waitDuration: Duration(seconds: 1),
                 child: ElevatedButton(
-                  onPressed: _startSearchPhraseAll,
+                  onPressed: () {
+                    setState(() => _progressColor = Colors.orange);
+                    _startSearchPhraseAll();
+                  },
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -1895,6 +1905,15 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
             ],
           ),
         ),
+        if (_isLoading)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: LinearProgressIndicator(
+              minHeight: 4,
+              valueColor: AlwaysStoppedAnimation<Color>(_progressColor),
+              backgroundColor: _progressColor.withOpacity(0.2),
+            ),
+          ),
 
         // Quick settings checkboxes
         isAdmin
@@ -2001,7 +2020,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
             : SizedBox.shrink(),
 
         SizedBox(height: 10),
-        Divider(color: Colors.grey[300], thickness: 5),
+        Divider(color: Colors.grey[300], thickness: 3),
         // Results list
         Expanded(
           child: ListView.builder(
