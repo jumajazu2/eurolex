@@ -1607,6 +1607,12 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                     'Phrase search in English with tight matching in your custom index',
                 waitDuration: Duration(seconds: 1),
                 child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        Theme.of(context).colorScheme.primaryContainer,
+                    foregroundColor:
+                        Theme.of(context).colorScheme.onPrimaryContainer,
+                  ),
                   onPressed: () {
                     setState(() => _progressColor = Colors.blue);
                     _startSearch();
@@ -1626,6 +1632,12 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                     'Search across languages with flexible matching in your custom index',
                 waitDuration: Duration(seconds: 1),
                 child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        Theme.of(context).colorScheme.primaryContainer,
+                    foregroundColor:
+                        Theme.of(context).colorScheme.onPrimaryContainer,
+                  ),
                   onPressed: () {
                     setState(() => _progressColor = Colors.green);
                     _startSearch2();
@@ -1645,6 +1657,12 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                     'Combine match and phrase search for better recall in your custom index',
                 waitDuration: Duration(seconds: 1),
                 child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        Theme.of(context).colorScheme.primaryContainer,
+                    foregroundColor:
+                        Theme.of(context).colorScheme.onPrimaryContainer,
+                  ),
                   onPressed: () {
                     setState(() => _progressColor = Colors.purple);
                     _startSearch3();
@@ -1664,6 +1682,12 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                     'Phrase search across all language fields in Global Index (All EU law available)',
                 waitDuration: Duration(seconds: 1),
                 child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        Theme.of(context).colorScheme.tertiaryContainer,
+                    foregroundColor:
+                        Theme.of(context).colorScheme.onTertiaryContainer,
+                  ),
                   onPressed: () {
                     setState(() => _progressColor = Colors.orange);
                     _startSearchPhraseAll();

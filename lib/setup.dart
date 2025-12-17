@@ -32,6 +32,8 @@ class indicesMaintenance extends StatefulWidget {
 class _indicesMaintenanceState extends State<indicesMaintenance> {
   final _emailCtrl = TextEditingController(text: userEmail);
   final _passkeyCtrl = TextEditingController(text: userPasskey);
+  double _fontScale = 1.0;
+  String _fontFamily = 'System';
 
   @override
   void initState() {
@@ -42,6 +44,11 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
       setState(() {
         userEmail = (jsonSettings['user_email'] ?? '').toString();
         print('userEmail loaded: $userEmail');
+        _fontScale = ((jsonSettings['font_scale'] ?? 1.0) as num).toDouble();
+        _fontFamily =
+            (jsonSettings['font_family']?.toString().trim().isNotEmpty ?? false)
+                ? jsonSettings['font_family'].toString()
+                : 'System';
         final all =
             (langsEU ?? const <String>[])
                 .map((e) => e.toUpperCase())
@@ -287,6 +294,105 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                       ),
                     ],
                   ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+            const Text(
+              'Appearance',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Slider(
+                    value: _fontScale,
+                    min: 0.85,
+                    max: 1.40,
+                    divisions: 11,
+                    label: _fontScale.toStringAsFixed(2),
+                    onChanged: (v) {
+                      setState(() => _fontScale = v);
+                      jsonSettings['font_scale'] = v;
+                      fontScaleNotifier.value = v;
+                    },
+                    onChangeEnd: (v) async {
+                      try {
+                        await writeSettingsToFile(jsonSettings);
+                      } catch (_) {}
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text('${(_fontScale * 100).round()}%'),
+                const SizedBox(width: 12),
+                OutlinedButton(
+                  onPressed: () async {
+                    setState(() => _fontScale = 1.0);
+                    jsonSettings['font_scale'] = 1.0;
+                    fontScaleNotifier.value = 1.0;
+                    try {
+                      await writeSettingsToFile(jsonSettings);
+                    } catch (_) {}
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Font size reset to default'),
+                        ),
+                      );
+                    }
+                  },
+                  child: const Text('Restore default'),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Text('Font family'),
+                const SizedBox(width: 16),
+                DropdownButton<String>(
+                  value: _fontFamily,
+                  items:
+                      const [
+                            'System',
+                            'Inter',
+                            'Merriweather',
+                            'Montserrat',
+                            'Nunito',
+                            'Source Serif 4',
+                            'EB Garamond',
+                            'Lexend',
+                            'Noto Sans',
+                          ]
+                          .map(
+                            (f) => DropdownMenuItem(value: f, child: Text(f)),
+                          )
+                          .toList(),
+                  onChanged: (v) async {
+                    if (v == null) return;
+                    setState(() => _fontFamily = v);
+                    jsonSettings['font_family'] = v;
+                    fontFamilyNotifier.value = v;
+                    try {
+                      await writeSettingsToFile(jsonSettings);
+                    } catch (_) {}
+                  },
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton(
+                  onPressed: () async {
+                    setState(() => _fontFamily = 'System');
+                    jsonSettings['font_family'] = 'System';
+                    fontFamilyNotifier.value = 'System';
+                    try {
+                      await writeSettingsToFile(jsonSettings);
+                    } catch (_) {}
+                  },
+                  child: const Text('System default'),
                 ),
               ],
             ),
