@@ -12,6 +12,7 @@ import 'package:LegisTracerEU/analyser.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:LegisTracerEU/http.dart';
 import 'package:LegisTracerEU/opensearch.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 //String osServer = 'localhost:9200'; // add to Settings or Autolookup
 String osServer = 'search.pts-translation.sk';
@@ -28,13 +29,57 @@ String? lang1;
 String? lang2;
 String? lang3;
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+final ValueNotifier<double> fontScaleNotifier = ValueNotifier<double>(1.0);
+final ValueNotifier<String> fontFamilyNotifier = ValueNotifier<String>(
+  'System',
+);
 LocalIngestServer ingestServer = LocalIngestServer(port: 6175);
 
 final isAdminNotifier = ValueNotifier<bool>(isAdmin);
 
 bool isAdmin = false;
 void main() {
-  runApp(MaterialApp(navigatorKey: navigatorKey, home: MainTabbedApp()));
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    // Ensure runtime fetching works even if AssetManifest.* isn't available
+    GoogleFonts.config.allowRuntimeFetching = true;
+  } catch (_) {}
+  runApp(
+    MaterialApp(
+      navigatorKey: navigatorKey,
+      builder: (context, child) {
+        return ValueListenableBuilder<double>(
+          valueListenable: fontScaleNotifier,
+          builder: (context, scale, _) {
+            return ValueListenableBuilder<String>(
+              valueListenable: fontFamilyNotifier,
+              builder: (context, family, __) {
+                // Use MediaQuery to scale all text globally (affects explicit sizes too)
+                final mq = MediaQuery.of(context);
+                final s = scale.clamp(0.8, 1.6);
+
+                // Apply selected font family to current theme while preserving colors and M3
+                final baseTheme = Theme.of(context);
+                final appliedTextTheme = _applyFontFamily(
+                  baseTheme.textTheme,
+                  family,
+                );
+
+                return MediaQuery(
+                  data: mq.copyWith(textScaler: TextScaler.linear(s)),
+                  child: Theme(
+                    data: baseTheme.copyWith(textTheme: appliedTextTheme),
+                    child: child!,
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+      home: MainTabbedApp(),
+    ),
+  );
 }
 
 Future<void> startIngestServer() async {
@@ -92,6 +137,18 @@ class _MainTabbedAppState extends State<MainTabbedApp>
           'juraj.kuban.sk@gmail.com';
       isAdminNotifier.value = isAdmin;
       print("isAdmin: $isAdmin");
+
+      // Initialize font scale from settings
+      final fs = jsonSettings['font_scale'];
+      if (fs is num) fontScaleNotifier.value = fs.toDouble();
+
+      // Initialize font family from settings
+      final ff = jsonSettings['font_family'];
+      if (ff is String && ff.trim().isNotEmpty) {
+        fontFamilyNotifier.value = ff;
+      } else {
+        fontFamilyNotifier.value = 'System';
+      }
 
       // Load indices after settings are loaded so isAdmin and access_key are available
       getCustomIndices(
@@ -182,7 +239,7 @@ class _MainTabbedAppState extends State<MainTabbedApp>
     if (isAdmin) const Tab(text: 'Auto Analyser'),
     const Tab(text: 'Setup'),
     if (isAdmin) const Tab(text: 'Data Process'),
-    const Tab(text: 'Data Upload'),
+    const Tab(text: 'Upload References'),
   ];
 
   List<Widget> _buildTabViews(bool isAdmin) => [
@@ -224,6 +281,30 @@ class _MainTabbedAppState extends State<MainTabbedApp>
             ],
           ),
     );
+  }
+}
+
+TextTheme _applyFontFamily(TextTheme base, String family) {
+  switch (family) {
+    case 'Inter':
+      return GoogleFonts.interTextTheme(base);
+    case 'Merriweather':
+      return GoogleFonts.merriweatherTextTheme(base);
+    case 'Montserrat':
+      return GoogleFonts.montserratTextTheme(base);
+    case 'Nunito':
+      return GoogleFonts.nunitoTextTheme(base);
+    case 'Source Serif 4':
+      return GoogleFonts.sourceSerif4TextTheme(base);
+    case 'EB Garamond':
+      return GoogleFonts.ebGaramondTextTheme(base);
+    case 'Lexend':
+      return GoogleFonts.lexendTextTheme(base);
+    case 'Noto Sans':
+      return GoogleFonts.notoSansTextTheme(base);
+    case 'System':
+    default:
+      return base;
   }
 }
 
