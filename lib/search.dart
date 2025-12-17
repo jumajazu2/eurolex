@@ -1235,7 +1235,6 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
   }
 
   void _startSearch() async {
-   
     setState(() {
       _results.clear();
 
@@ -1609,7 +1608,14 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                 waitDuration: Duration(seconds: 1),
                 child: ElevatedButton(
                   onPressed: _startSearch,
-                  child: Text('Search (match_phrase)'),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.search),
+                      SizedBox(width: 6),
+                      Text('Phrase in $lang1'),
+                    ],
+                  ),
                 ),
               ),
               Tooltip(
@@ -1618,7 +1624,14 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                 waitDuration: Duration(seconds: 1),
                 child: ElevatedButton(
                   onPressed: _startSearch2,
-                  child: Text('Search (multi_match)'),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.search),
+                      SizedBox(width: 6),
+                      Text('MultiMatch $lang1, $lang2, $lang3)'),
+                    ],
+                  ),
                 ),
               ),
               Tooltip(
@@ -1627,7 +1640,14 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                 waitDuration: Duration(seconds: 1),
                 child: ElevatedButton(
                   onPressed: _startSearch3,
-                  child: Text('Search (match+matchphrase)'),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.search),
+                      SizedBox(width: 6),
+                      Text('Match/Phrase $lang1, $lang2, $lang3'),
+                    ],
+                  ),
                 ),
               ),
               Tooltip(
@@ -1636,7 +1656,14 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                 waitDuration: Duration(seconds: 1),
                 child: ElevatedButton(
                   onPressed: _startSearchPhraseAll,
-                  child: Text('Search (phrase all)'),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.search),
+                      SizedBox(width: 6),
+                      Text('All EU Law'),
+                    ],
+                  ),
                 ),
               ),
 
@@ -1870,89 +1897,108 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
         ),
 
         // Quick settings checkboxes
-        Container(
-          color: const Color.fromARGB(200, 210, 238, 241),
-          child: ExpansionTile(
-            title:
-                (celexFilter.isNotEmpty || containsFilter.isNotEmpty)
-                    ? Row(
-                      children: [
-                        Icon(Icons.filter_alt, color: Colors.orange),
-                        SizedBox(width: 8),
-                        Text("Query Details: ${lang1Results.length} result(s)"),
-                        SizedBox(width: 8),
+        isAdmin
+            ? Container(
+              color: const Color.fromARGB(200, 210, 238, 241),
+              child: ExpansionTile(
+                title:
+                    (celexFilter.isNotEmpty || containsFilter.isNotEmpty)
+                        ? Row(
+                          children: [
+                            Icon(Icons.filter_alt, color: Colors.orange),
+                            SizedBox(width: 8),
+                            isAdmin
+                                ? Text(
+                                  "Query Details: ${lang1Results.length} result(s)",
+                                )
+                                : SizedBox.shrink(),
+                            SizedBox(width: 8),
 
-                        GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              celexFilter = "";
-                              containsFilter = "";
-                              _fillColor = Theme.of(context).canvasColor;
-                              _fillColor2 = Theme.of(context).canvasColor;
-                              _controller2.clear();
-                              _controller3.clear();
-                              //  _searchController.text =
-                              ""; // <--- Set the text to an empty string
-                              //  _searchKey = UniqueKey();
-                            });
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  celexFilter = "";
+                                  containsFilter = "";
+                                  _fillColor = Theme.of(context).canvasColor;
+                                  _fillColor2 = Theme.of(context).canvasColor;
+                                  _controller2.clear();
+                                  _controller3.clear();
+                                  //  _searchController.text =
+                                  ""; // <--- Set the text to an empty string
+                                  //  _searchKey = UniqueKey();
+                                });
 
-                            setState(() {}); // handle click event here
-                          },
-                          child: Text(
-                            "Filtered Results Displayed, Click Here to Clear Filters",
-                            style: TextStyle(
-                              color: Colors.orange,
-                              fontWeight: FontWeight.bold,
+                                setState(() {}); // handle click event here
+                              },
+                              child: Text(
+                                "Filtered Results Displayed, Click Here to Clear Filters",
+                                style: TextStyle(
+                                  color: Colors.orange,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                      ],
-                    )
-                    : Text("Query Details: ${lang1Results.length} result(s)"),
-            onExpansionChanged: (bool expanded) {
-              if (expanded) {
-                // Wrap the async call in an anonymous async function
-                () {
-                  setState(() {});
-                  print('Tile -query details- was expanded');
-                }(); // Immediately invoke the async function
-              } else {
-                print('Tile -query details- was collapsed');
-              }
-            },
+                          ],
+                        )
+                        : isAdmin
+                        ? Text(
+                          "Query Details: ${lang1Results.length} result(s)",
+                        )
+                        : SizedBox.shrink(),
+                onExpansionChanged: (bool expanded) {
+                  if (expanded) {
+                    // Wrap the async call in an anonymous async function
+                    () {
+                      setState(() {});
+                      print('Tile -query details- was expanded');
+                    }(); // Immediately invoke the async function
+                  } else {
+                    print('Tile -query details- was collapsed');
+                  }
+                },
 
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  'Query at $activeIndex: $queryText',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: SelectableText(
-                  'Query Text: $queryPattern',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  'Query Result: $lang1Results',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
-              /*   Padding(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(
+                      'Query at $activeIndex: $queryText',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: SelectableText(
+                      'Query Text: $queryPattern',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(
+                      'Query Result: $lang1Results',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  /*   Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Text(
                   'Results Count: ${enResults.length}',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),*/
-            ],
-          ),
-        ),
+                ],
+              ),
+            )
+            : SizedBox.shrink(),
 
         SizedBox(height: 10),
         Divider(color: Colors.grey[300], thickness: 5),
