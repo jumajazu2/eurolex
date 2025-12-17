@@ -58,7 +58,7 @@ msix:
   publisher_display_name: Jumajazu
   identity_name: Jumajazu.LegisTracerEU     # From Partner Center app reservation
   publisher: CN=9687351F-CD29-4738-A1E5-91A13D3AEBB4           # From Partner Center publisher ID
-  logo_path: windows/runner/resources/app_icon.ico
+  logo_path: windows/runner/resources/appicon.ico
   store: true                             # Generates Store-ready manifest
   # Optional:
   # description: EU law search and highlight client
