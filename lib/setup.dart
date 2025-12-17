@@ -356,6 +356,7 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                                     showDialog(
                                       context: context,
                                       builder: (_) {
+                                        String _filter = '';
                                         return AlertDialog(
                                           title: SelectableText(
                                             'Your Custom Index: $name',
@@ -413,45 +414,81 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                                                         ),
                                                       ),
                                                     if (!loading && !error)
-                                                      Flexible(
-                                                        child:
-                                                            celexes.isEmpty
-                                                                ? const Padding(
-                                                                  padding:
-                                                                      EdgeInsets.only(
-                                                                        top: 8,
-                                                                      ),
-                                                                  child: Text(
-                                                                    'No CELEX values found.',
-                                                                  ),
-                                                                )
-                                                                : ListView.builder(
-                                                                  shrinkWrap:
-                                                                      true,
-                                                                  itemCount:
-                                                                      celexes
-                                                                          .length,
-                                                                  itemBuilder: (
-                                                                    _,
-                                                                    i,
-                                                                  ) {
-                                                                    final c =
-                                                                        celexes[i];
-                                                                    final d =
-                                                                        ((i + 1).toString() +
-                                                                            ". " +
-                                                                            c);
-                                                                    i + 1;
-                                                                    return ListTile(
-                                                                      dense:
-                                                                          false,
-                                                                      title:
-                                                                          SelectableText(
-                                                                            d,
-                                                                          ),
-                                                                    );
-                                                                  },
+                                                      StatefulBuilder(
+                                                        builder: (ctx2, setSB) {
+                                                          final list =
+                                                              _filter.isEmpty
+                                                                  ? celexes
+                                                                  : celexes
+                                                                      .where(
+                                                                        (e) => e
+                                                                            .toLowerCase()
+                                                                            .contains(
+                                                                              _filter.toLowerCase(),
+                                                                            ),
+                                                                      )
+                                                                      .toList();
+                                                          return Column(
+                                                            mainAxisSize:
+                                                                MainAxisSize
+                                                                    .min,
+                                                            crossAxisAlignment:
+                                                                CrossAxisAlignment
+                                                                    .start,
+                                                            children: [
+                                                              TextField(
+                                                                decoration: const InputDecoration(
+                                                                  labelText:
+                                                                      'Filter documents',
+                                                                  isDense: true,
+                                                                  border:
+                                                                      OutlineInputBorder(),
                                                                 ),
+                                                                onChanged:
+                                                                    (
+                                                                      v,
+                                                                    ) => setSB(
+                                                                      () =>
+                                                                          _filter =
+                                                                              v,
+                                                                    ),
+                                                              ),
+                                                              const SizedBox(
+                                                                height: 8,
+                                                              ),
+                                                              SizedBox(
+                                                                height: 400,
+                                                                child:
+                                                                    list.isEmpty
+                                                                        ? const Center(
+                                                                          child: Text(
+                                                                            'No CELEX values found.',
+                                                                          ),
+                                                                        )
+                                                                        : ListView.builder(
+                                                                          itemCount:
+                                                                              list.length,
+                                                                          itemBuilder: (
+                                                                            _,
+                                                                            i,
+                                                                          ) {
+                                                                            final c =
+                                                                                list[i];
+                                                                            final d =
+                                                                                '${i + 1}. $c';
+                                                                            return ListTile(
+                                                                              dense:
+                                                                                  false,
+                                                                              title: SelectableText(
+                                                                                d,
+                                                                              ),
+                                                                            );
+                                                                          },
+                                                                        ),
+                                                              ),
+                                                            ],
+                                                          );
+                                                        },
                                                       ),
                                                   ],
                                                 ),

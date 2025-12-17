@@ -990,7 +990,9 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
       "Http testing, source: $_httpSource, target: $_httpTarget, segmentID: $_httpSegmentID, timestamp: $_httpTimestamp",
     );
     setState(() {
-      _progressColor = Colors.redAccent; //when auto lookup from Studio, the progress bar color is redAccent
+      _progressColor =
+          Colors
+              .redAccent; //when auto lookup from Studio, the progress bar color is redAccent
     });
 
     //
@@ -1820,7 +1822,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                   ),
                   Tooltip(
                     message:
-                        'Only show paragraphs from documents that are aligned across languages. Due to source inconsistencies, if documents are misaligned, click Expland Context to see the relevant segment. ',
+                        'Only show paragraphs from documents with text blocks aligned across languages. Due to source inconsistencies, if documents are misaligned (the content in one language does not match the content of another working language), click Expand/Collapse Context to see the relevant text block (may be shifted a few positions up or down). ',
                     waitDuration: Duration(seconds: 1),
                     triggerMode:
                         TooltipTriggerMode
@@ -1911,7 +1913,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
             child: LinearProgressIndicator(
               minHeight: 4,
               valueColor: AlwaysStoppedAnimation<Color>(_progressColor),
-              backgroundColor: _progressColor.withOpacity(0.2),
+              //  backgroundColor: _progressColor.withOpacity(0.2),
             ),
           ),
 
