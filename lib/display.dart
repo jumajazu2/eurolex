@@ -122,7 +122,17 @@ Future getContext(celex, pointer) async {
     'https://$osServer/$activeIndex/_search',
     [jsonEncode(query)],
   ); //BUG: when searching in all indices, which is appropriate, the sequence_id data does not match, now specific index is used, but it will not work for global search
-  var decodedResults = jsonDecode(resultsContext);
+  Map<String, dynamic> decodedResults;
+  try {
+    decodedResults = jsonDecode(resultsContext) as Map<String, dynamic>;
+  } on FormatException catch (_) {
+    // Likely offline or invalid response; return empty context safely
+    print('Context fetch failed: offline or invalid response.');
+    return [<String>[], <String>[], <String>[], <String>[]];
+  } catch (e) {
+    print('Context fetch unexpected parse error: $e');
+    return [<String>[], <String>[], <String>[], <String>[]];
+  }
 
   var hits = decodedResults['hits']['hits'] as List;
 

@@ -26,7 +26,22 @@ Future<List> searchQuery(query, queryString) async {
     'https://$osServer/$activeIndex/_search',
     [jsonEncode(query)],
   );
-  var decodedResults = jsonDecode(resultsOS);
+  Map<String, dynamic> decodedResults;
+  try {
+    decodedResults = jsonDecode(resultsOS) as Map<String, dynamic>;
+  } on FormatException catch (_) {
+    showInfo(
+      navigatorKey.currentContext!,
+      'You appear to be offline or the server response was invalid. Please check your connection and try again.',
+    );
+    return ["error"];
+  } catch (e) {
+    showInfo(
+      navigatorKey.currentContext!,
+      'Unexpected error parsing server response. Please try again.',
+    );
+    return ["error"];
+  }
   print(
     "In ANALYSER searchQuery, query: $query, queryString: $queryString, Results: $resultsOS",
   );
