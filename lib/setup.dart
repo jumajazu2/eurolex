@@ -34,6 +34,9 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
   final _passkeyCtrl = TextEditingController(text: userPasskey);
   double _fontScale = 1.0;
   String _fontFamily = 'System';
+  bool _autoScaleWithSystem = false;
+  // Search results-only font scale (does not affect global UI)
+  double _resultsFontScale = 1.0;
 
   @override
   void initState() {
@@ -49,6 +52,11 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
             (jsonSettings['font_family']?.toString().trim().isNotEmpty ?? false)
                 ? jsonSettings['font_family'].toString()
                 : 'System';
+        _autoScaleWithSystem =
+            (jsonSettings['auto_scale_with_system'] ?? false) == true;
+        _resultsFontScale =
+            ((jsonSettings['search_results_font_scale'] ?? 1.0) as num)
+                .toDouble();
         final all =
             (langsEU ?? const <String>[])
                 .map((e) => e.toUpperCase())
@@ -277,7 +285,7 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
 
                           // Move Confirm outside the three Expanded dropdowns
                           const SizedBox(width: 12),
-                          ElevatedButton(
+                          OutlinedButton(
                             onPressed: () async {
                               await _confirmSettings();
                               await getListIndicesFull(
@@ -303,6 +311,8 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
               'Appearance',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
+            const SizedBox(height: 8),
+            const Text('Text Size - All User Interface'),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -345,6 +355,48 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                     }
                   },
                   child: const Text('Restore default'),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+            const Text('Text Size - Results View Only'),
+            const SizedBox(height: 8),
+            // Search results-only font size slider
+            Row(
+              children: [
+                Expanded(
+                  child: Slider(
+                    value: _resultsFontScale,
+                    min: 0.85,
+                    max: 1.40,
+                    divisions: 11,
+                    label: _resultsFontScale.toStringAsFixed(2),
+                    onChanged: (v) {
+                      setState(() => _resultsFontScale = v);
+                      jsonSettings['search_results_font_scale'] = v;
+                      searchResultsFontScaleNotifier.value = v;
+                    },
+                    onChangeEnd: (v) async {
+                      try {
+                        await writeSettingsToFile(jsonSettings);
+                      } catch (_) {}
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text('${(_resultsFontScale * 100).round()}%'),
+                const SizedBox(width: 12),
+                OutlinedButton(
+                  onPressed: () async {
+                    setState(() => _resultsFontScale = 1.0);
+                    jsonSettings['search_results_font_scale'] = 1.0;
+                    searchResultsFontScaleNotifier.value = 1.0;
+                    try {
+                      await writeSettingsToFile(jsonSettings);
+                    } catch (_) {}
+                  },
+                  child: const Text('Restore results default'),
                 ),
               ],
             ),
@@ -395,6 +447,23 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                   child: const Text('System default'),
                 ),
               ],
+            ),
+
+            const SizedBox(height: 8),
+            SwitchListTile(
+              title: const Text('Auto scale with system text size'),
+              subtitle: const Text(
+                'Combine OS text size with Appearance slider',
+              ),
+              contentPadding: EdgeInsets.zero,
+              value: _autoScaleWithSystem,
+              onChanged: (v) async {
+                setState(() => _autoScaleWithSystem = v);
+                jsonSettings['auto_scale_with_system'] = v;
+                try {
+                  await writeSettingsToFile(jsonSettings);
+                } catch (_) {}
+              },
             ),
 
             const SizedBox(height: 24),

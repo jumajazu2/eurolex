@@ -1113,7 +1113,31 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
       [jsonEncode(query)],
     );
     if (!mounted) return;
-    var decodedResults = jsonDecode(resultsOS);
+    // Guard: if offline or invalid response, fail gracefully
+    Map<String, dynamic> decodedResults;
+    try {
+      decodedResults = jsonDecode(resultsOS) as Map<String, dynamic>;
+    } on FormatException catch (_) {
+      showInfo(
+        context,
+        'You appear to be offline or the server response was invalid. Please check your connection and try again.',
+      );
+      setState(() {
+        _progressColor = Colors.redAccent;
+        _isLoading = false;
+      });
+      return;
+    } catch (_) {
+      showInfo(
+        context,
+        'Unexpected error parsing server response. Please try again.',
+      );
+      setState(() {
+        _progressColor = Colors.redAccent;
+        _isLoading = false;
+      });
+      return;
+    }
 
     //if query returns error, stop processing, display error
     if (decodedResults['error'] != null) {
@@ -1241,7 +1265,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     var query = {
       "query": {
         "match_phrase": {
-          "en_text": {
+          "${lang1?.toLowerCase()}_text": {
             "query": _searchController.text,
             "slop": 2, // Allow some flexibility in word order
             "boost": 1.5, // Boost the phrase match
@@ -1288,7 +1312,11 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
             {
               "multi_match": {
                 "query": _searchController.text,
-                "fields": ["en_text", "sk_text", "cs_text"],
+                "fields": [
+                  "${lang1?.toLowerCase()}_text",
+                  "${lang2?.toLowerCase()}_text",
+                  "${lang3?.toLowerCase()}_text",
+                ],
                 "fuzziness": "AUTO",
                 "minimum_should_match": "80%",
               },
@@ -1301,7 +1329,11 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
       },
       "size": 50,
       "highlight": {
-        "fields": {"en_text": {}, "sk_text": {}, "cz_text": {}},
+        "fields": {
+          "${lang1?.toLowerCase()}_text": {},
+          "${lang2?.toLowerCase()}_text": {},
+          "${lang3?.toLowerCase()}_text": {},
+        },
       },
     };
 
@@ -1321,7 +1353,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
           "should": [
             {
               "match_phrase": {
-                "en_text": {
+                "${lang1?.toLowerCase()}_text": {
                   "query": _searchController.text,
                   "slop": 2,
                   "boost": 3.0,
@@ -1330,7 +1362,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
             },
             {
               "match": {
-                "en_text": {
+                "${lang1?.toLowerCase()}_text": {
                   "query": _searchController.text,
                   "fuzziness": "AUTO",
                   "operator": "and",
@@ -1340,7 +1372,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
             },
             {
               "match_phrase": {
-                "sk_text": {
+                "${lang2?.toLowerCase()}_text": {
                   "query": _searchController.text,
                   "slop": 2,
                   "boost": 3.0,
@@ -1349,7 +1381,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
             },
             {
               "match": {
-                "sk_text": {
+                "${lang2?.toLowerCase()}_text": {
                   "query": _searchController.text,
                   "fuzziness": "AUTO",
                   "operator": "and",
@@ -1359,7 +1391,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
             },
             {
               "match_phrase": {
-                "cz_text": {
+                "${lang3?.toLowerCase()}_text": {
                   "query": _searchController.text,
                   "slop": 2,
                   "boost": 3.0,
@@ -1368,7 +1400,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
             },
             {
               "match": {
-                "cz_text": {
+                "${lang3?.toLowerCase()}_text": {
                   "query": _searchController.text,
                   "fuzziness": "AUTO",
                   "operator": "and",
@@ -1599,8 +1631,10 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
         // Start Search button
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 4.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Tooltip(
                 message:
@@ -1622,7 +1656,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                     children: [
                       Icon(Icons.search),
                       SizedBox(width: 6),
-                      Text('Phrase in $lang1'),
+                      Text('Phrase $lang1'),
                     ],
                   ),
                 ),
@@ -1647,7 +1681,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                     children: [
                       Icon(Icons.search),
                       SizedBox(width: 6),
-                      Text('MultiMatch $lang1, $lang2, $lang3)'),
+                      Text('Multi $lang1, $lang2, $lang3'),
                     ],
                   ),
                 ),
@@ -1672,7 +1706,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                     children: [
                       Icon(Icons.search),
                       SizedBox(width: 6),
-                      Text('Match/Phrase $lang1, $lang2, $lang3'),
+                      Text('Combined $lang1, $lang2, $lang3'),
                     ],
                   ),
                 ),
@@ -1697,7 +1731,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                     children: [
                       Icon(Icons.search),
                       SizedBox(width: 6),
-                      Text('All EU Law'),
+                      Text('All'),
                     ],
                   ),
                 ),
@@ -1765,7 +1799,10 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                 ),
               ),
 
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Tooltip(
                     message:
@@ -2106,9 +2143,17 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 8.0,
                                     ),
-                                    child: SelectableText.rich(
-                                      style: const TextStyle(fontSize: 18.0),
-                                      spanLang1,
+                                    child: ValueListenableBuilder<double>(
+                                      valueListenable:
+                                          searchResultsFontScaleNotifier,
+                                      builder: (context, scale, __) {
+                                        return SelectableText.rich(
+                                          style: TextStyle(
+                                            fontSize: 18.0 * scale,
+                                          ),
+                                          spanLang1,
+                                        );
+                                      },
                                     ),
                                   ),
                                 )
@@ -2124,9 +2169,17 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 8.0,
                                     ),
-                                    child: SelectableText.rich(
-                                      style: TextStyle(fontSize: 18.0),
-                                      spanLang2,
+                                    child: ValueListenableBuilder<double>(
+                                      valueListenable:
+                                          searchResultsFontScaleNotifier,
+                                      builder: (context, scale, __) {
+                                        return SelectableText.rich(
+                                          style: TextStyle(
+                                            fontSize: 18.0 * scale,
+                                          ),
+                                          spanLang2,
+                                        );
+                                      },
                                     ),
                                   ),
                                 )
@@ -2138,16 +2191,25 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 8.0,
                                     ),
-                                    child: SelectableText.rich(
-                                      style: TextStyle(fontSize: 18.0),
-                                      spanLang3,
+                                    child: ValueListenableBuilder<double>(
+                                      valueListenable:
+                                          searchResultsFontScaleNotifier,
+                                      builder: (context, scale, __) {
+                                        return SelectableText.rich(
+                                          style: TextStyle(
+                                            fontSize: 18.0 * scale,
+                                          ),
+                                          spanLang3,
+                                        );
+                                      },
                                     ),
                                   ),
                                 )
                                 : SizedBox.shrink(),
                             jsonSettings['display_meta']
-                                ? Expanded(
-                                  flex: 2, // Metadata column is narrower
+                                ? SizedBox(
+                                  width:
+                                      240, // Constrain metadata width to prevent overflow
                                   child: Container(
                                     // Subtle shading for differentiation
                                     padding: const EdgeInsets.symmetric(
@@ -2160,12 +2222,13 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                         Row(
                                           children: [
                                             Text("Celex: "),
-                                            Flexible(
+                                            Expanded(
                                               child: SelectableText(
                                                 metaCelex.length > index
                                                     ? metaCelex[index]
                                                     : '',
-                                                // overflow: TextOverflow.ellipsis,
+                                                // Consider: set maxLines for single-line truncation
+                                                // maxLines: 1,
                                               ),
                                             ),
                                           ],
@@ -2188,7 +2251,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                         Row(
                                           children: [
                                             Text("Date: "),
-                                            Flexible(
+                                            Expanded(
                                               child: SelectableText(
                                                 docDate.length > index
                                                     ? (() {
@@ -2203,7 +2266,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                                       return "${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}";
                                                     })()
                                                     : '',
-                                                //  overflow: TextOverflow.ellipsis,
+                                                // maxLines: 1,
                                               ),
                                             ),
                                           ],
@@ -2212,12 +2275,12 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                         Row(
                                           children: [
                                             Text("Class: "),
-                                            Flexible(
+                                            Expanded(
                                               child: SelectableText(
                                                 className.length > index
                                                     ? className[index]
                                                     : '',
-                                                // overflow: TextOverflow.ellipsis,
+                                                // maxLines: 1,
                                               ),
                                             ),
                                           ],
@@ -2226,33 +2289,29 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                         Row(
                                           children: [
                                             Text("Sequence ID: "),
-                                            Flexible(
+                                            Expanded(
                                               child: SelectableText(
                                                 pointerPar.length > index
                                                     ? pointerPar[index]
                                                     : '',
-                                                // overflow: TextOverflow.ellipsis,
+                                                // maxLines: 1,
                                               ),
                                             ),
                                           ],
                                         ),
-                                        Row(
-                                          children: [
-                                            Text("Unmatched paragraphs: "),
-                                            Flexible(
-                                              child: SelectableText(
-                                                parNotMatched.length > index
-                                                    ? parNotMatched[index]
-                                                    : '',
-                                                // overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
+                                        (parNotMatched[index] == "true")
+                                            ? Row(
+                                              children: [
+                                                Text(
+                                                  "Texts may be misaligned!",
+                                                ),
+                                              ],
+                                            )
+                                            : SizedBox.shrink(),
 
                                         Row(
                                           children: [
-                                            Text("Open in Browser: "),
+                                            Text("Eur-Lex: "),
                                             GestureDetector(
                                               onTap: () {
                                                 // Handle the tap event here, e.g. open the link in a browser

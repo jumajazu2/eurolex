@@ -30,6 +30,9 @@ String? lang2;
 String? lang3;
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 final ValueNotifier<double> fontScaleNotifier = ValueNotifier<double>(1.0);
+// Font scale used only for Search results list/table
+final ValueNotifier<double> searchResultsFontScaleNotifier =
+  ValueNotifier<double>(1.0);
 final ValueNotifier<String> fontFamilyNotifier = ValueNotifier<String>(
   'System',
 );
