@@ -443,10 +443,22 @@ void openSearchUpload(json, indexName) {
 
   // Send the NDJSON data to OpenSearch
 
+  final bulkPreview = bulkData.sublist(
+    0,
+    bulkData.length < 2 ? bulkData.length : 2,
+  );
+  final bytesLength = (bulkData.join("\n") + "\n").length;
   print("Sending data to OpenSearch at $opensearchUrl");
   print("******************************************************************");
-  print(bulkData.sublist(0, bulkData.length < 2 ? bulkData.length : 2));
+  print(bulkPreview);
   print("******************************************************************");
+
+  try {
+    final lgr = LogManager(fileName: '${fileSafeStamp}_${indexName}.log');
+    lgr.log(
+      'bulk start url=$opensearchUrl lines=${bulkData.length} bytes=$bytesLength osServer=$osServer',
+    );
+  } catch (_) {}
 
   sendToOpenSearch(opensearchUrl, bulkData);
 }
@@ -470,6 +482,10 @@ Future<String> sendToOpenSearch(String url, List<String> bulkData) async {
       print(
         "Data successfully processed in opensearch! ${response.body.substring(0, 100)}",
       );
+      try {
+        final lgr = LogManager(fileName: '${fileSafeStamp}_bulk_ok.log');
+        lgr.log('200 OK at $url');
+      } catch (_) {}
       return response.body;
     } else {
       print("Error: ${response.statusCode} - ${response.headers}");
@@ -477,19 +493,43 @@ Future<String> sendToOpenSearch(String url, List<String> bulkData) async {
         print("Showing subscription dialog for status ${response.statusCode}");
         showSubscriptionDialog(response.statusCode);
       }
+      try {
+        final lgr = LogManager(fileName: '${fileSafeStamp}_bulk_err.log');
+        final bodyPrefix =
+            response.body.length > 512
+                ? response.body.substring(0, 512)
+                : response.body;
+        lgr.log('HTTP ${response.statusCode} at $url body: ' + bodyPrefix);
+      } catch (_) {}
       return response.body;
     }
   } on TimeoutException catch (e) {
     print("Timeout sending data to OpenSearch: $e");
+    try {
+      final lgr = LogManager(fileName: '${fileSafeStamp}_bulk_err.log');
+      lgr.log('Timeout at $url: $e');
+    } catch (_) {}
     return "Timeout: $e";
   } on SocketException catch (e) {
     print("SocketException sending data to OpenSearch: $e");
+    try {
+      final lgr = LogManager(fileName: '${fileSafeStamp}_bulk_err.log');
+      lgr.log('SocketException at $url: $e');
+    } catch (_) {}
     return "SocketException: $e";
   } on http.ClientException catch (e) {
     print("ClientException sending data to OpenSearch: $e");
+    try {
+      final lgr = LogManager(fileName: '${fileSafeStamp}_bulk_err.log');
+      lgr.log('ClientException at $url: $e');
+    } catch (_) {}
     return "ClientException: $e";
   } catch (e) {
     print("Error sending data to OpenSearch: $e");
+    try {
+      final lgr = LogManager(fileName: '${fileSafeStamp}_bulk_err.log');
+      lgr.log('Unexpected error at $url: $e');
+    } catch (_) {}
     return "Error with OpenSearch: $e";
   }
 }

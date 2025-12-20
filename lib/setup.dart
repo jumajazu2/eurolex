@@ -11,6 +11,7 @@ import 'package:LegisTracerEU/display.dart';
 import 'package:LegisTracerEU/preparehtml.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:LegisTracerEU/ui_notices.dart';
 import 'dart:async';
 import 'dart:io';
@@ -37,6 +38,9 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
   bool _autoScaleWithSystem = false;
   // Search results-only font scale (does not affect global UI)
   double _resultsFontScale = 1.0;
+  // Update: hosted JSON endpoint (editable as needed)
+  static const String updateInfoUrl =
+      'https://www.pts-translation.sk/updateInfoUrl.json';
 
   @override
   void initState() {
@@ -89,6 +93,72 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
     _emailCtrl.dispose();
     _passkeyCtrl.dispose();
     super.dispose();
+  }
+
+  int _compareVersions(String a, String b) {
+    List<int> pa = a.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    List<int> pb = b.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    final len = max(pa.length, pb.length);
+    while (pa.length < len) pa.add(0);
+    while (pb.length < len) pb.add(0);
+    for (int i = 0; i < len; i++) {
+      if (pa[i] < pb[i]) return -1;
+      if (pa[i] > pb[i]) return 1;
+    }
+    return 0;
+  }
+
+  String? _currentVersion;
+  String? _availableVersion;
+  bool _checkingUpdate = false;
+  String? _updateError;
+
+  Future<void> _checkForStoreUpdate() async {
+    setState(() {
+      _checkingUpdate = true;
+      _updateError = null;
+    });
+    try {
+      final resp = await http
+          .get(Uri.parse(updateInfoUrl))
+          .timeout(const Duration(seconds: 8));
+      if (resp.statusCode != 200) {
+        setState(() {
+          _updateError = 'Update check failed (${resp.statusCode})';
+          _checkingUpdate = false;
+        });
+        return;
+      }
+      final data = jsonDecode(resp.body) as Map<String, dynamic>;
+      final latest = (data['version'] ?? '').toString();
+      final storeUrl =
+          (data['storeUrl'] ??
+                  'ms-windows-store://pdp/?PFN=Jumajazu.LegisTracerEU')
+              .toString();
+
+      final info = await PackageInfo.fromPlatform();
+      final current = info.version;
+      setState(() {
+        _currentVersion = current;
+        _availableVersion = latest;
+        _checkingUpdate = false;
+      });
+      final cmp = _compareVersions(current, latest);
+      if (cmp < 0) {
+        final uri = Uri.parse(storeUrl);
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('You’re up to date')));
+      }
+    } catch (e) {
+      setState(() {
+        _updateError = 'Update check error: $e';
+        _checkingUpdate = false;
+      });
+    }
   }
 
   Future<void> _confirmSettings() async {
@@ -466,6 +536,41 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
               },
             ),
 
+            const SizedBox(height: 24),
+
+            const Text(
+              'Updates',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                OutlinedButton(
+                  onPressed: _checkingUpdate ? null : _checkForStoreUpdate,
+                  child:
+                      _checkingUpdate
+                          ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                          : const Text('Check for Store Update'),
+                ),
+                const SizedBox(width: 24),
+                if (_currentVersion != null && _availableVersion != null)
+                  Text(
+                    'Current: $_currentVersion, Available: $_availableVersion',
+                  ),
+                if (_updateError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16),
+                    child: Text(
+                      _updateError!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ),
+              ],
+            ),
             const SizedBox(height: 24),
 
             // Maintenance (admin only)
