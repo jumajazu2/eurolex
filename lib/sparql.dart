@@ -2,6 +2,14 @@ import 'dart:convert';
 import 'testHtmlDumps.dart';
 import 'package:http/http.dart' as http;
 import 'package:LegisTracerEU/logger.dart';
+import 'package:LegisTracerEU/main.dart' show deviceId;
+
+Map<String, String> addDeviceIdHeader([Map<String, String>? headers]) {
+  final h = <String, String>{};
+  if (headers != null) h.addAll(headers);
+  if (deviceId != null && deviceId!.isNotEmpty) h['x-device-id'] = deviceId!;
+  return h;
+}
 
 final langMap = {
   'BUL': 'BG', // Bulgarian
@@ -94,11 +102,11 @@ LIMIT 10000
       resp = await http
           .post(
             Uri.parse(endpoint),
-            headers: {
+            headers: addDeviceIdHeader({
               'Accept': 'application/sparql-results+json',
               'Content-Type':
                   'application/x-www-form-urlencoded; charset=UTF-8',
-            },
+            }),
             body: {'query': query},
           )
           .timeout(const Duration(seconds: 12));
@@ -109,7 +117,12 @@ LIMIT 10000
       ).replace(queryParameters: {'query': query});
       method = 'GET';
       resp = await http
-          .get(getUri, headers: {'Accept': 'application/sparql-results+json'})
+          .get(
+            getUri,
+            headers: addDeviceIdHeader({
+              'Accept': 'application/sparql-results+json',
+            }),
+          )
           .timeout(const Duration(seconds: 12));
     }
 
@@ -198,11 +211,11 @@ LIMIT 10000
       resp = await http
           .post(
             Uri.parse(endpoint),
-            headers: {
+            headers: addDeviceIdHeader({
               'Accept': 'application/sparql-results+json',
               'Content-Type':
                   'application/x-www-form-urlencoded; charset=UTF-8',
-            },
+            }),
             body: {'query': query},
           )
           .timeout(const Duration(seconds: 12));
@@ -213,7 +226,12 @@ LIMIT 10000
       ).replace(queryParameters: {'query': query});
       method = 'GET';
       resp = await http
-          .get(getUri, headers: {'Accept': 'application/sparql-results+json'})
+          .get(
+            getUri,
+            headers: addDeviceIdHeader({
+              'Accept': 'application/sparql-results+json',
+            }),
+          )
           .timeout(const Duration(seconds: 12));
     }
 
@@ -408,11 +426,11 @@ LIMIT $limit
         resp = await http
             .post(
               Uri.parse(endpoint),
-              headers: {
+              headers: addDeviceIdHeader({
                 'Accept': 'application/sparql-results+json',
                 'Content-Type':
                     'application/x-www-form-urlencoded; charset=UTF-8',
-              },
+              }),
               body: {'query': query},
             )
             .timeout(const Duration(seconds: 15));
@@ -422,7 +440,12 @@ LIMIT $limit
         ).replace(queryParameters: {'query': query});
         method = 'GET';
         resp = await http
-            .get(getUri, headers: {'Accept': 'application/sparql-results+json'})
+            .get(
+              getUri,
+              headers: addDeviceIdHeader({
+                'Accept': 'application/sparql-results+json',
+              }),
+            )
             .timeout(const Duration(seconds: 15));
       }
       _sparqlLog(
@@ -559,11 +582,11 @@ ORDER BY ?celex
         resp = await http
             .post(
               Uri.parse(endpoint),
-              headers: {
+              headers: addDeviceIdHeader({
                 'Accept': 'application/sparql-results+json',
                 'Content-Type':
                     'application/x-www-form-urlencoded; charset=UTF-8',
-              },
+              }),
               body: {'query': query},
             )
             .timeout(const Duration(seconds: 15));
@@ -573,7 +596,12 @@ ORDER BY ?celex
         ).replace(queryParameters: {'query': query});
         method = 'GET';
         resp = await http
-            .get(getUri, headers: {'Accept': 'application/sparql-results+json'})
+            .get(
+              getUri,
+              headers: addDeviceIdHeader({
+                'Accept': 'application/sparql-results+json',
+              }),
+            )
             .timeout(const Duration(seconds: 15));
       }
       _sparqlLog(

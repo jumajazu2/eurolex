@@ -2,6 +2,7 @@
 import 'package:LegisTracerEU/main.dart'; // ensu re showSubscrip tionDialog is visible
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:LegisTracerEU/main.dart' show deviceId;
 import 'package:html/parser.dart' as html_parser;
 import 'dart:convert';
 import 'package:xml/xml.dart' as xml;
@@ -234,6 +235,13 @@ List<dom.Element> parseHtmlContent(String htmlContent) {
 */
 //This is the chosen method for extracting plain text lines from HTML DOM
 // ...existing code...
+Map<String, String> addDeviceIdHeader([Map<String, String>? headers]) {
+  final h = <String, String>{};
+  if (headers != null) h.addAll(headers);
+  if (deviceId != null && deviceId!.isNotEmpty) h['x-device-id'] = deviceId!;
+  return h;
+}
+
 List<String> extractPlainTextLines(String html) {
   final doc = html_parser.parse(html);
 
@@ -469,11 +477,11 @@ Future<String> sendToOpenSearch(String url, List<String> bulkData) async {
     final response = await http
         .post(
           Uri.parse(url),
-          headers: {
+          headers: addDeviceIdHeader({
             "Content-Type": "application/x-ndjson",
             'x-api-key': '${jsonSettings['access_key']}',
             'x-email': '${jsonSettings['user_email']}',
-          },
+          }),
           body: bulkData.join("\n") + "\n",
         )
         .timeout(const Duration(seconds: 20));
