@@ -14,6 +14,9 @@ import 'package:LegisTracerEU/http.dart';
 import 'package:LegisTracerEU/opensearch.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'package:device_info_plus/device_info_plus.dart';
+import 'dart:io';
+
 //String osServer = 'localhost:9200'; // add to Settings or Autolookup
 String osServer = 'search.pts-translation.sk';
 
@@ -32,11 +35,13 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 final ValueNotifier<double> fontScaleNotifier = ValueNotifier<double>(1.0);
 // Font scale used only for Search results list/table
 final ValueNotifier<double> searchResultsFontScaleNotifier =
-  ValueNotifier<double>(1.0);
+    ValueNotifier<double>(1.0);
 final ValueNotifier<String> fontFamilyNotifier = ValueNotifier<String>(
   'System',
 );
 LocalIngestServer ingestServer = LocalIngestServer(port: 6175);
+
+String? deviceId;
 
 final isAdminNotifier = ValueNotifier<bool>(isAdmin);
 
@@ -47,42 +52,72 @@ void main() {
     // Ensure runtime fetching works even if AssetManifest.* isn't available
     GoogleFonts.config.allowRuntimeFetching = true;
   } catch (_) {}
-  runApp(
-    MaterialApp(
-      navigatorKey: navigatorKey,
-      builder: (context, child) {
-        return ValueListenableBuilder<double>(
-          valueListenable: fontScaleNotifier,
-          builder: (context, scale, _) {
-            return ValueListenableBuilder<String>(
-              valueListenable: fontFamilyNotifier,
-              builder: (context, family, __) {
-                // Use MediaQuery to scale all text globally (affects explicit sizes too)
-                final mq = MediaQuery.of(context);
-                final s = scale.clamp(0.8, 1.6);
+  _initDeviceId().then((_) {
+    runApp(
+      MaterialApp(
+        navigatorKey: navigatorKey,
+        builder: (context, child) {
+          return ValueListenableBuilder<double>(
+            valueListenable: fontScaleNotifier,
+            builder: (context, scale, _) {
+              return ValueListenableBuilder<String>(
+                valueListenable: fontFamilyNotifier,
+                builder: (context, family, __) {
+                  // Use MediaQuery to scale all text globally (affects explicit sizes too)
+                  final mq = MediaQuery.of(context);
+                  final s = scale.clamp(0.8, 1.6);
 
-                // Apply selected font family to current theme while preserving colors and M3
-                final baseTheme = Theme.of(context);
-                final appliedTextTheme = _applyFontFamily(
-                  baseTheme.textTheme,
-                  family,
-                );
+                  // Apply selected font family to current theme while preserving colors and M3
+                  final baseTheme = Theme.of(context);
+                  final appliedTextTheme = _applyFontFamily(
+                    baseTheme.textTheme,
+                    family,
+                  );
 
-                return MediaQuery(
-                  data: mq.copyWith(textScaler: TextScaler.linear(s)),
-                  child: Theme(
-                    data: baseTheme.copyWith(textTheme: appliedTextTheme),
-                    child: child!,
-                  ),
-                );
-              },
-            );
-          },
-        );
-      },
-      home: MainTabbedApp(),
-    ),
-  );
+                  return MediaQuery(
+                    data: mq.copyWith(textScaler: TextScaler.linear(s)),
+                    child: Theme(
+                      data: baseTheme.copyWith(textTheme: appliedTextTheme),
+                      child: child!,
+                    ),
+                  );
+                },
+              );
+            },
+          );
+        },
+        home: MainTabbedApp(),
+      ),
+    );
+  });
+}
+
+Future<void> _initDeviceId() async {
+  try {
+    final deviceInfo = DeviceInfoPlugin();
+    if (Platform.isWindows) {
+      final win = await deviceInfo.windowsInfo;
+      deviceId = win.deviceId;
+    } else if (Platform.isLinux) {
+      final linux = await deviceInfo.linuxInfo;
+      deviceId = linux.machineId;
+    } else if (Platform.isMacOS) {
+      final mac = await deviceInfo.macOsInfo;
+      deviceId = mac.systemGUID;
+    } else if (Platform.isAndroid) {
+      final android = await deviceInfo.androidInfo;
+      deviceId = android.id;
+    } else if (Platform.isIOS) {
+      final ios = await deviceInfo.iosInfo;
+      deviceId = ios.identifierForVendor;
+    } else {
+      deviceId = null;
+    }
+    print('Device ID: ' + (deviceId ?? 'null'));
+  } catch (e) {
+    deviceId = null;
+    print('Failed to get device ID: $e');
+  }
 }
 
 Future<void> startIngestServer() async {
