@@ -24,3 +24,17 @@ ingestServer.onRequest = (payload) async {
       };
     };
 
+
+
+monitoring traffic on server
+
+sudo tcpdump -i lo -s0 -A 'tcp port 9200'
+# or for a remote ES host
+sudo tcpdump -i eth0 -s0 -A 'host <ES_IP> and tcp port 9200'
+# ngrep (human-friendly HTTP) BEST FORMAT //TODO monitoring traffic on server at node.js
+sudo ngrep -W byline '^(POST|GET|PUT|DELETE)' 'tcp and port 9200' -d lo
+
+
+Write a pcap to inspect later in Wireshark
+sudo tcpdump -i any -nn -s0 -w /tmp/es_bulk.pcap 'tcp port 9200'
+

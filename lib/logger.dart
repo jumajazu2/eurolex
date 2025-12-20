@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:path_provider/path_provider.dart';
+import 'package:LegisTracerEU/file_handling.dart';
 
 class LogManager {
   static const int maxLogSize = 90000000; // bytes (adjust as needed)
@@ -13,15 +13,12 @@ class LogManager {
   const LogManager({String? fileName})
     : _fileName = fileName ?? LogManager.fileName;
 
-  Future<String> get _logFilePath async {
-    final directory = await getApplicationDocumentsDirectory();
-    return "${directory.path}/$_fileName";
-  }
+  Future<String> get _logFilePath async => getFilePath(_fileName);
 
   Future<File> get _logFile async {
     final path = await _logFilePath;
     final file = File(path);
-    // Ensure parent directory exists (this creates Documents/logs if needed)
+    // Ensure parent directory exists
     await file.parent.create(recursive: true);
     return file;
   }

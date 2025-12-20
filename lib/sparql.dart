@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'testHtmlDumps.dart';
 import 'package:http/http.dart' as http;
+import 'package:LegisTracerEU/logger.dart';
 
 final langMap = {
   'BUL': 'BG', // Bulgarian
@@ -28,6 +29,13 @@ final langMap = {
   'SWE': 'SV', // Swedish
   'GLE': 'GA', // Ukrainian
 };
+
+// Centralized lightweight logger for SPARQL calls.
+void _sparqlLog(String msg) {
+  try {
+    LogManager(fileName: 'sparql.log').log(msg);
+  } catch (_) {}
+}
 
 String convertLangCode(String code) {
   return langMap[code] ?? code;
@@ -79,32 +87,75 @@ ORDER BY ?celex
 LIMIT 10000
 ''';
 
-  final resp = await http.post(
-    Uri.parse(endpoint),
-    headers: {
-      'Accept': 'application/sparql-results+json',
-      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-    },
-    body: {'query': query},
-  );
-
-  if (resp.statusCode != 200) {
-    throw Exception('SPARQL HTTP ${resp.statusCode}: ${resp.body}');
-  }
-
-  final decoded = jsonDecode(resp.body) as Map<String, dynamic>;
-  final bindings = (decoded['results']?['bindings'] as List?) ?? const [];
-
-  final lines = <String>[];
-  for (final row in bindings) {
-    final celex = row['celex']?['value'] as String? ?? '';
-    final title = row['title']?['value'] as String? ?? '';
-    if (celex.isNotEmpty) {
-      lines.add('$celex\t$title');
+  try {
+    http.Response resp;
+    String method = 'POST';
+    try {
+      resp = await http
+          .post(
+            Uri.parse(endpoint),
+            headers: {
+              'Accept': 'application/sparql-results+json',
+              'Content-Type':
+                  'application/x-www-form-urlencoded; charset=UTF-8',
+            },
+            body: {'query': query},
+          )
+          .timeout(const Duration(seconds: 12));
+    } catch (_) {
+      // Fallback to GET if POST is blocked
+      final getUri = Uri.parse(
+        endpoint,
+      ).replace(queryParameters: {'query': query});
+      method = 'GET';
+      resp = await http
+          .get(getUri, headers: {'Accept': 'application/sparql-results+json'})
+          .timeout(const Duration(seconds: 12));
     }
-  }
 
-  return lines;
+    _sparqlLog(
+      'titles sector=$sector year=$year method=$method status=' +
+          resp.statusCode.toString() +
+          ' len=' +
+          resp.body.length.toString(),
+    );
+
+    if (resp.statusCode != 200) {
+      print(
+        'SPARQL titles HTTP ${resp.statusCode}: ${resp.body.substring(0, resp.body.length > 300 ? 300 : resp.body.length)}',
+      );
+      _sparqlLog(
+        'titles error sector=$sector year=$year status=' +
+            resp.statusCode.toString() +
+            ' body=' +
+            resp.body.substring(
+              0,
+              resp.body.length > 300 ? 300 : resp.body.length,
+            ),
+      );
+      return const [];
+    }
+
+    final decoded = jsonDecode(resp.body) as Map<String, dynamic>;
+    final bindings = (decoded['results']?['bindings'] as List?) ?? const [];
+
+    final lines = <String>[];
+    for (final row in bindings) {
+      final celex = row['celex']?['value'] as String? ?? '';
+      final title = row['title']?['value'] as String? ?? '';
+      if (celex.isNotEmpty) {
+        lines.add('$celex\t$title');
+      }
+    }
+
+    return lines;
+  } catch (e) {
+    print('SPARQL titles fetch error (sector=$sector, year=$year): $e');
+    _sparqlLog(
+      'titles exception sector=$sector year=$year err=' + e.toString(),
+    );
+    return const [];
+  }
 }
 
 /// Returns lines with Cellar links"
@@ -140,32 +191,73 @@ ORDER BY ?celex
 LIMIT 10000
 ''';
 
-  final resp = await http.post(
-    Uri.parse(endpoint),
-    headers: {
-      'Accept': 'application/sparql-results+json',
-      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-    },
-    body: {'query': query},
-  );
-
-  if (resp.statusCode != 200) {
-    throw Exception('SPARQL HTTP ${resp.statusCode}: ${resp.body}');
-  }
-
-  final decoded = jsonDecode(resp.body) as Map<String, dynamic>;
-  final bindings = (decoded['results']?['bindings'] as List?) ?? const [];
-
-  final lines = <String>[];
-  for (final row in bindings) {
-    final celex = row['celex']?['value'] as String? ?? '';
-    final title = row['title']?['value'] as String? ?? '';
-    if (celex.isNotEmpty) {
-      lines.add('$celex\t$title');
+  try {
+    http.Response resp;
+    String method = 'POST';
+    try {
+      resp = await http
+          .post(
+            Uri.parse(endpoint),
+            headers: {
+              'Accept': 'application/sparql-results+json',
+              'Content-Type':
+                  'application/x-www-form-urlencoded; charset=UTF-8',
+            },
+            body: {'query': query},
+          )
+          .timeout(const Duration(seconds: 12));
+    } catch (_) {
+      // Fallback to GET if POST is blocked
+      final getUri = Uri.parse(
+        endpoint,
+      ).replace(queryParameters: {'query': query});
+      method = 'GET';
+      resp = await http
+          .get(getUri, headers: {'Accept': 'application/sparql-results+json'})
+          .timeout(const Duration(seconds: 12));
     }
-  }
 
-  return lines;
+    _sparqlLog(
+      'links sector=$sector year=$year method=$method status=' +
+          resp.statusCode.toString() +
+          ' len=' +
+          resp.body.length.toString(),
+    );
+
+    if (resp.statusCode != 200) {
+      print(
+        'SPARQL links HTTP ${resp.statusCode}: ${resp.body.substring(0, resp.body.length > 300 ? 300 : resp.body.length)}',
+      );
+      _sparqlLog(
+        'links error sector=$sector year=$year status=' +
+            resp.statusCode.toString() +
+            ' body=' +
+            resp.body.substring(
+              0,
+              resp.body.length > 300 ? 300 : resp.body.length,
+            ),
+      );
+      return const [];
+    }
+
+    final decoded = jsonDecode(resp.body) as Map<String, dynamic>;
+    final bindings = (decoded['results']?['bindings'] as List?) ?? const [];
+
+    final lines = <String>[];
+    for (final row in bindings) {
+      final celex = row['celex']?['value'] as String? ?? '';
+      final title = row['title']?['value'] as String? ?? '';
+      if (celex.isNotEmpty) {
+        lines.add('$celex\t$title');
+      }
+    }
+
+    return lines;
+  } catch (e) {
+    print('SPARQL links fetch error (sector=$sector, year=$year): $e');
+    _sparqlLog('links exception sector=$sector year=$year err=' + e.toString());
+    return const [];
+  }
 }
 
 Future<Map<String, String>> fetchTitlesForCelex(dynamic celex) async {
@@ -194,16 +286,55 @@ where {
 ''';
 
   try {
-    final resp = await http.post(
-      Uri.parse(endpoint),
-      headers: {
-        'Accept': 'application/sparql-results+json',
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-      },
-      body: {'query': query},
+    // Prefer POST; some environments may block it, so fallback to GET
+    http.Response resp;
+    String method = 'POST';
+    try {
+      resp = await http
+          .post(
+            Uri.parse(endpoint),
+            headers: {
+              'Accept': 'application/sparql-results+json',
+              'Content-Type':
+                  'application/x-www-form-urlencoded; charset=UTF-8',
+            },
+            body: {'query': query},
+          )
+          .timeout(const Duration(seconds: 12));
+    } catch (e) {
+      // POST failed (e.g., blocked). Try GET with URL-encoded query
+      final getUri = Uri.parse(
+        endpoint,
+      ).replace(queryParameters: {'query': query});
+      method = 'GET';
+      resp = await http
+          .get(getUri, headers: {'Accept': 'application/sparql-results+json'})
+          .timeout(const Duration(seconds: 12));
+    }
+
+    _sparqlLog(
+      'titles-celex celex=' +
+          celexStr +
+          ' method=' +
+          method +
+          ' status=' +
+          resp.statusCode.toString() +
+          ' len=' +
+          resp.body.length.toString(),
     );
 
     if (resp.statusCode != 200) {
+      _sparqlLog(
+        'titles-celex error celex=' +
+            celexStr +
+            ' status=' +
+            resp.statusCode.toString() +
+            ' body=' +
+            resp.body.substring(
+              0,
+              resp.body.length > 300 ? 300 : resp.body.length,
+            ),
+      );
       throw Exception('SPARQL HTTP ${resp.statusCode}: ${resp.body}');
     }
 
@@ -221,6 +352,9 @@ where {
     }
   } catch (e) {
     print('Error fetching titles for CELEX $celexStr: $e');
+    _sparqlLog(
+      'titles-celex exception celex=' + celexStr + ' err=' + e.toString(),
+    );
   }
   print('Fetched titles for CELEX $celexStr: $titleMap');
   return titleMap;
@@ -267,15 +401,60 @@ LIMIT $limit
 ''';
 
     try {
-      final resp = await http.post(
-        Uri.parse(endpoint),
-        headers: {
-          'Accept': 'application/sparql-results+json',
-          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        },
-        body: {'query': query},
+      // Try POST first, then fallback to GET if needed
+      http.Response resp;
+      String method = 'POST';
+      try {
+        resp = await http
+            .post(
+              Uri.parse(endpoint),
+              headers: {
+                'Accept': 'application/sparql-results+json',
+                'Content-Type':
+                    'application/x-www-form-urlencoded; charset=UTF-8',
+              },
+              body: {'query': query},
+            )
+            .timeout(const Duration(seconds: 15));
+      } catch (_) {
+        final getUri = Uri.parse(
+          endpoint,
+        ).replace(queryParameters: {'query': query});
+        method = 'GET';
+        resp = await http
+            .get(getUri, headers: {'Accept': 'application/sparql-results+json'})
+            .timeout(const Duration(seconds: 15));
+      }
+      _sparqlLog(
+        'linksNumber sector=' +
+            sectorStr +
+            ' year=' +
+            yearStr +
+            ' page=' +
+            page.toString() +
+            ' method=' +
+            method +
+            ' status=' +
+            resp.statusCode.toString() +
+            ' len=' +
+            resp.body.length.toString(),
       );
       if (resp.statusCode != 200) {
+        _sparqlLog(
+          'linksNumber error sector=' +
+              sectorStr +
+              ' year=' +
+              yearStr +
+              ' page=' +
+              page.toString() +
+              ' status=' +
+              resp.statusCode.toString() +
+              ' body=' +
+              resp.body.substring(
+                0,
+                resp.body.length > 300 ? 300 : resp.body.length,
+              ),
+        );
         throw Exception('SPARQL HTTP ${resp.statusCode}: ${resp.body}');
       }
 
@@ -314,6 +493,12 @@ LIMIT $limit
       }
     } catch (e) {
       print('Harvest Error on page $page: $e');
+      _sparqlLog(
+        'linksNumber exception page=' +
+            page.toString() +
+            ' err=' +
+            e.toString(),
+      );
       break;
     }
   }
@@ -331,7 +516,7 @@ LIMIT $limit
 
 Future<Map<String, Map<String, String>>> fetchLinksForCelex(
   dynamic celex,
-  String format
+  String format,
 ) async {
   const endpoint = 'https://publications.europa.eu/webapi/rdf/sparql';
   final celexStr = celex;
@@ -367,15 +552,60 @@ ORDER BY ?celex
 ''';
 
     try {
-      final resp = await http.post(
-        Uri.parse(endpoint),
-        headers: {
-          'Accept': 'application/sparql-results+json',
-          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        },
-        body: {'query': query},
+      // Try POST with fallback to GET
+      http.Response resp;
+      String method = 'POST';
+      try {
+        resp = await http
+            .post(
+              Uri.parse(endpoint),
+              headers: {
+                'Accept': 'application/sparql-results+json',
+                'Content-Type':
+                    'application/x-www-form-urlencoded; charset=UTF-8',
+              },
+              body: {'query': query},
+            )
+            .timeout(const Duration(seconds: 15));
+      } catch (_) {
+        final getUri = Uri.parse(
+          endpoint,
+        ).replace(queryParameters: {'query': query});
+        method = 'GET';
+        resp = await http
+            .get(getUri, headers: {'Accept': 'application/sparql-results+json'})
+            .timeout(const Duration(seconds: 15));
+      }
+      _sparqlLog(
+        'links-celex celex=' +
+            celexStr +
+            ' format=' +
+            format +
+            ' page=' +
+            page.toString() +
+            ' method=' +
+            method +
+            ' status=' +
+            resp.statusCode.toString() +
+            ' len=' +
+            resp.body.length.toString(),
       );
       if (resp.statusCode != 200) {
+        _sparqlLog(
+          'links-celex error celex=' +
+              celexStr +
+              ' format=' +
+              format +
+              ' page=' +
+              page.toString() +
+              ' status=' +
+              resp.statusCode.toString() +
+              ' body=' +
+              resp.body.substring(
+                0,
+                resp.body.length > 300 ? 300 : resp.body.length,
+              ),
+        );
         throw Exception('SPARQL HTTP ${resp.statusCode}: ${resp.body}');
       }
 
@@ -414,6 +644,12 @@ ORDER BY ?celex
       }
     } catch (e) {
       print('Harvest Error on page $page: $e');
+      _sparqlLog(
+        'links-celex exception page=' +
+            page.toString() +
+            ' err=' +
+            e.toString(),
+      );
       break;
     }
   }
