@@ -73,7 +73,7 @@
   <header class="search-page-header">
     <div class="container">
       <a class="brand" href="index.html">
-        <span class="brand__logo" aria-hidden="true">⚖️</span>
+        <span class="" aria-hidden="true"><img src="app_icon.ico" alt="LegisTracerEU logo" style="height:3.5em;vertical-align:middle;" /></span>
         <span class="brand__text">LegisTracerEU</span>
       </a>
       <nav>
@@ -98,13 +98,27 @@
 
       <div class="search-demo">
         <div class="search-controls">
-          <input id="demoSearch" type="text" placeholder="Enter search phrase (e.g., GDPR, banking supervision, climate change)..." />
-          <button id="searchBtn1" title="Performs a precise phrase search on English text.">Search (English only)</button>
-          <button id="searchBtn2" title="Performs a fuzzy search across English, Slovak, and Czech.">Search (EN, SK, CZ)</button>
-          <button id="searchBtn3" title="Combines phrase and fuzzy matching across all three languages.">Search (Combined)</button>
-          <button id="clearBtn">Clear</button>
+          <div class="lang-select-row" style="margin-bottom: 0.5em; display: flex; flex-wrap: wrap; width: 100%;">
+            <label for="sourceLang" class="sr-only">Source language</label>
+            <select id="sourceLang" name="sourceLang" class="lang-select"></select>
+            <span style="margin: 0 0.5em; font-weight: bold; color: #0E5895;">→</span>
+            <label for="targetLang" class="sr-only">Target language</label>
+            <select id="targetLang" name="targetLang" class="lang-select"></select>
+            <style>
+              .lang-select-row { justify-content: flex-start !important; }
+            </style>
+          </div>
+            <div style="width:100%;margin-bottom:0.5em;display:block;clear:both;">
+                  <textarea id="demoSearch" style="width:100%;max-width:1100px;min-width:320px;display:block;margin:0;height:3.5em;font-size:1em;resize:vertical;" rows="2" placeholder="Enter search phrase (e.g., GDPR, banking supervision, climate change)..."></textarea>
+          </div>
+          <div class="search-btn-row" style="display:flex;gap:0.5em;flex-wrap:wrap;">
+            <button id="searchBtn1" title="Performs a precise phrase search on the source language text.">Search (Source only)</button>
+            <button id="searchBtn2" title="Performs a fuzzy search across source and target language.">Search (Both)</button>
+            <button id="searchBtn3" title="Combines phrase and fuzzy matching across both languages.">Search (Combined)</button>
+            <button id="clearBtn">Clear</button>
+          </div>
         </div>
-        
+
         <div class="search-options">
           <label><input type="checkbox" id="highlightToggle" checked> Highlight results</label>
           <label><input type="checkbox" id="deduplicateToggle" checked> Deduplicate results</label>
@@ -113,13 +127,79 @@
         <div id="quotaInfo" class="quota-display"></div>
         <div id="results" class="search-results"></div>
       </div>
+      <script>
+        // List of all EU official languages (ISO 639-1 codes and names)
+        const euLanguages = [
+          { code: 'bg', name: 'Bulgarian' },
+          { code: 'cs', name: 'Czech' },
+          { code: 'da', name: 'Danish' },
+          { code: 'de', name: 'German' },
+          { code: 'el', name: 'Greek' },
+          { code: 'en', name: 'English' },
+          { code: 'es', name: 'Spanish' },
+          { code: 'et', name: 'Estonian' },
+          { code: 'fi', name: 'Finnish' },
+          { code: 'fr', name: 'French' },
+          { code: 'ga', name: 'Irish' },
+          { code: 'hr', name: 'Croatian' },
+          { code: 'hu', name: 'Hungarian' },
+          { code: 'it', name: 'Italian' },
+          { code: 'lt', name: 'Lithuanian' },
+          { code: 'lv', name: 'Latvian' },
+          { code: 'mt', name: 'Maltese' },
+          { code: 'nl', name: 'Dutch' },
+          { code: 'pl', name: 'Polish' },
+          { code: 'pt', name: 'Portuguese' },
+          { code: 'ro', name: 'Romanian' },
+          { code: 'sk', name: 'Slovak' },
+          { code: 'sl', name: 'Slovenian' },
+          { code: 'sv', name: 'Swedish' }
+        ];
+
+        function populateLangSelect(selectId, defaultCode) {
+          const select = document.getElementById(selectId);
+          if (!select) return;
+          select.innerHTML = '';
+          euLanguages.forEach(lang => {
+            const opt = document.createElement('option');
+            opt.value = lang.code;
+            opt.textContent = lang.name;
+            if (lang.code === defaultCode) opt.selected = true;
+            select.appendChild(opt);
+          });
+        }
+
+        // Save language pair to localStorage on change
+        function saveLangPair() {
+          const src = document.getElementById('sourceLang')?.value;
+          const tgt = document.getElementById('targetLang')?.value;
+          if (src && tgt) {
+            localStorage.setItem('lt_sourceLang', src);
+            localStorage.setItem('lt_targetLang', tgt);
+          }
+        }
+
+        // Detect browser language (prefer first part, e.g. 'sk' from 'sk-SK')
+        const browserLang = (navigator.language || navigator.userLanguage || 'en').split('-')[0];
+        // Set source to English, target to detected language (unless it's English)
+        const targetLang = euLanguages.some(l => l.code === browserLang) && browserLang !== 'en' ? browserLang : 'sk';
+        document.addEventListener('DOMContentLoaded', function() {
+          // Use saved values if available
+          const savedSrc = localStorage.getItem('lt_sourceLang') || 'en';
+          const savedTgt = localStorage.getItem('lt_targetLang') || targetLang;
+          populateLangSelect('sourceLang', savedSrc);
+          populateLangSelect('targetLang', savedTgt);
+          document.getElementById('sourceLang')?.addEventListener('change', saveLangPair);
+          document.getElementById('targetLang')?.addEventListener('change', saveLangPair);
+        });
+      </script>
     </div>
   </main>
   <footer class="site-footer">
     <div class="container footer-grid">
       <div class="footer-brand">
         <div class="brand small">
-          <span class="brand__logo">⚖️</span>
+          <span class="" aria-hidden="true"><img src="app_icon.ico" alt="LegisTracerEU logo" style="height:3.5em;vertical-align:middle;" /></span>
           <span class="brand__text">LegisTracerEU</span>
         </div>
         <p class="foot-note">EU Law Toolbox for linguists, translators, and legal professionals.</p>

@@ -1,6 +1,7 @@
 import 'package:LegisTracerEU/dataupload.dart';
 import 'package:LegisTracerEU/file_handling.dart';
 import 'package:LegisTracerEU/setup.dart';
+import 'package:LegisTracerEU/splash.dart';
 import 'package:LegisTracerEU/ui_notices.dart';
 import 'package:flutter/material.dart';
 import 'package:LegisTracerEU/preparehtml.dart';
@@ -13,6 +14,9 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:LegisTracerEU/http.dart';
 import 'package:LegisTracerEU/opensearch.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+import 'package:LegisTracerEU/version_check.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'dart:io';
@@ -136,6 +140,22 @@ class _MainTabbedAppState extends State<MainTabbedApp>
   @override
   void initState() {
     super.initState();
+    _checkForUpdate();
+    // Show splash screen as dialog on first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      showDialog(
+        context: navigatorKey.currentContext ?? context,
+        barrierDismissible: false,
+        builder: (_) => SplashScreen(),
+      );
+      Future.delayed(const Duration(seconds: 3), () {
+        if (navigatorKey.currentContext != null) {
+          Navigator.of(navigatorKey.currentContext!).pop();
+        } else {
+          Navigator.of(context).pop();
+        }
+      });
+    });
     /*/   _tabController = TabController(length: 5, vsync: this, initialIndex: 0);
 
     _tabController.addListener(() {
@@ -167,6 +187,7 @@ class _MainTabbedAppState extends State<MainTabbedApp>
             );
         });
       }
+
       lang1 = jsonSettings['lang1']?.toString().toUpperCase();
       lang2 = jsonSettings['lang2']?.toString().toUpperCase();
       lang3 = jsonSettings['lang3']?.toString().toUpperCase();
@@ -218,9 +239,79 @@ class _MainTabbedAppState extends State<MainTabbedApp>
     });*/
   }
 
+  void _checkForUpdate() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      final currentVersion = info.version + "+" + info.buildNumber;
+      print('[VersionCheck] Current app version: $currentVersion');
+      final latest = await fetchLatestAppVersion();
+      print('[VersionCheck] Latest version fetched: $latest');
+      if (latest != null) {
+        final isNewer = _isNewerVersion(latest, currentVersion);
+        print('[VersionCheck] Is newer version available? $isNewer');
+        if (isNewer) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            print('[VersionCheck] Showing update banner for version $latest');
+            showBanner(
+              context,
+              message:
+                  'A new version ($latest) is available! Please update your current version ($currentVersion) for the latest features and fixes.',
+              dismisable: true,
+              backgroundColor: Colors.lightBlue.shade100,
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    print(
+                      '[VersionCheck] Update button pressed, opening download page',
+                    );
+                    launchUrl(
+                      Uri.parse(
+                        'https://apps.microsoft.com/detail/9NKNVGXJFSW5',
+                      ),
+                      mode: LaunchMode.externalApplication,
+                    );
+                  },
+                  child: const Text('Update'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    print(
+                      '[VersionCheck] Dismiss button pressed, hiding banner',
+                    );
+                    ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
+                  },
+                  child: const Text('Dismiss'),
+                ),
+              ],
+            );
+          });
+        }
+      }
+    } catch (e) {
+      print('[VersionCheck] Error during version check: $e');
+    }
+  }
+
+  // Returns true if v1 > v2
+  bool _isNewerVersion(String v1, String v2) {
+    List<int> parse(String v) =>
+        v.split('+')[0].split('.').map(int.parse).toList();
+    final a = parse(v1);
+    final b = parse(v2);
+    for (int i = 0; i < a.length && i < b.length; i++) {
+      if (a[i] > b[i]) return true;
+      if (a[i] < b[i]) return false;
+    }
+    return a.length > b.length;
+  }
+
   @override
   void dispose() {
-    _tabController.dispose();
+    // Only dispose if _tabController is initialized
+    try {
+      _tabController.dispose();
+    } catch (_) {}
     super.dispose();
   }
 
