@@ -1,18 +1,21 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
+
 <head>
   <meta charset="UTF-8" />
   <title>Full-Text EU Law Search for Legal Translation | LegisTracerEU</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="description" content="Fast multilingual EU law search for translators, linguists & lawyers. Fuzzy & phrase search across EU regulations and directives with Trados Studio/CAT integration." />
+  <meta name="description"
+    content="Fast multilingual EU law search for translators, linguists & lawyers. Fuzzy & phrase search across EU regulations and directives with Trados Studio/CAT integration." />
   <meta name="keywords"
-    content="EUR-Lex search, EU law, legal translation, translation memory, CAT tool, terminology, Juremy, legal tech, Slovak, Czech, English, EU legislation search, EU Law Toolbox, translators, linguists, lawyers, machine translation post-editing, legal drafting, legal analysis, affordable Juremy alternative, právny preklad, prekladateľská pamäť, legislatíva EÚ, nástroje pre prekladateľov, právní překlad, překladatelská paměť, legislativa EU, nástroje pro překladatele, právny prekladač, právo európskej únie, predpisy eu, právne predpisy, legislatíva eú, európska legislatíva, právnická terminológia, law search engines, search law, search laws, eu search engines, new eu law, eur-lex search, eur-lex europa, eur-lex database, law toolbox, eu law, european union laws, european union rules, eu law analysis, law analysis, legal linguist, law linguist, linguist lawyer, law student, eur-lex suche, eu gesetze, eu verordnungen, eu verordnungen und richtlinien, eu verordnung englisch">
+    content="EUR-Lex search, EU law, legal translation, translation memory, CAT tool, terminology, Juremy, legal tech, Slovak, Czech, English, French, German, Spanish, all EU languages EU legislation search, EU Law Toolbox, translators, linguists, lawyers, machine translation post-editing, legal drafting, legal analysis, affordable Juremy alternative, právny preklad, prekladateľská pamäť, legislatíva EÚ, nástroje pre prekladateľov, právní překlad, překladatelská paměť, legislativa EU, nástroje pro překladatele, právny prekladač, právo európskej únie, predpisy eu, právne predpisy, legislatíva eú, európska legislatíva, právnická terminológia, law search engines, search law, search laws, eu search engines, new eu law, eur-lex search, eur-lex europa, eur-lex database, law toolbox, eu law, european union laws, european union rules, eu law analysis, law analysis, legal linguist, law linguist, linguist lawyer, law student, eur-lex suche, eu gesetze, eu verordnungen, eu verordnungen und richtlinien, eu verordnung englisch">
   <meta property="og:title" content="Full-Text EU Law Search for Legal Translation | LegisTracerEU" />
-  <meta property="og:description" content="Advanced search tool for professionals working with EU law, offering powerful features for legal translation and research." />
+  <meta property="og:description"
+    content="Advanced search tool for professionals working with EU law, offering powerful features for legal translation and research." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://www.pts-translation.sk" />
   <meta property="og:image" content="https://www.pts-translation.sk/og-image.png" />
-  
+
   <!-- Structured Data: Organization, SoftwareApplication (with Offers), WebSite (SearchAction), FAQPage -->
   <script type="application/ld+json">
   {
@@ -136,9 +139,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <!-- Professional distinctive font -->
-  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700;900&display=swap"
+    rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
-  
+
   <!-- Google Analytics -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-66JRRH14F8"></script>
   <script>
@@ -151,17 +155,31 @@
 
   <!-- Stripe Buy Button -->
   <script async src="https://js.stripe.com/v3/buy-button.js"></script>
-  
+
   <script defer src="script.js?v=20251216b"></script>
 </head>
+
 <body>
   <!-- Accessible skip link -->
   <a class="skip-link" href="#main">Skip to main content</a>
 
+  <!-- Announcement Banner: All EU languages supported -->
+  <div id="eu-lang-banner" class="eu-lang-banner" role="status">
+    <span class="eu-lang-banner__text">
+      <strong>New:</strong> Now supports <b>all EU languages</b> in any combination!<br>
+      <span style="font-weight:normal;">Windows app now available for download in <a
+          href="https://apps.microsoft.com/detail/9NKNVGXJFSW5" target="_blank"
+          style="color:#ffd700;text-decoration:underline;font-weight:bold;">Microsoft Store</a>.</span>
+    </span>
+    <button class="eu-lang-banner__close" aria-label="Dismiss announcement"
+      onclick="document.getElementById('eu-lang-banner').style.display='none'">&times;</button>
+  </div>
+
   <header class="site-header">
     <div class="container flex between center-v gap-m">
       <a class="brand" href="/">
-        <span class="brand__logo" aria-hidden="true">⚖️</span>
+        <span class="" aria-hidden="true"><img src="app_icon.ico" alt="LegisTracerEU logo"
+            style="height:3.5em;vertical-align:middle;" /></span>
         <span class="brand__text">LegisTracerEU</span>
       </a>
       <nav class="primary-nav" aria-label="Main navigation">
@@ -193,10 +211,11 @@
         <div class="hero__content">
           <h1 class="hero__title">
             EU Law<br>
-Search for Linguists and Lawyers
+            Search for Linguists and Lawyers
           </h1>
           <p class="hero__subtitle">
-            Fast full-text search in the bulk of EU law. Tailored for translators, post-editors, legal analysts and lawyers. 
+            Fast full-text search in the bulk of EU law. Tailored for translators, post-editors, legal analysts and
+            lawyers.
             Designed to minimise search time. Custom search on a predefined set of laws.
           </p>
         </div>
@@ -207,7 +226,79 @@ Search for Linguists and Lawyers
               <input id="heroSearch" name="q" type="search" placeholder="Search EU legislation..." autocomplete="off" />
             </div>
             <button type="submit" class="hero-search-button">Search</button>
+            <div class="lang-select-row">
+              <label for="sourceLang" class="sr-only">Source language</label>
+              <select id="sourceLang" name="sourceLang" class="lang-select"></select>
+              <span style="margin: 0 0.5em; font-weight: bold; color: #0E5895;">→</span>
+              <label for="targetLang" class="sr-only">Target language</label>
+              <select id="targetLang" name="targetLang" class="lang-select"></select>
+            </div>
           </form>
+          <script>
+            // List of all EU official languages (ISO 639-1 codes and names)
+            const euLanguages = [
+              { code: 'bg', name: 'Bulgarian' },
+              { code: 'cs', name: 'Czech' },
+              { code: 'da', name: 'Danish' },
+              { code: 'de', name: 'German' },
+              { code: 'el', name: 'Greek' },
+              { code: 'en', name: 'English' },
+              { code: 'es', name: 'Spanish' },
+              { code: 'et', name: 'Estonian' },
+              { code: 'fi', name: 'Finnish' },
+              { code: 'fr', name: 'French' },
+              { code: 'ga', name: 'Irish' },
+              { code: 'hr', name: 'Croatian' },
+              { code: 'hu', name: 'Hungarian' },
+              { code: 'it', name: 'Italian' },
+              { code: 'lt', name: 'Lithuanian' },
+              { code: 'lv', name: 'Latvian' },
+              { code: 'mt', name: 'Maltese' },
+              { code: 'nl', name: 'Dutch' },
+              { code: 'pl', name: 'Polish' },
+              { code: 'pt', name: 'Portuguese' },
+              { code: 'ro', name: 'Romanian' },
+              { code: 'sk', name: 'Slovak' },
+              { code: 'sl', name: 'Slovenian' },
+              { code: 'sv', name: 'Swedish' }
+            ];
+
+            function populateLangSelect(selectId, defaultCode) {
+              const select = document.getElementById(selectId);
+              select.innerHTML = '';
+              euLanguages.forEach(lang => {
+                const opt = document.createElement('option');
+                opt.value = lang.code;
+                opt.textContent = lang.name;
+                if (lang.code === defaultCode) opt.selected = true;
+                select.appendChild(opt);
+              });
+            }
+
+            // Save language pair to localStorage on change
+            function saveLangPair() {
+              const src = document.getElementById('sourceLang')?.value;
+              const tgt = document.getElementById('targetLang')?.value;
+              if (src && tgt) {
+                localStorage.setItem('lt_sourceLang', src);
+                localStorage.setItem('lt_targetLang', tgt);
+              }
+            }
+
+            // Detect browser language (prefer first part, e.g. 'sk' from 'sk-SK')
+            const browserLang = (navigator.language || navigator.userLanguage || 'en').split('-')[0];
+            // Set source to English, target to detected language (unless it's English)
+            const targetLang = euLanguages.some(l => l.code === browserLang) && browserLang !== 'en' ? browserLang : 'sk';
+            document.addEventListener('DOMContentLoaded', function() {
+              // Use saved values if available
+              const savedSrc = localStorage.getItem('lt_sourceLang') || 'en';
+              const savedTgt = localStorage.getItem('lt_targetLang') || targetLang;
+              populateLangSelect('sourceLang', savedSrc);
+              populateLangSelect('targetLang', savedTgt);
+              document.getElementById('sourceLang')?.addEventListener('change', saveLangPair);
+              document.getElementById('targetLang')?.addEventListener('change', saveLangPair);
+            });
+          </script>
         </div>
       </div>
     </section>
@@ -216,38 +307,48 @@ Search for Linguists and Lawyers
     <section id="features" class="section container">
       <header class="section-header center">
         <h2>Why Choose LegisTracerEU</h2>
-        <p class="section-lead">Our service provides an efficient way to search across EU legal norms to find accurate terms and exact or fuzzy phrases.</p>
+        <p class="section-lead">Our service provides an efficient way to search across EU legal norms to find accurate
+          terms and exact or fuzzy phrases.</p>
       </header>
       <div class="feature-grid">
         <article class="feature-card">
           <div class="feature-icon">⚡</div>
           <h3 class="feature-card__title">Discover EU Law in Seconds</h3>
-          <p class="feature-card__body">Search through thousands of EU regulations and directives instantly. See results in full legal context, filter by keywords or document numbers, and find exactly what you need — fast.</p>
+          <p class="feature-card__body">Search through thousands of EU regulations and directives instantly. See results
+            in full legal context, filter by keywords or document numbers, and find exactly what you need — fast.</p>
         </article>
         <article class="feature-card">
           <div class="feature-icon">✓</div>
           <h3 class="feature-card__title">Ensure Translation Consistency</h3>
-          <p class="feature-card__body">Locate exact citations across multiple legal acts to ensure terminological and contextual consistency. Reuse existing translations from official sources and maintain the highest quality with less effort.</p>
+          <p class="feature-card__body">Locate exact citations across multiple legal acts to ensure terminological and
+            contextual consistency. Reuse existing translations from official sources and maintain the highest quality
+            with less effort.</p>
         </article>
         <article class="feature-card">
           <div class="feature-icon">§</div>
           <h3 class="feature-card__title">Built for Legal Translators</h3>
-          <p class="feature-card__body">Created by professional translators who understand real workflows. Integrated with Trados Studio and optimized for linguistic precision, speed, and EU compliance — right when and where you need it.</p>
+          <p class="feature-card__body">Created by professional translators who understand real workflows. Integrated
+            with Trados Studio and optimized for linguistic precision, speed, and EU compliance — right when and where
+            you need it.</p>
         </article>
         <article class="feature-card">
           <div class="feature-icon">€</div>
           <h3 class="feature-card__title">Cost-Efficient Access</h3>
-          <p class="feature-card__body">Achieve full functionality at a significantly lower cost than comparable tools. Unlock features such as custom search indices and autoAnalyst, seamlessly integrated with Trados Studio to provide immediate legal references during translation.</p>
+          <p class="feature-card__body">Achieve full functionality at a significantly lower cost than comparable tools.
+            Unlock features such as custom search indices and autoAnalyst, seamlessly integrated with Trados Studio to
+            provide immediate legal references during translation.</p>
         </article>
         <article class="feature-card">
           <div class="feature-icon">🛡</div>
           <h3 class="feature-card__title">Privacy and Security First</h3>
-          <p class="feature-card__body">Your queries stay yours. Searches are processed securely, then immediately discarded — ensuring no trace of your source documents remains.</p>
+          <p class="feature-card__body">Your queries stay yours. Searches are processed securely, then immediately
+            discarded — ensuring no trace of your source documents remains.</p>
         </article>
         <article class="feature-card">
           <div class="feature-icon">⌘</div>
           <h3 class="feature-card__title">Work Anywhere</h3>
-          <p class="feature-card__body">Enjoy full functionality via the desktop app (Windows) with Trados Studio integration, or perform quick searches anytime through a secure web interface.</p>
+          <p class="feature-card__body">Enjoy full functionality via the desktop app (Windows) with Trados Studio
+            integration, or perform quick searches anytime through a secure web interface.</p>
         </article>
       </div>
     </section>
@@ -300,15 +401,49 @@ Search for Linguists and Lawyers
         <div class="data-sources-content">
           <div class="data-source-card">
             <h3>Web Form</h3>
-            <p>Enjoy core functionality<span class="tooltip" data-tooltip="7 searches a day without subscription. 2,000 searches a day with subscription, which is beyond what is practically possible for individual use, the cap is to prevent abuse of the service. Access may be revoked if abuse is detected.">*</span> via a web form. Simply enter your search phrase (one or a few words or longer texts) in any of the supported languages in the search form and hit "Search". You will get multilingual list of results with a link to the source legal act. Use checkboxes to have your results highlighted for easier orientation or deduplicated to limit their number.</p>
+            <p>Enjoy core functionality<span class="tooltip"
+                data-tooltip="7 searches a day without subscription. 2,000 searches a day with subscription, which is beyond what is practically possible for individual use, the cap is to prevent abuse of the service. Access may be revoked if abuse is detected.">*</span>
+              via a web form. Simply enter your search phrase (one or a few words or longer texts) in any of the
+              supported languages in the search form and hit "Search". You will get multilingual list of results with a
+              link to the source legal act. Use checkboxes to have your results highlighted for easier orientation or
+              deduplicated to limit their number.</p>
             <a href="#demo" class="btn outline">How to Use the Form</a>
           </div>
           <div class="data-source-card">
-            <h3>Desktop App<span class="tooltip" data-tooltip="The desktop app is undergoing maintenance, it will be available for download by the end of October. If you buy subscription by the end of October, it will be valid for 13 months to compensate for this temporary unavailablity of the desktor app. Please use the web form in the meantime.">*</span></h3>
-            <p>Enjoy full-feature access<span class="tooltip" data-tooltip="7 searches a day without subscription. 2,000 searches a day with subscription, which is beyond what is practically possible for individual use, the cap is to prevent abuse of the service. Access may be revoked if abuse is detected.">*</span> with a desktop app (currently for Windows). Follow these steps install the app and use search form in it, with filtering options, result highlighting and showing each result in the context of the underlying legal act. For extra features, such as ThinkAhead, install a Trados Studio plugin and see smart results the moment you open a segment in Trados Studio.</p>
-            <a href="https://www.pts-translation.sk/" target="_blank" rel="noopener noreferrer" class="btn outline">How to Install and Use the App</a>
+            <h3>Desktop App</h3>
+            <p>
+              Now available for download in
+              <a href="https://apps.microsoft.com/detail/9NKNVGXJFSW5" target="_blank" rel="noopener noreferrer"
+                style="color:#ffd700;text-decoration:underline;font-weight:bold;">
+                Microsoft Store
+              </a>.
+              Enjoy full-feature access<span class="tooltip"
+                data-tooltip="7 searches a day without subscription. 2,000 searches a day with subscription, which is beyond what is practically possible for individual use, the cap is to prevent abuse of the service. Access may be revoked if abuse is detected.">*</span>
+              with a desktop app (currently for Windows). Follow these steps to install the app and use search form in
+              it, with filtering options, result highlighting and showing each result in the context of the underlying
+              legal act Full customization options - create multiple subsets of reference documents to limit your search
+              to relevant resources.
+            </p>
+            <a href="https://www.pts-translation.sk/" target="_blank" rel="noopener noreferrer" class="btn outline">How
+              to Install and Use the App</a>
+          </div>
+
+          <div class="data-source-card">
+            <h3>Trados Studio Plugin<span class="tooltip"
+                data-tooltip="The Trados Studio plugin is undergoing maintenance, it will be available for download by mid-January 2026.">*</span>
+            </h3>
+            <p>Install a Trados Studio plugin<span class="tooltip"
+                data-tooltip="7 searches a day without subscription. 2,000 searches a day with subscription, which is beyond what is practically possible for individual use, the cap is to prevent abuse of the service. Access may be revoked if abuse is detected.">*</span>
+              and see smart results the moment you open a segment in Trados Studio. Bidirectional
+              exchange of data between Trados Studio and the app, with results displayed in Trados Studio for enhanced comfort. New features, such as automatic content analysis and content suggestions, to be available soon.</p>
+            <a href="https://www.pts-translation.sk/" target="_blank" rel="noopener noreferrer" class="btn outline">How
+              to Install
+              and Use the Plugin</a>
           </div>
         </div>
+
+
+
       </div>
     </section>
 
@@ -319,33 +454,36 @@ Search for Linguists and Lawyers
           <h2>Try LegisTracerEU</h2>
           <p class="section-lead">Experience our blazing fast EU law search capabilities.</p>
         </header>
-        
+
         <div class="demo-preview">
           <div class="demo-card">
             <h3>Quick Search Preview</h3>
-            <p>Try searching for common EU legal topics like "GDPR", "climate change" or a typical sentence to see how our search works.</p>
+            <p>Try searching for common EU legal topics like "GDPR", "climate change" or a typical sentence to see how
+              our search works.</p>
             <div class="demo-actions">
-           
-      
+
+
               <a href="search.html?q=GDPR" class="btn primary">Try: 'GDPR'</a>
               <a href="search.html?q=climate change" class="btn primary">Try 'climate change'</a>
-              <a href="search.html?q=This Decision is addressed to the Member States" class="btn primary">Try 'This Decision is addressed to the Member States.'</a>
+              <a href="search.html?q=This Decision is addressed to the Member States" class="btn primary">Try 'This
+                Decision is addressed to the Member States.'</a>
 
             </div>
-            
-            <p class="demo-language-note">Current version supports English, Slovak and Czech, more languages to follow.</p>
 
-            
+            <p class="demo-language-note">Supports all EU languages in any combination.
+            </p>
+
+
           </div>
-          
+
           <div class="demo-features">
             <h3>Search Features</h3>
             <ul>
-              <li>✓ Several search modes available<span class="tooltip"
-                data-tooltip="In the desktop app">*</span></li>
+              <li>✓ Several search modes available<span class="tooltip" data-tooltip="In the desktop app">*</span></li>
               <li>✓ Search across tens of thousands of EU legal documents</li>
               <li>✓ Results with context and direct links to EUR-Lex</li>
-              <li>✓ Advanced filtering<span class="tooltip" data-tooltip="In the desktop app">*</span> and highlighting options</li>
+              <li>✓ Advanced filtering<span class="tooltip" data-tooltip="In the desktop app">*</span> and highlighting
+                options</li>
               <li>✓ Fuzzy search: Don't worry about typos or some variations in search terms</li>
             </ul>
           </div>
@@ -367,8 +505,8 @@ Search for Linguists and Lawyers
             <ul class="feature-list">
               <li>7 searches per day</li>
               <li>Basic search modes</li>
-              <li>Limited language support</li>
-              <li>Web interface only</li>
+              <li>Multi-language support (all EU languages in any combination)</li>
+              <li>Use via Windows app or Web interface</li>
             </ul>
             <a href="#demo" class="btn outline full">Try Now</a>
           </div>
@@ -377,20 +515,17 @@ Search for Linguists and Lawyers
             <h3 class="price-tier">Regular</h3>
             <p class="price-amount">€60<span class="price-period">/year</span></p>
             <ul class="feature-list">
-              <li>Unlimited searches<span class="tooltip"
-                data-tooltip="Capped at 2,000 searches a day.">*</span></li>
+              <li>Unlimited searches<span class="tooltip" data-tooltip="Capped at 2,000 searches a day.">*</span></li>
               <li>Single user</li>
               <li>All search modes</li>
-              <li>Multi-language support (Currently English, Slovak, Czech)</li>
-              <li>CAT tool integration</li>
-              <li>Advanced features<span class="tooltip" data-tooltip="In the desktop app"  >*</span></li>
-              
+              <li>Multi-language support (all EU languages in any combination)</li>
+              <li>CAT tool integration (via Trados Studio plugin)</li>
+              <li>Customization to use own set of reference documents<span class="tooltip" data-tooltip="In the desktop app">*</span></li>
+
             </ul>
             <div style="display: flex; justify-content: center; width: 100%;">
-              <stripe-buy-button
-                buy-button-id="buy_btn_1SDYQqEoCB1sdCAHVSl7QdUO"
-                publishable-key="pk_live_51SDXiqEoCB1sdCAHcZ6FXuvXxaP4IGTU3hYSON6pUtsZwLmbXLfur4XsOi42feOBdOgwireE4D6ibWtVSPneMm2R00sloxPWJW"
-              >
+              <stripe-buy-button buy-button-id="buy_btn_1SDYQqEoCB1sdCAHVSl7QdUO"
+                publishable-key="pk_live_51SDXiqEoCB1sdCAHcZ6FXuvXxaP4IGTU3hYSON6pUtsZwLmbXLfur4XsOi42feOBdOgwireE4D6ibWtVSPneMm2R00sloxPWJW">
               </stripe-buy-button>
             </div>
           </div>
@@ -401,12 +536,13 @@ Search for Linguists and Lawyers
               <li>Language Service Providers, Law firms</li>
               <li>One subscription for several users</li>
               <li>Lower cost per user</li>
-             <li>Dedicated support</li>
+              <li>Dedicated support</li>
               <li>Training sessions<span class="tooltip" data-tooltip="Not included in subscription">*</span></li>
             </ul>
-            <a href="mailto:juraj.kuban.sk@gmail.com?subject=Asking%20for%20the%20price%20of%20Team%20subscription%20at%20LegisTracerEU&body=Dear%20Customer%2C%0A%0APlease%20let%20us%20know%20your%20intended%20usage%20and%20number%20of%20users%20to%20include%20in%20the%20subscription.%0A%0AYour%20customised%20quote%20will%20be%20with%20you%20within%2048%20hours.%0A%0AKind%20regards%0ALegisTracerEU%20Team" class="btn ghost full">Request Quote</a>
+            <a href="mailto:juraj.kuban.sk@gmail.com?subject=Asking%20for%20the%20price%20of%20Team%20subscription%20at%20LegisTracerEU&body=Dear%20Customer%2C%0A%0APlease%20let%20us%20know%20your%20intended%20usage%20and%20number%20of%20users%20to%20include%20in%20the%20subscription.%0A%0AYour%20customised%20quote%20will%20be%20with%20you%20within%2048%20hours.%0A%0AKind%20regards%0ALegisTracerEU%20Team"
+              class="btn ghost full">Request Quote</a>
           </div>
-        
+
 
         </div>
       </div>
@@ -420,81 +556,108 @@ Search for Linguists and Lawyers
       <div class="container">
         <header class="section-header center narrow">
           <h2>Frequently Asked Questions</h2>
-  
+
         </header>
         <details class="faq-item" id="data-sources-faq">
           <summary>Where does our legal data come from?</summary>
-          <p>The legal content available through this service is sourced from authoritative and high-quality EU repositories –
-          primarily the EUR-Lex portal and the IATE terminology database. EU law is generally accessible freely, either
-          through the EUR-Lex search interface or as bulk data via the EUR-Lex website.
-          <br><br>
-          
-          The European Commission’s document reuse policy, established under Decision 2011/833/EU, allows for the reuse of legal
-          documents published on EUR-Lex for both commercial and non-commercial purposes, unless otherwise specified.
-          For detailed information on the reuse of EU legal content, please consult the <a href="https://eur-lex.europa.eu/content/legal-notice/legal-notice.html?locale=en#2.%20droits">EUR-Lex reuse policy page</a>. For
-          information on IATE data reuse, please visit the <a href="https://iate.europa.eu/download-iate">IATE data reuse</a> page.
-          <br><br>
-          While EU legal documents are publicly available, their vast scope and intricate network of cross-references make
-          efficient searching a significant challenge—particularly for translators, linguists, and legal professionals.
-          <br><br>
-          With hands-on experience in EU legal translation, we have leveraged these publicly available resources to develop a
-          high-performance, domain-specific search engine designed to support professional workflows.
-          <br><br>
-          Each search result is presented in full context, allowing users to view the surrounding text within the originating
-          document. A direct link to the complete document on EUR-Lex is also provided for every result.</p>
+          <p>The legal content available through this service is sourced from authoritative and high-quality EU
+            repositories –
+            primarily the EUR-Lex portal and the IATE terminology database. EU law is generally accessible freely,
+            either
+            through the EUR-Lex search interface or as bulk data via the EUR-Lex website.
+            <br><br>
+
+            The European Commission’s document reuse policy, established under Decision 2011/833/EU, allows for the
+            reuse of legal
+            documents published on EUR-Lex for both commercial and non-commercial purposes, unless otherwise specified.
+            For detailed information on the reuse of EU legal content, please consult the <a
+              href="https://eur-lex.europa.eu/content/legal-notice/legal-notice.html?locale=en#2.%20droits">EUR-Lex
+              reuse policy page</a>. For
+            information on IATE data reuse, please visit the <a href="https://iate.europa.eu/download-iate">IATE data
+              reuse</a> page.
+            <br><br>
+            While EU legal documents are publicly available, their vast scope and intricate network of cross-references
+            make
+            efficient searching a significant challenge—particularly for translators, linguists, and legal
+            professionals.
+            <br><br>
+            With hands-on experience in EU legal translation, we have leveraged these publicly available resources to
+            develop a
+            high-performance, domain-specific search engine designed to support professional workflows.
+            <br><br>
+            Each search result is presented in full context, allowing users to view the surrounding text within the
+            originating
+            document. A direct link to the complete document on EUR-Lex is also provided for every result.
+          </p>
         </details>
         <details class="faq-item">
           <summary>Is this just another one-size-fits-all service, or can it be customized?</summary>
           <p><b>Customization is not only possible – it’s central to how this service works.</b><br><br>
-          
-          While you can search across the entire body of EU law and retrieve thousands of results instantly, in practice it’s
-          often far more efficient to focus on smaller, highly relevant subsets of documents.
-          <br><br>
-          <b>The challenge of scale</b>
-          <br><br>
-          The breadth of EU law is both a strength and a difficulty: the more data you include, the more overwhelming your results
-          can become. To address this, the service offers powerful <b>customization tools</b> that let you define your own sets of legal
-          documents – called <b>custom indices</b> – tailored to your workflow and priorities.
-          <br><br>
-          For example, EU legal translators often receive a list of reference documents or Celex numbers to follow. You can easily
-          import such a list and limit your searches to exactly those documents – or expand to the full database whenever needed.
-          As you work, you can also add new documents to your custom index with a few clicks.
-          <br><br>
-          Custom indices are currently available in the desktop application only, and each user may create up to three custom indices..</p>
+
+            While you can search across the entire body of EU law and retrieve thousands of results instantly, in
+            practice it’s
+            often far more efficient to focus on smaller, highly relevant subsets of documents.
+            <br><br>
+            <b>The challenge of scale</b>
+            <br><br>
+            The breadth of EU law is both a strength and a difficulty: the more data you include, the more overwhelming
+            your results
+            can become. To address this, the service offers powerful <b>customization tools</b> that let you define your
+            own sets of legal
+            documents – called <b>custom indices</b> – tailored to your workflow and priorities.
+            <br><br>
+            For example, EU legal translators often receive a list of reference documents or Celex numbers to follow.
+            You can easily
+            import such a list and limit your searches to exactly those documents – or expand to the full database
+            whenever needed.
+            As you work, you can also add new documents to your custom index with a few clicks.
+            <br><br>
+            Custom indices are currently available in the desktop application only, and each user may create up to three
+            custom indices..
+          </p>
         </details>
         <details class="faq-item">
           <summary>Does it really help in translation work?</summary>
           <p>Absolutely.
             <br><br>
-          
-          If you’ve ever translated for the European Commission or similar institutions, you know that consistency is not
-          optional. Each act must align perfectly with other referenced legal texts. No guessing, no paraphrasing — citations must
-          be verbatim.
-          <br><br>
-          And there are often many of them. That means countless searches, every day. The faster the search, the smoother your
-          workflow.
-          <br><br>
-          This tool was built specifically to make that process faster and more reliable. It lets translators keep precision
-          without sacrificing time or productivity. You no longer have to choose between accuracy and efficiency — both are built
-          in.
-.</p>
+
+            If you’ve ever translated for the European Commission or similar institutions, you know that consistency is
+            not
+            optional. Each act must align perfectly with other referenced legal texts. No guessing, no paraphrasing —
+            citations must
+            be verbatim.
+            <br><br>
+            And there are often many of them. That means countless searches, every day. The faster the search, the
+            smoother your
+            workflow.
+            <br><br>
+            This tool was built specifically to make that process faster and more reliable. It lets translators keep
+            precision
+            without sacrificing time or productivity. You no longer have to choose between accuracy and efficiency —
+            both are built
+            in.
+            .
+          </p>
         </details>
 
         <details class="faq-item">
           <summary>Is AI on board?</summary>
           <p>Not yet — and that’s intentional.
-        <br><br>
-          The search results do not come from a large language model (LLM), but from a specialized database that stores EU legal
-          content in a format designed for full-text search, structured queries, and real-time analytics.
-        <br><br>
-          There are two main reasons for this choice:
-        <br><br>
-          Accuracy: we need exact citations from official legal acts, not AI-generated interpretations.
-        <br><br>
-          Privacy: your search queries or documents are never shared with public AI systems or external cloud services.
-          <br><br>
-          In the future, certain AI elements may be introduced — for example, for terminology extraction or context analysis — but
-          they will only operate on publicly available data, never on your own queries or translation content.
+            <br><br>
+            The search results do not come from a large language model (LLM), but from a specialized database that
+            stores EU legal
+            content in a format designed for full-text search, structured queries, and real-time analytics.
+            <br><br>
+            There are two main reasons for this choice:
+            <br><br>
+            Accuracy: we need exact citations from official legal acts, not AI-generated interpretations.
+            <br><br>
+            Privacy: your search queries or documents are never shared with public AI systems or external cloud
+            services.
+            <br><br>
+            In the future, certain AI elements may be introduced — for example, for terminology extraction or context
+            analysis — but
+            they will only operate on publicly available data, never on your own queries or translation content.
 
           </p>
         </details>
@@ -503,25 +666,30 @@ Search for Linguists and Lawyers
         <details class="faq-item">
           <summary>How is this project evolving?</summary>
           <p>This is an active, evolving project.
-          <br><br>
-          It has already been tested extensively in real professional translation workflows, and after proving its reliability,
-          it’s now being opened to the wider public.
-          <br><br>
-          You can expect regular updates with new features and refinements — always built around the same core idea: fast,
-          precise, privacy-conscious search in EU law.
-          
-          We also welcome feedback from translators and legal professionals — your suggestions directly influence what comes next.
-          <br><br>
-          
-          <a href="mailto:juraj.kuban.sk@gmail.com?subject=Providing%20feedback%20or%20feature%20ideas&body=Hello%2C%0A%0AFeel%20free%20to%20share%20your%20feedback%20or%20feature%20ideas%20to%20drive%20the%20development%20of%20this%20project.%0A%0AKind%20regards%0AJuraj"
-            class="btn ghost full">Click here to share your feedback or feature ideas.</a>
+            <br><br>
+            It has already been tested extensively in real professional translation workflows, and after proving its
+            reliability,
+            it’s now being opened to the wider public.
+            <br><br>
+            You can expect regular updates with new features and refinements — always built around the same core idea:
+            fast,
+            precise, privacy-conscious search in EU law.
 
-        
+            We also welcome feedback from translators and legal professionals — your suggestions directly influence what
+            comes next.
+            <br><br>
+
+            <a href="mailto:juraj.kuban.sk@gmail.com?subject=Providing%20feedback%20or%20feature%20ideas&body=Hello%2C%0A%0AFeel%20free%20to%20share%20your%20feedback%20or%20feature%20ideas%20to%20drive%20the%20development%20of%20this%20project.%0A%0AKind%20regards%0AJuraj"
+              class="btn ghost full">Click here to share your feedback or feature ideas.</a>
+
+
           </p>
         </details>
         <details class="faq-item" id="who-is-behind">
-          <summary>Who is  this project?</summary>
-          <p>This section will soon provide background information about the author, professional experience in legal translation, and the motivations for building LegisTracerEU. For now, you can reach out directly via the Contact link in the footer or the feedback button above.</p>
+          <summary>Who is this project?</summary>
+          <p>This section will soon provide background information about the author, professional experience in legal
+            translation, and the motivations for building LegisTracerEU. For now, you can reach out directly via the
+            Contact link in the footer or the feedback button above.</p>
         </details>
       </div>
     </section>
@@ -568,7 +736,8 @@ Search for Linguists and Lawyers
   <!-- Cookie Notice -->
   <div id="cookieNotice" class="cookie-notice">
     <div class="cookie-content">
-      <span class="cookie-text">By clicking Accept, Search or Buy, you agree with the use of cookies according to the <a href="privacy.html" class="cookie-link">Privacy Policy</a></span>
+      <span class="cookie-text">By clicking Accept, Search or Buy, you agree with the use of cookies according to the <a
+          href="privacy.html" class="cookie-link">Privacy Policy</a></span>
       <div class="cookie-actions">
         <button id="acceptCookies" class="cookie-btn">Accept</button>
       </div>
@@ -576,4 +745,5 @@ Search for Linguists and Lawyers
   </div>
 
 </body>
+
 </html>

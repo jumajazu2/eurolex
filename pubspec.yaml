@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 0.9.2+0
+version: 0.9.4+0
 
 environment:
   sdk: ^3.7.2
@@ -51,6 +51,7 @@ dependencies:
 
 dev_dependencies:
   msix: ^3.16.2
+  
 
 
   flutter_test:
@@ -62,7 +63,8 @@ msix:
   identity_name: Jumajazu.LegisTracerEU     # From Partner Center app reservation
   publisher: CN=9687351F-CD29-4738-A1E5-91A13D3AEBB4           # From Partner Center publisher ID
   logo_path: windows/runner/resources/icons.png
-  store: true                             # Generates Store-ready manifest
+  store: true         
+  version: 0.9.4.0                    # Generates Store-ready manifest
   # Optional:
   # description: EU law search and highlight client
   # architecture: x64                      # defaults to auto-detect
@@ -85,7 +87,8 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
+  assets:
+    - assets/splash1.png
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 
@@ -114,3 +117,5 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+

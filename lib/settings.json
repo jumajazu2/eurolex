@@ -3,7 +3,7 @@
   "font_size": 14,
   "lang1": "EN",
   "lang2": "SK",
-  "lang3": "CS",
+  "lang3": "EL",
   "display_lang1": true,
   "display_lang2": true,
   "display_lang3": false,
@@ -13,7 +13,7 @@
   "max_log_size": 999999,
   "access_key": "7239",
   "user_email": "juraj.kuban.sk@gmail.com1",
-  "font_scale": 0.85,
+  "font_scale": 0.95,
   "font_family": "Lexend",
   "auto_scale_with_system": false,
   "search_results_font_scale": 1.0999999999999999

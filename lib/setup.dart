@@ -96,8 +96,16 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
   }
 
   int _compareVersions(String a, String b) {
-    List<int> pa = a.split('.').map((e) => int.tryParse(e) ?? 0).toList();
-    List<int> pb = b.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    // Split at '+' to separate main version and build number
+    List<String> aParts = a.split('+');
+    List<String> bParts = b.split('+');
+    String aMain = aParts[0];
+    String bMain = bParts[0];
+    int aBuild = aParts.length > 1 ? int.tryParse(aParts[1]) ?? 0 : 0;
+    int bBuild = bParts.length > 1 ? int.tryParse(bParts[1]) ?? 0 : 0;
+
+    List<int> pa = aMain.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    List<int> pb = bMain.split('.').map((e) => int.tryParse(e) ?? 0).toList();
     final len = max(pa.length, pb.length);
     while (pa.length < len) pa.add(0);
     while (pb.length < len) pb.add(0);
@@ -105,6 +113,9 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
       if (pa[i] < pb[i]) return -1;
       if (pa[i] > pb[i]) return 1;
     }
+    // If main versions are equal, compare build numbers
+    if (aBuild < bBuild) return -1;
+    if (aBuild > bBuild) return 1;
     return 0;
   }
 
@@ -132,8 +143,7 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
       final data = jsonDecode(resp.body) as Map<String, dynamic>;
       final latest = (data['version'] ?? '').toString();
       final storeUrl =
-          (data['storeUrl'] ??
-                  'ms-windows-store://pdp/?PFN=Jumajazu.LegisTracerEU')
+          (data['storeUrl'] ?? 'https://apps.microsoft.com/detail/9NKNVGXJFSW5')
               .toString();
 
       final info = await PackageInfo.fromPlatform();
@@ -430,7 +440,7 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
             ),
 
             const SizedBox(height: 12),
-            const Text('Text Size - Results View Only'),
+            const Text('Text Size -  Only'),
             const SizedBox(height: 8),
             // Search results-only font size slider
             Row(
@@ -522,9 +532,7 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
             const SizedBox(height: 8),
             SwitchListTile(
               title: const Text('Auto scale with system text size'),
-              subtitle: const Text(
-                'Combine OS text size with Appearance slider',
-              ),
+
               contentPadding: EdgeInsets.zero,
               value: _autoScaleWithSystem,
               onChanged: (v) async {
@@ -558,7 +566,7 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                 ),
                 const SizedBox(width: 24),
                 if (_currentVersion != null && _availableVersion != null)
-                  Text(
+                  SelectableText(
                     'Current: $_currentVersion, Available: $_availableVersion',
                   ),
                 if (_updateError != null)

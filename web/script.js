@@ -157,6 +157,14 @@ async function doSearch(mode) {
     updateQuotaDisplay();
   }
 
+  // Get selected source and target languages from dropdowns
+  const sourceLang = document.getElementById('sourceLang')?.value || 'en';
+  const targetLang = document.getElementById('targetLang')?.value || 'sk';
+
+  // Compose field names
+  const sourceField = sourceLang + '_text';
+  const targetField = targetLang + '_text';
+
   let body;
   if (!q) {
     body = { size: 50, query: { match_all: {} } };
@@ -165,7 +173,7 @@ async function doSearch(mode) {
       query: {
         bool: {
           must: [
-            { match_phrase: { en_text: { query: q, slop: 2, boost: 1.5 } } },
+            { match_phrase: { [sourceField]: { query: q, slop: 2, boost: 1.5 } } },
             { term: { paragraphsNotMatched: false } }
           ]
         }
@@ -180,7 +188,7 @@ async function doSearch(mode) {
             {
               multi_match: {
                 query: q,
-                fields: ["en_text", "sk_text", "cz_text"],
+                fields: [sourceField, targetField],
                 fuzziness: 1,
                 minimum_should_match: "80%"
               }
@@ -196,12 +204,10 @@ async function doSearch(mode) {
       query: {
         bool: {
           should: [
-            { match_phrase: { en_text: { query: q, slop: 2, boost: 3.0 } } },
-            { match: { en_text: { query: q, fuzziness: 1, operator: "and", boost: 1.0 } } },
-            { match_phrase: { sk_text: { query: q, slop: 2, boost: 3.0 } } },
-            { match: { sk_text: { query: q, fuzziness: 1, operator: "and", boost: 1.0 } } },
-            { match_phrase: { cz_text: { query: q, slop: 2, boost: 3.0 } } },
-            { match: { cz_text: { query: q, fuzziness: 1, operator: "and", boost: 1.0 } } }
+            { match_phrase: { [sourceField]: { query: q, slop: 2, boost: 3.0 } } },
+            { match: { [sourceField]: { query: q, fuzziness: 1, operator: "and", boost: 1.0 } } },
+            { match_phrase: { [targetField]: { query: q, slop: 2, boost: 3.0 } } },
+            { match: { [targetField]: { query: q, fuzziness: 1, operator: "and", boost: 1.0 } } }
           ],
           minimum_should_match: 1
         }
@@ -265,13 +271,16 @@ function renderResults(data, query) {
     return;
   }
 
+  // Get selected source and target languages from dropdowns
+  const sourceLang = document.getElementById('sourceLang')?.value || 'en';
+  const targetLang = document.getElementById('targetLang')?.value || 'sk';
+
   const fieldMap = {
-    "en_text": "English",
-    "sk_text": "Slovak", 
-    "cz_text": "Czech",
+    [sourceLang + '_text']: sourceLang === 'en' ? 'English' : (sourceLang === 'sk' ? 'Slovak' : sourceLang),
+    [targetLang + '_text']: targetLang === 'en' ? 'English' : (targetLang === 'sk' ? 'Slovak' : targetLang),
     "celex": "Document"
   };
-  
+
   const fields = Object.keys(fieldMap);
   const headers = Object.values(fieldMap);
 
@@ -291,7 +300,7 @@ function renderResults(data, query) {
         const display = val.replace(/^CELEX:/i, '');
         return `<td><a href="${url}" target="_blank" rel="noopener noreferrer">${escapeHtml(display)}</a></td>`;
       }
-      
+
       const cellText = pretty(src[f]);
       const shouldHighlight = document.getElementById('highlightToggle')?.checked;
       return `<td>${shouldHighlight ? highlight(cellText, query) : escapeHtml(cellText)}</td>`;
