@@ -1,3 +1,59 @@
+// --- Account/Passkey Panel Logic ---
+const openAccountPanelBtn = document.getElementById('openAccountPanel');
+const accountPanel = document.getElementById('accountPanel');
+const closeAccountPanelBtn = document.getElementById('closeAccountPanel');
+const accountForm = document.getElementById('accountForm');
+const accountEmailInput = document.getElementById('accountEmail');
+const accountPasskeyInput = document.getElementById('accountPasskey');
+const accountStatusBar = document.getElementById('accountStatusBar');
+const accountStatusText = document.getElementById('accountStatusText');
+
+function showAccountPanel() {
+  accountPanel.style.display = 'block';
+  if (openAccountPanelBtn) openAccountPanelBtn.style.display = 'none';
+  // Pre-fill fields from localStorage
+  accountEmailInput.value = localStorage.getItem('lt_email') || '';
+  accountPasskeyInput.value = localStorage.getItem('lt_passkey') || '';
+}
+function hideAccountPanel() {
+  accountPanel.style.display = 'none';
+  updateAccountStatusBar();
+}
+if (openAccountPanelBtn) openAccountPanelBtn.addEventListener('click', showAccountPanel);
+if (closeAccountPanelBtn) closeAccountPanelBtn.addEventListener('click', hideAccountPanel);
+
+function updateAccountStatusBar() {
+  const email = localStorage.getItem('lt_email');
+  const passkey = localStorage.getItem('lt_passkey');
+  if (email && passkey) {
+    accountStatusBar.style.display = 'flex';
+    if (openAccountPanelBtn) openAccountPanelBtn.style.display = 'none';
+    accountStatusText.textContent = `Signed in as ${email}`;
+  } else {
+    accountStatusBar.style.display = 'none';
+    if (openAccountPanelBtn) openAccountPanelBtn.style.display = 'flex';
+  }
+}
+
+// Load from localStorage on page load
+document.addEventListener('DOMContentLoaded', () => {
+  updateAccountStatusBar();
+});
+
+// Save on submit
+if (accountForm) {
+  accountForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const email = accountEmailInput.value.trim();
+    const passkey = accountPasskeyInput.value.trim();
+    if (email && passkey) {
+      localStorage.setItem('lt_email', email);
+      localStorage.setItem('lt_passkey', passkey);
+      apiKey = passkey;
+      hideAccountPanel();
+    }
+  });
+}
 /* LegisTracerEU Website Functionality */
 
 // OpenSearch configuration
@@ -225,13 +281,17 @@ async function doSearch(mode) {
   resultsDiv.innerHTML = '<p class="search-loading">Searching EU legislation...</p>';
 
   try {
+    // Always get latest passkey from localStorage for x-api-key
+    let localPasskey = localStorage.getItem('lt_passkey');
+    if (!localPasskey || !localPasskey.trim()) localPasskey = 'trial';
+    const localEmail = localStorage.getItem('lt_email');
     const url = `${OPENSEARCH_URL}/${encodeURIComponent(DEFAULT_INDEX)}/_search`;
     const headers = {
       'Content-Type': 'application/json',
       'x-client-context': JSON.stringify(clientContext),
-      'x-api-key': apiKey
+      'x-api-key': localPasskey,
+      'x-email': localEmail || ''
     };
-    
     const resp = await fetch(url, { 
       method: 'POST', 
       headers, 
@@ -278,14 +338,18 @@ function renderResults(data, query) {
   const fieldMap = {
     [sourceLang + '_text']: sourceLang === 'en' ? 'English' : (sourceLang === 'sk' ? 'Slovak' : sourceLang),
     [targetLang + '_text']: targetLang === 'en' ? 'English' : (targetLang === 'sk' ? 'Slovak' : targetLang),
-    "celex": "Document"
+    "celex": "EUR-lex URL"
   };
 
   const fields = Object.keys(fieldMap);
   const headers = Object.values(fieldMap);
 
   let html = '<div class="results-table"><table><thead><tr>' + 
-    headers.map(h => `<th>${h}</th>`).join('') + 
+    headers.map((h, i) => {
+      if (i === 0 || i === 1) return `<th style="min-width:340px;max-width:900px;">${h}</th>`;
+      if (i === 2) return `<th style="min-width:80px;max-width:120px;">${h}</th>`;
+      return `<th>${h}</th>`;
+    }).join('') + 
     '</tr></thead><tbody>';
 
   for (const h of hits) {
@@ -295,7 +359,7 @@ function renderResults(data, query) {
         const val = String(src[f] || '').trim();
         if (!val) return '<td></td>';
         const uriParam = val.match(/^CELEX:/i) ? val : 'CELEX:' + val;
-        const url = 'https://eur-lex.europa.eu/legal-content/EN-SK-CS/TXT/?fromTab=ALL&from=SK&uri=' + 
+        const url = 'https://eur-lex.europa.eu/legal-content/' + encodeURIComponent(sourceLang) + '-' + encodeURIComponent(targetLang) + '/TXT/?fromTab=ALL&from=SK&uri=' + 
           encodeURIComponent(uriParam);
         const display = val.replace(/^CELEX:/i, '');
         return `<td><a href="${url}" target="_blank" rel="noopener noreferrer">${escapeHtml(display)}</a></td>`;
@@ -333,7 +397,8 @@ function updateQuotaDisplay() {
   const quotaInfoDiv = document.getElementById('quotaInfo');
   if (!quotaInfoDiv) return;
 
-  if (apiKey === 'trial') {
+  let pk = localStorage.getItem('lt_passkey');
+  if (!pk || !pk.trim() || pk.trim() === 'trial') {
     quotaInfoDiv.textContent = `Trial usage: ${searchCount} / 7 searches today`;
     quotaInfoDiv.className = searchCount >= 7 ? 'quota-display warning' : 'quota-display';
   } else {

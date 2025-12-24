@@ -1,3 +1,88 @@
+mark {
+  background: #fff9c4;
+  color: inherit;
+  padding: 0 0.12em;
+  border-radius: 2px;
+  box-shadow: none;
+}
+/* Account status bar styles */
+.account-status-bar {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1002;
+  background: #f5f5f5;
+  border: 1px solid #ccc;
+  border-radius: 22px;
+  padding: 6px 16px 6px 12px;
+  min-width: 160px;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  font-size: 15px;
+  color: #333;
+}
+.account-status-edit {
+  margin-left: 12px;
+  background: #e0e0e0;
+  border: none;
+  border-radius: 12px;
+  padding: 2px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+/* Floating Account Panel Styles */
+.account-panel {
+  position: fixed;
+  top: 3em;
+  right: 2em;
+  background: #fff;
+  border: 1px solid #bbb;
+  border-radius: 10px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.12);
+  padding: 1.2em 1.5em 1em 1.5em;
+  z-index: 1002;
+  min-width: 260px;
+  max-width: 340px;
+}
+.account-panel label {
+  display: block;
+  margin-top: 0.5em;
+  font-weight: 500;
+}
+.account-panel input {
+  width: 100%;
+  margin-bottom: 0.5em;
+  padding: 0.4em;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  font-size: 1em;
+}
+.account-panel button[type="submit"] {
+  background: #0E5895;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  padding: 0.5em 1.2em;
+  font-size: 1em;
+  cursor: pointer;
+}
+.account-panel-toggle {
+  background: #fff;
+  border: 1px solid #bbb;
+  border-radius: 50%;
+  width: 2.5em;
+  height: 2.5em;
+  font-size: 1.3em;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  cursor: pointer;
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
 /* Language selection dropdown styling */
 .lang-select-row {
   display: flex;
@@ -397,7 +482,7 @@ h4 { font-size: 1.25rem; text-transform: uppercase; letter-spacing: 0.06em; }
   top: 0;
   left: 0;
   right: 0;
-  bottom: 0;
+  max-width: 1800px;
   background: 
     radial-gradient(circle at 15% 30%, rgba(255,255,255,0.18) 5px, transparent 5px),
     radial-gradient(circle at 85% 80%, rgba(255,255,255,0.15) 6px, transparent 6px),
@@ -422,7 +507,7 @@ h4 { font-size: 1.25rem; text-transform: uppercase; letter-spacing: 0.06em; }
     radial-gradient(circle at 70% 40%, rgba(255,255,255,0.12) 6px, transparent 6px),
     radial-gradient(circle at 50% 90%, rgba(255,255,255,0.08) 9px, transparent 9px),
     radial-gradient(circle at 10% 40%, rgba(255,255,255,0.09) 7px, transparent 7px);
-  background-size: 350px 350px, 280px 280px, 420px 420px, 360px 360px;
+  max-width: 1800px;
   animation: float 25s ease-in-out infinite reverse;
   opacity: 0.6;
   z-index: 1;
@@ -1406,11 +1491,11 @@ h4 { font-size: 1.25rem; text-transform: uppercase; letter-spacing: 0.06em; }
 }
 
 .results-table mark {
-  background: linear-gradient(90deg, #A97CFF, #6A8BFF);
-  color: white;
-  font-weight: 600;
-  padding: 2px 4px;
-  border-radius: 3px;
+  background: #fff9c4;
+  color: inherit;
+  padding: 0 0.12em;
+  border-radius: 2px;
+  box-shadow: none;
 }
 
 .quota-exceeded {
