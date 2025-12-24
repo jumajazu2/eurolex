@@ -160,6 +160,22 @@
 </head>
 
 <body>
+    <!-- Floating Account/Passkey Form -->
+    <div id="accountPanel" class="account-panel" style="display:none;">
+      <form id="accountForm" autocomplete="off">
+        <label for="accountEmail">Email:</label>
+        <input type="email" id="accountEmail" name="accountEmail" required placeholder="Enter your email" />
+        <label for="accountPasskey">Passkey:</label>
+        <input type="text" id="accountPasskey" name="accountPasskey" required placeholder="Enter your passkey" />
+        <button type="submit">Save</button>
+        <button type="button" id="closeAccountPanel" style="margin-left:8px;">Close</button>
+      </form>
+    </div>
+    <div id="accountStatusBar" class="account-status-bar" style="display:none">
+      <span id="accountStatusText"></span>
+      <button class="account-status-edit" onclick="showAccountPanel()" title="Edit email/passkey">Edit</button>
+    </div>
+    <button id="openAccountPanel" class="account-panel-toggle" title="Account / Passkey" style="position:fixed;top:1em;right:1em;z-index:1001;display:none;">🔑</button>
   <!-- Accessible skip link -->
   <a class="skip-link" href="#main">Skip to main content</a>
 
@@ -229,7 +245,7 @@
             <div class="lang-select-row">
               <label for="sourceLang" class="sr-only">Source language</label>
               <select id="sourceLang" name="sourceLang" class="lang-select"></select>
-              <span style="margin: 0 0.5em; font-weight: bold; color: #0E5895;">→</span>
+              <span style="margin: 0 0.5em; font-weight: bold; color: #0E5895;">⇄</span>
               <label for="targetLang" class="sr-only">Target language</label>
               <select id="targetLang" name="targetLang" class="lang-select"></select>
             </div>
@@ -726,8 +742,8 @@
         <h4>Stay Updated</h4>
         <form class="newsletter-form" id="newsletterForm">
           <label for="emailInput" class="sr-only">Email address</label>
-          <input type="email" id="emailInput" placeholder="you@company.com" required />
-          <button class="btn small primary" type="submit">Subscribe</button>
+          <input type="email" id="emailInput" placeholder="your@email.com" required />
+          <button class="btn small primary" type="submit">Subscribe for News</button>
         </form>
       </div>
     </div>

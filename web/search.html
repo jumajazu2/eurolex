@@ -41,35 +41,51 @@
     }
     
     .search-page-content {
-      max-width: 1200px;
+      max-width: 1800px;
       margin: 0 auto;
-      padding: var(--space-l);
+      padding: 0 2vw;
     }
-    
+
     .search-intro {
       background: var(--color-surface);
       border: 1px solid var(--color-border);
       border-radius: var(--radius-l);
-      padding: var(--space-l);
-      margin-bottom: var(--space-l);
+      padding: 2.5em 2vw;
+      margin-bottom: 2em;
       text-align: center;
     }
-    
+
     .search-intro h1 {
       color: var(--color-accent-solid);
-      margin-bottom: var(--space-m);
+      margin-bottom: 1em;
     }
-    
+
     .full-search-demo {
       background: var(--color-surface);
       border: 1px solid var(--color-border);
       border-radius: var(--radius-l);
-      padding: var(--space-xl);
-      margin-bottom: var(--space-l);
+      padding: 2.5em 2vw;
+      margin-bottom: 2em;
     }
   </style>
 </head>
 <body>
+    <!-- Floating Account/Passkey Form -->
+    <div id="accountPanel" class="account-panel" style="display:none;">
+      <form id="accountForm" autocomplete="off">
+        <label for="accountEmail">Email:</label>
+        <input type="email" id="accountEmail" name="accountEmail" required placeholder="Enter your email" />
+        <label for="accountPasskey">Passkey:</label>
+        <input type="text" id="accountPasskey" name="accountPasskey" required placeholder="Enter your passkey" />
+        <button type="submit">Save</button>
+        <button type="button" id="closeAccountPanel" style="margin-left:8px;">Close</button>
+      </form>
+    </div>
+    <div id="accountStatusBar" class="account-status-bar" style="display:none">
+      <span id="accountStatusText"></span>
+      <button class="account-status-edit" onclick="showAccountPanel()" title="Edit email/passkey">Edit</button>
+    </div>
+    <button id="openAccountPanel" class="account-panel-toggle" title="Account / Passkey" style="position:fixed;top:1em;right:1em;z-index:1001;display:none;">🔑</button>
   <header class="search-page-header">
     <div class="container">
       <a class="brand" href="index.html">
@@ -90,7 +106,7 @@
 
     <div class="full-search-demo">
       <div class="demo-notice">
-        <div><strong>Trial Version - 7 searches per day</strong></div>
+        <div class="trial-only"><strong>Trial Version - 7 searches per day</strong></div>
         <div>The legal content is based on the authoritative EUR-Lex portal and IATE terminology system.</div>
         <div>EU Law data reused under <a href="https://eur-lex.europa.eu/content/help/data-reuse/reuse-contents-eurlex-details.html" target="_blank" rel="noopener noreferrer">European Commission's reuse policy</a>.</div>
         <div>For each search result, you can see it in context with a direct link to the full document on EUR-Lex.</div>
@@ -225,8 +241,8 @@
         <h4>Stay Updated</h4>
         <form class="newsletter-form" id="newsletterForm">
           <label for="emailInput" class="sr-only">Email address</label>
-          <input type="email" id="emailInput" placeholder="you@company.com" required />
-          <button class="btn small primary" type="submit">Subscribe</button>
+          <input type="email" id="emailInput" placeholder="your@email.com" required />
+          <button class="btn small primary" type="submit">Subscribe for News</button>
         </form>
       </div>
     </div>
@@ -234,4 +250,84 @@
 
   <script src="script.js?v=20251216b"></script>
 </body>
+<script>
+// Hide trial notice if passkey is set and not 'trial'
+function updateTrialNotice() {
+  const pk = localStorage.getItem('lt_passkey');
+  const showTrial = !(pk && pk.trim() && pk.trim() !== 'trial');
+  document.querySelectorAll('.trial-only').forEach(el => {
+    el.style.display = showTrial ? '' : 'none';
+  });
+}
+// Update on load and after credential change
+document.addEventListener('DOMContentLoaded', updateTrialNotice);
+if (window.accountForm) {
+  window.accountForm.addEventListener('submit', function() {
+    setTimeout(updateTrialNotice, 0);
+  });
+}
+</script>
+<script>
+// --- Account/Passkey Panel Logic ---
+const openAccountPanelBtn = document.getElementById('openAccountPanel');
+const accountPanel = document.getElementById('accountPanel');
+const closeAccountPanelBtn = document.getElementById('closeAccountPanel');
+const accountForm = document.getElementById('accountForm');
+const accountEmailInput = document.getElementById('accountEmail');
+const accountPasskeyInput = document.getElementById('accountPasskey');
+const accountStatusBar = document.getElementById('accountStatusBar');
+const accountStatusText = document.getElementById('accountStatusText');
+
+function showAccountPanel() {
+  accountPanel.style.display = 'block';
+  if (openAccountPanelBtn) openAccountPanelBtn.style.display = 'none';
+  // Pre-fill fields from localStorage
+  accountEmailInput.value = localStorage.getItem('lt_email') || '';
+  accountPasskeyInput.value = localStorage.getItem('lt_passkey') || '';
+}
+function hideAccountPanel() {
+  accountPanel.style.display = 'none';
+  updateAccountStatusBar();
+}
+if (openAccountPanelBtn) openAccountPanelBtn.addEventListener('click', showAccountPanel);
+if (closeAccountPanelBtn) closeAccountPanelBtn.addEventListener('click', hideAccountPanel);
+
+function updateAccountStatusBar() {
+  const email = localStorage.getItem('lt_email');
+  const passkey = localStorage.getItem('lt_passkey');
+  if (email && passkey) {
+    accountStatusBar.style.display = 'flex';
+    if (openAccountPanelBtn) openAccountPanelBtn.style.display = 'none';
+    accountStatusText.textContent = `Signed in as ${email}`;
+  } else {
+    accountStatusBar.style.display = 'none';
+    if (openAccountPanelBtn) openAccountPanelBtn.style.display = 'flex';
+  }
+}
+
+// Load from localStorage on page load
+document.addEventListener('DOMContentLoaded', () => {
+  updateAccountStatusBar();
+});
+
+// Save on submit
+if (accountForm) {
+  accountForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const email = accountEmailInput.value.trim();
+    const passkey = accountPasskeyInput.value.trim();
+    if (email && passkey) {
+      localStorage.setItem('lt_email', email);
+      localStorage.setItem('lt_passkey', passkey);
+      hideAccountPanel();
+    }
+  });
+}
+
+// Patch: Always use latest passkey from localStorage for x-api-key, fallback to 'trial'
+window.getApiKey = function() {
+  const pk = localStorage.getItem('lt_passkey');
+  return (pk && pk.trim()) ? pk : 'trial';
+};
+</script>
 </html>

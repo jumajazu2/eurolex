@@ -1003,12 +1003,13 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
             {
               "multi_match": {
                 "query": _httpSource,
+                "type": "phrase",
                 "fields": [
                   "${lang1?.toLowerCase()}_text",
                   "${lang2?.toLowerCase()}_text",
                   "${lang3?.toLowerCase()}_text",
                 ],
-                "fuzziness": "0",
+
                 "minimum_should_match": "60%",
               },
             },
