@@ -12,9 +12,10 @@
   "log_level": "info",
   "max_log_size": 999999,
   "access_key": "7239",
-  "user_email": "juraj.kuban.sk@gmail.com1",
+  "user_email": "juraj.kuban.sk@gmail.com",
   "font_scale": 0.95,
   "font_family": "Lexend",
   "auto_scale_with_system": false,
-  "search_results_font_scale": 1.0999999999999999
+  "search_results_font_scale": 1.0999999999999999,
+  "selected_index": "7239_eu4302b"
 }

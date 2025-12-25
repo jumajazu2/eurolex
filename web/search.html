@@ -110,14 +110,14 @@
         <div>The legal content is based on the authoritative EUR-Lex portal and IATE terminology system.</div>
         <div>EU Law data reused under <a href="https://eur-lex.europa.eu/content/help/data-reuse/reuse-contents-eurlex-details.html" target="_blank" rel="noopener noreferrer">European Commission's reuse policy</a>.</div>
         <div>For each search result, you can see it in context with a direct link to the full document on EUR-Lex.</div>
-      </div>
+        <div>The web search offers a limited set of features, for full functionality we recommend <a href="https://apps.microsoft.com/detail/9nknvgxjfsw5">the desktop application</a> and <a href="https://www.pts-translation.sk/#pricing">paid subscription</a>.</div>
 
       <div class="search-demo">
         <div class="search-controls">
           <div class="lang-select-row" style="margin-bottom: 0.5em; display: flex; flex-wrap: wrap; width: 100%;">
             <label for="sourceLang" class="sr-only">Source language</label>
             <select id="sourceLang" name="sourceLang" class="lang-select"></select>
-            <span style="margin: 0 0.5em; font-weight: bold; color: #0E5895;">→</span>
+            <span style="margin: 0 0.5em; font-weight: bold; color: #0E5895;">⇄</span>
             <label for="targetLang" class="sr-only">Target language</label>
             <select id="targetLang" name="targetLang" class="lang-select"></select>
             <style>
@@ -137,7 +137,7 @@
 
         <div class="search-options">
           <label><input type="checkbox" id="highlightToggle" checked> Highlight results</label>
-          <label><input type="checkbox" id="deduplicateToggle" checked> Deduplicate results</label>
+          <label><input type="checkbox" id="deduplicateToggle"> Deduplicate results</label>
         </div>
 
         <div id="quotaInfo" class="quota-display"></div>
@@ -266,68 +266,5 @@ if (window.accountForm) {
     setTimeout(updateTrialNotice, 0);
   });
 }
-</script>
-<script>
-// --- Account/Passkey Panel Logic ---
-const openAccountPanelBtn = document.getElementById('openAccountPanel');
-const accountPanel = document.getElementById('accountPanel');
-const closeAccountPanelBtn = document.getElementById('closeAccountPanel');
-const accountForm = document.getElementById('accountForm');
-const accountEmailInput = document.getElementById('accountEmail');
-const accountPasskeyInput = document.getElementById('accountPasskey');
-const accountStatusBar = document.getElementById('accountStatusBar');
-const accountStatusText = document.getElementById('accountStatusText');
-
-function showAccountPanel() {
-  accountPanel.style.display = 'block';
-  if (openAccountPanelBtn) openAccountPanelBtn.style.display = 'none';
-  // Pre-fill fields from localStorage
-  accountEmailInput.value = localStorage.getItem('lt_email') || '';
-  accountPasskeyInput.value = localStorage.getItem('lt_passkey') || '';
-}
-function hideAccountPanel() {
-  accountPanel.style.display = 'none';
-  updateAccountStatusBar();
-}
-if (openAccountPanelBtn) openAccountPanelBtn.addEventListener('click', showAccountPanel);
-if (closeAccountPanelBtn) closeAccountPanelBtn.addEventListener('click', hideAccountPanel);
-
-function updateAccountStatusBar() {
-  const email = localStorage.getItem('lt_email');
-  const passkey = localStorage.getItem('lt_passkey');
-  if (email && passkey) {
-    accountStatusBar.style.display = 'flex';
-    if (openAccountPanelBtn) openAccountPanelBtn.style.display = 'none';
-    accountStatusText.textContent = `Signed in as ${email}`;
-  } else {
-    accountStatusBar.style.display = 'none';
-    if (openAccountPanelBtn) openAccountPanelBtn.style.display = 'flex';
-  }
-}
-
-// Load from localStorage on page load
-document.addEventListener('DOMContentLoaded', () => {
-  updateAccountStatusBar();
-});
-
-// Save on submit
-if (accountForm) {
-  accountForm.addEventListener('submit', function(e) {
-    e.preventDefault();
-    const email = accountEmailInput.value.trim();
-    const passkey = accountPasskeyInput.value.trim();
-    if (email && passkey) {
-      localStorage.setItem('lt_email', email);
-      localStorage.setItem('lt_passkey', passkey);
-      hideAccountPanel();
-    }
-  });
-}
-
-// Patch: Always use latest passkey from localStorage for x-api-key, fallback to 'trial'
-window.getApiKey = function() {
-  const pk = localStorage.getItem('lt_passkey');
-  return (pk && pk.trim()) ? pk : 'trial';
-};
 </script>
 </html>

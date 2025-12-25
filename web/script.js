@@ -285,7 +285,9 @@ async function doSearch(mode) {
     let localPasskey = localStorage.getItem('lt_passkey');
     if (!localPasskey || !localPasskey.trim()) localPasskey = 'trial';
     const localEmail = localStorage.getItem('lt_email');
-    const url = `${OPENSEARCH_URL}/${encodeURIComponent(DEFAULT_INDEX)}/_search`;
+    // Exclude system indices (starting with a dot) using /*,-.*
+    const indexPattern = '/*,-.*';
+    const url = `${OPENSEARCH_URL}/${indexPattern}/_search`;
     const headers = {
       'Content-Type': 'application/json',
       'x-client-context': JSON.stringify(clientContext),
