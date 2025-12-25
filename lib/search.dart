@@ -45,6 +45,21 @@ List<HighlightResult> lang1HighlightedResults = [];
 List<HighlightResult> lang2HighlightedResults = [];
 List<HighlightResult> lang3HighlightedResults = [];
 var activeIndex = '*';
+
+// Restore selected index from settings if available
+void restoreActiveIndexFromSettings() {
+  if (jsonSettings.containsKey('selected_index') &&
+      jsonSettings['selected_index'] is String &&
+      (indices.contains(jsonSettings['selected_index']) ||
+          jsonSettings['selected_index'] == '*')) {
+    activeIndex = jsonSettings['selected_index'];
+  } else if (indices.isNotEmpty) {
+    activeIndex = indices[0];
+  } else {
+    activeIndex = '*';
+  }
+}
+
 var containsFilter = "";
 var celexFilter = "";
 var classFilter;
@@ -876,10 +891,11 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
         isAdmin,
         jsonSettings['access_key'] ?? DEFAULT_ACCESS_KEY,
       ).then((_) {
+        restoreActiveIndexFromSettings();
         if (mounted) {
           setState(() {
             print(
-              "SearchTab initialized - Indices loaded: $indices for isAdmin: $isAdmin",
+              "SearchTab initialized - Indices loaded: $indices for isAdmin: $isAdmin, activeIndex: $activeIndex",
             );
           });
         }
@@ -1595,13 +1611,9 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                     child: DropdownButton<String>(
                       isExpanded: true,
                       value:
-                          indices.contains(
-                                activeIndex,
-                              ) //TODO active index is inited with "*", which indices does contain, so nothing is shown, save last index
+                          indices.contains(activeIndex)
                               ? activeIndex
-                              : indices.isNotEmpty
-                              ? indices[0]
-                              : "*", // Default selected value
+                              : (indices.isNotEmpty ? indices[0] : "*"),
                       items:
                           indices.map((String value) {
                             return DropdownMenuItem<String>(
@@ -1615,12 +1627,14 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                             updateDropdown();
                           }),
 
-                      onChanged: (String? newValue) {
+                      onChanged: (String? newValue) async {
                         setState(() {
                           activeIndex = newValue!;
                         });
-                        // Handle dropdown selection
-                        print('Selected: $newValue');
+                        // Persist selected index
+                        jsonSettings['selected_index'] = activeIndex;
+                        await writeSettingsToFile(jsonSettings);
+                        print('Selected: $newValue (saved to settings)');
                       },
                     ),
                   ),
