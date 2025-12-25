@@ -1,7 +1,3 @@
-import 'package:showcaseview/showcaseview.dart';
-
-// Selected index for maintenance (persisted)
-
 import 'dart:convert';
 import 'dart:math';
 
@@ -23,11 +19,9 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
 // Simple globals (no `library` / `part`).
-final GlobalKey _dropdownKey = GlobalKey();
 // User
 String userEmail = jsonSettings['user_email'] ?? '';
 String userPasskey = jsonSettings['access_key'] ?? '';
-String? selectedIndex;
 // Working languages
 
 class indicesMaintenance extends StatefulWidget {
@@ -84,14 +78,6 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
         lang2 = v2;
         lang3 = v3;
         _emailCtrl.text = userEmail;
-
-        // Restore selected index for maintenance if available
-        if (jsonSettings.containsKey('selected_index') &&
-            jsonSettings['selected_index'] is String) {
-          selectedIndex = jsonSettings['selected_index'];
-        } else {
-          selectedIndex = null;
-        }
       });
     });
 
@@ -104,12 +90,9 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
   @override
   void dispose() {
     _emailCtrl.dispose();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ShowCaseWidget.of(context).startShowCase([_dropdownKey]);
-    });
     _passkeyCtrl.dispose();
     super.dispose();
+    bool _showcaseStarted = false;
   }
 
   int _compareVersions(String a, String b) {
@@ -247,7 +230,6 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
             .toList();
 
     // Index dropdown for maintenance (if needed)
-    final indexItems = indicesFull.map((row) => row[0]).toList();
 
     //final isAdmin =  _emailCtrl.text.trim().toLowerCase() == 'juraj.kuban.sk@gmail.com';
 
@@ -608,43 +590,6 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
             ),
             const SizedBox(height: 8),
             // Index selection dropdown for maintenance (optional, if you want to allow switching)
-            if (indexItems.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12.0),
-                child: Row(
-                  children: [
-                    const Text('Selected Index for Maintenance: '),
-                    Showcase(
-                      key: _dropdownKey,
-                      description: 'Check if the correct index is selected!',
-                      child: DropdownButton<String>(
-                        value:
-                            (selectedIndex != null &&
-                                    indexItems.contains(selectedIndex))
-                                ? selectedIndex
-                                : indexItems[0],
-                        items:
-                            indexItems
-                                .map(
-                                  (idx) => DropdownMenuItem<String>(
-                                    value: idx,
-                                    child: Text(idx),
-                                  ),
-                                )
-                                .toList(),
-                        onChanged: (String? newValue) async {
-                          setState(() {
-                            selectedIndex = newValue;
-                          });
-                          // Persist selected index
-                          jsonSettings['selected_index'] = selectedIndex;
-                          await writeSettingsToFile(jsonSettings);
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             // The rest of the maintenance UI (unchanged)
             GridView.builder(
               shrinkWrap: true,

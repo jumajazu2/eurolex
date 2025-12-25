@@ -1000,6 +1000,8 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     String _httpSegmentID = payload['segmentId'] ?? '';
     String _httpTimestamp = payload['timestamp'] ?? '';
 
+    _httpSource = sanitizeInput(_httpSource);
+
     httpPassAnalyzer = _httpSource;
 
     print(
@@ -1040,6 +1042,17 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     setState(() {
       queryText = "Auto-analyse: $_httpSource";
     }); // You may need to call setState again to update the UI
+  }
+
+  String sanitizeInput(input) {
+    // Remove {...} blocks
+    String output = input.replaceAll(RegExp(r'\{.*?\}', dotAll: true), '');
+    // Remove <...> tags
+    output = output.replaceAll(RegExp(r'<[^>]+>'), '');
+    // Collapse whitespace and trim
+    output = output.replaceAll(RegExp(r'\s+'), ' ').trim();
+    print("sanitized input: $output");
+    return output;
   }
 
   void _updateState() async {

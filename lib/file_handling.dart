@@ -24,10 +24,13 @@ String getFilePath(String filename) {
     try {
       Directory(baseDir).createSync(recursive: true);
     } catch (_) {}
+    print("Production mode detected. Using $baseDir, $filename.");
     return p.join(baseDir, filename);
   } else {
     // Debug: keep existing project-relative path
-    print("Debug mode detected. Using relative path.");
+    print(
+      "Debug mode detected. Using relative path, c:/Users/Juraj/Documents/IT/OSLex/eurolex/lib/$filename.",
+    );
     return 'c:/Users/Juraj/Documents/IT/OSLex/eurolex/lib/$filename';
   }
 }
