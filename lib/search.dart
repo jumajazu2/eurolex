@@ -863,7 +863,7 @@ class SearchTabWidget extends StatefulWidget {
 }
 
 class _SearchTabWidgetState extends State<SearchTabWidget>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _controller2 = TextEditingController();
   final TextEditingController _controller3 = TextEditingController();
@@ -878,10 +878,73 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
   Timer? _pollingTimer;
   bool _isVisible = true;
   var lastFileContent = "";
+
+  bool _showIndexArrowHint = true;
+  late final AnimationController _indexArrowBlinkController;
+  late final Animation<double> _indexArrowOpacity;
+
+  Widget _buildIndexArrowHint() {
+    return Tooltip(
+      message: 'Make sure that the correct custom index is selected',
+      waitDuration: const Duration(milliseconds: 600),
+      child: FadeTransition(
+        opacity: _indexArrowOpacity,
+        child: SizedBox(
+          width: 62,
+          height: 54,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              const Align(
+                alignment: Alignment.center,
+                child: Icon(Icons.arrow_back, color: Colors.red, size: 54),
+              ),
+              Positioned(
+                right: -6,
+                top: -6,
+                child: InkWell(
+                  onTap: () {
+                    _indexArrowBlinkController.stop();
+                    if (!mounted) return;
+                    setState(() => _showIndexArrowHint = false);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.close,
+                      size: 14,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    _indexArrowBlinkController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+    _indexArrowOpacity = Tween<double>(begin: 0.25, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _indexArrowBlinkController,
+        curve: Curves.easeInOut,
+      ),
+    );
+    _indexArrowBlinkController.repeat(reverse: true);
 
     // Load settings before using jsonSettings
     loadSettingsFromFile().then((_) {
@@ -962,6 +1025,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _pollingTimer?.cancel();
+    _indexArrowBlinkController.dispose();
     super.dispose();
   }
 
@@ -1653,6 +1717,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                   ),
                 ),
               ),
+              if (_showIndexArrowHint) _buildIndexArrowHint(),
             ],
           ),
         ),
