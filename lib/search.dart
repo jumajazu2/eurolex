@@ -848,6 +848,96 @@ Set<String> stopwordsForLangs({String? lang1, String? lang2, String? lang3}) {
   return acc;
 }
 
+List<String> _pickInformativeTokens(
+  String text, {
+  String? l1,
+  String? l2,
+  String? l3,
+  int maxTokens = 4,
+}) {
+  final stop = stopwordsForLangs(lang1: l1, lang2: l2, lang3: l3);
+  final normalized = text.toLowerCase().replaceAll(
+    RegExp(r"[^\p{L}\p{M}\p{N}\s'’\-‑]", unicode: true),
+    " ",
+  );
+  final raw = normalized
+      .split(RegExp(r"\s+", unicode: true))
+      .where((w) => w.isNotEmpty);
+  final picked = <String>[];
+  for (final w in raw) {
+    if (w.length < 4) continue;
+    if (stop.contains(w)) continue;
+    if (picked.contains(w)) continue;
+    picked.add(w);
+    if (picked.length >= maxTokens) break;
+  }
+  if (picked.isEmpty) {
+    for (final w in raw) {
+      if (w.length < 4) continue;
+      if (picked.contains(w)) continue;
+      picked.add(w);
+      if (picked.length >= maxTokens) break;
+    }
+  }
+  return picked;
+}
+
+Map<String, dynamic> buildIntervalsQueryFromText(
+  String fullText, {
+  String? l1,
+  String? l2,
+  String? l3,
+  int maxGaps = 3,
+  int maxTokens = 4,
+  int size = 25,
+}) {
+  final tokens = _pickInformativeTokens(
+    fullText,
+    l1: l1 ?? lang1,
+    l2: l2 ?? lang2,
+    l3: l3 ?? lang3,
+    maxTokens: maxTokens,
+  );
+  print(tokens);
+  final fields = <String>[
+    if ((l1 ?? lang1)?.toLowerCase() != null)
+      "${(l1 ?? lang1)?.toLowerCase()}_text",
+    if ((l2 ?? lang2)?.toLowerCase() != null)
+      "${(l2 ?? lang2)?.toLowerCase()}_text",
+    if ((l3 ?? lang3)?.toLowerCase() != null)
+      "${(l3 ?? lang3)?.toLowerCase()}_text",
+  ];
+  final should = <Map<String, dynamic>>[];
+  for (final f in fields) {
+    if (f.contains("null")) continue;
+    should.add({
+      "intervals": {
+        f: {
+          "all_of": {
+            "ordered": true,
+            "intervals":
+                tokens
+                    .map(
+                      (t) => {
+                        "match": {"query": t},
+                      },
+                    )
+                    .toList(),
+            "max_gaps": maxGaps,
+          },
+        },
+      },
+    });
+  }
+  print(should);
+  return {
+    "query": {
+      "bool": {"should": should, "minimum_should_match": 1},
+    },
+    "size": size,
+  };
+}
+
 class SearchTabWidget extends StatefulWidget {
   final String queryText;
   final String queryName;
@@ -1077,7 +1167,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
               .redAccent; //when auto lookup from Studio, the progress bar color is redAccent
     });
 
-    //
+    ///BUG does not find what Multi button finds
     var queryAnalyser = {
       "query": {
         "bool": {
@@ -1085,7 +1175,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
             {
               "multi_match": {
                 "query": _httpSource,
-                "type": "phrase",
+                //"type": "phrase",
                 "fields": [
                   "${lang1?.toLowerCase()}_text",
                   "${lang2?.toLowerCase()}_text",
@@ -1101,7 +1191,80 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
       "size": 3,
     };
 
-    await processQuery(queryAnalyser, _httpSource, activeIndex);
+    var queryAnalyserMulti = {
+      "query": {
+        "bool": {
+          "must": [..._existsClausesForDisplayedLangs()],
+          "should": [
+            {
+              "match_phrase": {
+                "${lang1?.toLowerCase()}_text": {
+                  "query": _httpSource,
+                  "slop": 6,
+                  "boost": 3.0,
+                },
+              },
+            },
+            {
+              "match": {
+                "${lang1?.toLowerCase()}_text": {
+                  "query": _httpSource,
+                  "fuzziness": "AUTO",
+                  "operator": "and",
+                  "boost": 1.0,
+                },
+              },
+            },
+            {
+              "match_phrase": {
+                "${lang2?.toLowerCase()}_text": {
+                  "query": _httpSource,
+                  "slop": 2,
+                  "boost": 3.0,
+                },
+              },
+            },
+            {
+              "match": {
+                "${lang2?.toLowerCase()}_text": {
+                  "query": _httpSource,
+                  "fuzziness": "AUTO",
+                  "operator": "and",
+                  "boost": 1.0,
+                },
+              },
+            },
+            {
+              "match_phrase": {
+                "${lang3?.toLowerCase()}_text": {
+                  "query": _httpSource,
+                  "slop": 2,
+                  "boost": 3.0,
+                },
+              },
+            },
+            {
+              "match": {
+                "${lang3?.toLowerCase()}_text": {
+                  "query": _httpSource,
+                  "fuzziness": "AUTO",
+                  "operator": "and",
+                  "boost": 1.0,
+                },
+              },
+            },
+          ],
+          "minimum_should_match": 1,
+        },
+      },
+      "size": 25,
+    };
+
+    await processQuery(
+      queryAnalyser,
+      _httpSource,
+      activeIndex,
+    ); // reverted to legacy path for auto-lookup
     if (!mounted) return;
     setState(() {
       queryText = "Auto-analyse: $_httpSource";
@@ -1193,9 +1356,9 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
   Future processQuery(query, searchTerm, index) async {
     queryPattern = query;
 
-    lang1Results.clear;
-    lang2Results.clear;
-    lang3Results.clear;
+    lang1Results.clear();
+    lang2Results.clear();
+    lang3Results.clear();
     lang1HighlightedResults.clear();
     lang2HighlightedResults.clear();
     lang3HighlightedResults.clear();
@@ -1350,21 +1513,44 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     //BUG too power hungry to get titles with titlesForCelex();
   }
 
+  // Build OpenSearch exists clauses for displayed working languages
+  List<Map<String, dynamic>> _existsClausesForDisplayedLangs() {
+    final clauses = <Map<String, dynamic>>[];
+    void addIf(bool? display, String? lang) {
+      if ((display ?? false) && (lang != null) && lang.isNotEmpty) {
+        clauses.add({
+          "exists": {"field": "${lang.toLowerCase()}_text"},
+        });
+      }
+    }
+
+    addIf(jsonSettings['display_lang1'] as bool?, lang1);
+    addIf(jsonSettings['display_lang2'] as bool?, lang2);
+    addIf(jsonSettings['display_lang3'] as bool?, lang3);
+    return clauses;
+  }
+
   void _startSearch() async {
     setState(() {
       _results.clear();
 
       enHighlightedResults.clear();
     });
-    var query = {
-      "query": {
+    final must = [
+      ..._existsClausesForDisplayedLangs(),
+      {
         "match_phrase": {
           "${lang1?.toLowerCase()}_text": {
             "query": _searchController.text,
-            "slop": 2, // Allow some flexibility in word order
-            "boost": 1.5, // Boost the phrase match
+            "slop": 2,
+            "boost": 1.5,
           },
         },
+      },
+    ];
+    var query = {
+      "query": {
+        "bool": {"must": must},
       },
       "size": 50,
     };
@@ -1398,11 +1584,12 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
         "fields": {"en_text": {}, "sk_text": {}, "cz_text": {}},
       },
     }; // Increase the number of results to 50
-
+    //BUG auto search less effective than Multi button, difference in type = phrase
     var query2 = {
       "query": {
         "bool": {
           "must": [
+            ..._existsClausesForDisplayedLangs(),
             {
               "multi_match": {
                 "query": _searchController.text,
@@ -1444,6 +1631,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     var query = {
       "query": {
         "bool": {
+          "must": [..._existsClausesForDisplayedLangs()],
           "should": [
             {
               "match_phrase": {
@@ -1513,6 +1701,27 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     processQuery(query, _searchController.text, activeIndex);
   }
 
+  void _startIntervalsTest() async {
+    setState(() {
+      _results.clear();
+      enHighlightedResults.clear();
+    });
+
+    final query = buildIntervalsQueryFromText(
+      _searchController.text,
+      l1: lang1,
+      l2: lang2,
+      l3: lang3,
+      maxGaps: 3,
+      maxTokens: 4,
+      size: 50,
+    );
+
+    print('Intervals A/B query JSON: ${jsonEncode(query)}');
+    setState(() => _progressColor = Colors.teal);
+    processQuery(query, _searchController.text, activeIndex);
+  }
+
   void _startSearchPhraseAll() async {
     setState(() {
       _results.clear();
@@ -1521,13 +1730,20 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
 
     final query = {
       "query": {
-        "multi_match": {
-          "type": "phrase",
-          "query": _searchController.text,
-          "slop": 10,
-          "fields": ["*_text"], // all lang fields ending with _text
-          "auto_generate_synonyms_phrase_query": false,
-          "lenient": true,
+        "bool": {
+          "must": [
+            ..._existsClausesForDisplayedLangs(),
+            {
+              "multi_match": {
+                "type": "phrase",
+                "query": _searchController.text,
+                "slop": 10,
+                "fields": ["*_text"],
+                "auto_generate_synonyms_phrase_query": false,
+                "lenient": true,
+              },
+            },
+          ],
         },
       },
       "size": 50,
@@ -1830,6 +2046,32 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                 ),
               ),
 
+              Tooltip(
+                message:
+                    'Temporary A/B: intervals query using informative tokens',
+                waitDuration: Duration(seconds: 1),
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        Theme.of(context).colorScheme.primaryContainer,
+                    foregroundColor:
+                        Theme.of(context).colorScheme.onPrimaryContainer,
+                  ),
+                  onPressed: () {
+                    setState(() => _progressColor = Colors.teal);
+                    _startIntervalsTest();
+                  },
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.science_outlined),
+                      SizedBox(width: 6),
+                      Text('Intervals A/B'),
+                    ],
+                  ),
+                ),
+              ),
+
               SizedBox(
                 width: 150,
                 child: TextFormField(
@@ -1849,7 +2091,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                   onFieldSubmitted: (value) {
                     _controller2.text = value;
                     setState(() {
-                      celexFilter = value;
+                      celexFilter = value.trim();
                       _fillColor2 =
                           value.isNotEmpty
                               ? Colors.orangeAccent
@@ -1879,7 +2121,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                   onFieldSubmitted: (value) {
                     _controller3.text = value;
                     setState(() {
-                      containsFilter = value;
+                      containsFilter = value.trim();
 
                       _fillColor =
                           value.isNotEmpty
@@ -2135,32 +2377,41 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                 children: [
                   Padding(
                     padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      'Query at $activeIndex: $queryText',
-                      style: TextStyle(
+                    child: CollapsibleText(
+                      text: 'Query at $activeIndex: $queryText',
+                      previewChars: 150,
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
+                      expandLabel: 'More',
+                      collapseLabel: 'Less',
                     ),
                   ),
                   Padding(
                     padding: const EdgeInsets.all(8.0),
-                    child: SelectableText(
-                      'Query Text: $queryPattern',
-                      style: TextStyle(
+                    child: CollapsibleSelectableText(
+                      text: 'Query Text: $queryPattern',
+                      previewChars: 150,
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
+                      expandLabel: 'More',
+                      collapseLabel: 'Less',
                     ),
                   ),
                   Padding(
                     padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      'Query Result: $lang1Results',
-                      style: TextStyle(
+                    child: CollapsibleText(
+                      text: 'Query Result: $lang1Results',
+                      previewChars: 200,
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
+                      expandLabel: 'More',
+                      collapseLabel: 'Less',
                     ),
                   ),
                   /*   Padding(
@@ -2596,6 +2847,97 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
             },
           ),
         ),
+      ],
+    );
+  }
+}
+
+class CollapsibleText extends StatefulWidget {
+  final String text;
+  final int previewChars;
+  final TextStyle? style;
+  final String expandLabel;
+  final String collapseLabel;
+
+  const CollapsibleText({
+    super.key,
+    required this.text,
+    this.previewChars = 200,
+    this.style,
+    this.expandLabel = 'Show more',
+    this.collapseLabel = 'Show less',
+  });
+
+  @override
+  State<CollapsibleText> createState() => _CollapsibleTextState();
+}
+
+class _CollapsibleTextState extends State<CollapsibleText> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final full = widget.text;
+    final isLong = full.length > widget.previewChars;
+    final preview =
+        isLong ? full.substring(0, widget.previewChars) + '…' : full;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(_expanded ? full : preview, style: widget.style),
+        if (isLong)
+          TextButton.icon(
+            onPressed: () => setState(() => _expanded = !_expanded),
+            icon: Icon(_expanded ? Icons.remove : Icons.add),
+            label: Text(_expanded ? widget.collapseLabel : widget.expandLabel),
+          ),
+      ],
+    );
+  }
+}
+
+class CollapsibleSelectableText extends StatefulWidget {
+  final String text;
+  final int previewChars;
+  final TextStyle? style;
+  final String expandLabel;
+  final String collapseLabel;
+
+  const CollapsibleSelectableText({
+    super.key,
+    required this.text,
+    this.previewChars = 200,
+    this.style,
+    this.expandLabel = 'Show more',
+    this.collapseLabel = 'Show less',
+  });
+
+  @override
+  State<CollapsibleSelectableText> createState() =>
+      _CollapsibleSelectableTextState();
+}
+
+class _CollapsibleSelectableTextState extends State<CollapsibleSelectableText> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final full = widget.text;
+    final isLong = full.length > widget.previewChars;
+    final preview =
+        isLong ? full.substring(0, widget.previewChars) + '…' : full;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SelectableText(_expanded ? full : preview, style: widget.style),
+        if (isLong)
+          TextButton.icon(
+            onPressed: () => setState(() => _expanded = !_expanded),
+            icon: Icon(_expanded ? Icons.remove : Icons.add),
+            label: Text(_expanded ? widget.collapseLabel : widget.expandLabel),
+          ),
       ],
     );
   }

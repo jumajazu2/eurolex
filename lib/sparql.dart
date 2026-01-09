@@ -319,6 +319,7 @@ where {
             body: {'query': query},
           )
           .timeout(const Duration(seconds: 12));
+      print('fetchTitlesForCelex response status: ${resp.body}');
     } catch (e) {
       // POST failed (e.g., blocked). Try GET with URL-encoded query
       final getUri = Uri.parse(
@@ -329,7 +330,7 @@ where {
           .get(getUri, headers: {'Accept': 'application/sparql-results+json'})
           .timeout(const Duration(seconds: 12));
     }
-
+    print('fetchTitlesForCelex response status: ${resp.body}');
     _sparqlLog(
       'titles-celex celex=' +
           celexStr +

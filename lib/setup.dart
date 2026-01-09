@@ -442,7 +442,7 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
             ),
 
             const SizedBox(height: 12),
-            const Text('Text Size -  Only'),
+            const Text('Text Size - Results Only'),
             const SizedBox(height: 8),
             // Search results-only font size slider
             Row(
@@ -882,6 +882,8 @@ Future<List<String>> getDistinctCelexForIndex(String index) async {
           body: body,
         )
         .timeout(const Duration(seconds: 15));
+
+    print('CELEX fetch response status: ${resp.body}');
     if (resp.statusCode != 200) return [];
 
     final decoded = jsonDecode(resp.body) as Map<String, dynamic>;
