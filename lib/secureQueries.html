@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Securing Queries in OpenSearch Applications</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 2em;
+        }
+
+        h1,
+        h2,
+        h3 {
+            color: #2c3e50;
+        }
+
+        pre,
+        code {
+            background: #f4f4f4;
+            padding: 0.5em;
+            border-radius: 4px;
+        }
+
+        pre {
+            overflow-x: auto;
+        }
+
+        .note {
+            color: #c0392b;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Securing Queries in OpenSearch Applications</h1>
+    <h2>1. Why Escape HTML?</h2>
+    <p> Escape HTML is the process of converting special characters in a string (such as <code>&lt;</code>,
+        <code>&gt;</code>, <code>&amp;</code>, <code>"</code>, and <code>'</code>) into their corresponding HTML
+        entities (like <code>&amp;lt;</code>, <code>&amp;gt;</code>, <code>&amp;amp;</code>, <code>&amp;quot;</code>,
+        and <code>&amp;#39;</code>). This prevents browsers from interpreting user-supplied text as HTML or JavaScript,
+        which is essential for protecting against cross-site scripting (XSS) attacks. </p>
+    <p><strong>Example:</strong></p>
+    <pre> Input: &lt;script&gt;alert('XSS')&lt;/script&gt; Escaped: &amp;lt;script&amp;gt;alert(&amp;#39;XSS&amp;#39;)&amp;lt;/script&amp;gt; </pre>
+    <h2>2. Are My Queries Parameterized?</h2>
+    <p> Using user text as a variable in your queries does not automatically mean your queries are parameterized. </p>
+    <ul>
+        <li><strong>Parameterized queries</strong> are a specific technique where user input is passed as a parameter,
+            not directly inserted into the query string. This prevents the input from being interpreted as part of the
+            query syntax.</li>
+    </ul>
+    <p><strong>Example:</strong></p>
+    <pre> Safe (parameterized): db.query('SELECT * FROM table WHERE name = ?', [userInput])
+
+Unsafe:
+db.query('SELECT * FROM table WHERE name = "' + userInput + '"')
+</pre>
+    <p>
+        For OpenSearch/Elasticsearch, inserting user input as a value in JSON queries is generally safe, as long as the
+        input does not control the query structure.
+    </p>
+
+    <h2>3. Confirming Safe Query Construction</h2>
+    <p> Your app inserts user input as a value in JSON queries (for example, in the "multi_match" or "term" fields of
+        OpenSearch queries), not as part of the query structure itself. This means your queries are generally safe from
+        injection, as user input cannot alter the structure or logic of the query. </p>
+    <ul>
+        <li>User input should only be used as a value, never as a field name or query operator.</li>
+        <li>Validate and sanitize input to prevent other types of abuse.</li>
+    </ul>
+    <h2>4. Risks of Allowing Arbitrary Queries</h2>
+    <p> If your server endpoint allows users to submit full query objects (not just search strings), a malicious user
+        could craft and send dangerous or resource-intensive queries, potentially exposing your backend to security
+        risks or denial-of-service attacks. </p>
+    <div class="note">Best Practice:</div>
+    <ul>
+        <li>Only accept simple parameters from the client (e.g., search string, query type, filters).</li>
+        <li>Construct the actual OpenSearch/Elasticsearch query on the server side, using these parameters.</li>
+        <li>Never allow users to submit raw or arbitrary query JSON to your backend.</li>
+        <li>Validate and sanitize all input on the server, and enforce limits on query complexity, size, and allowed
+            fields.</li>
+    </ul>
+    <h2>5. Preventing Destructive Requests</h2>
+    <p> If your proxy allows all HTTP methods, including DELETE, a user could potentially send a DELETE request and
+        delete indices or data in OpenSearch. </p>
+    <div class="note">How to Secure:</div>
+    <pre> app.use((req, res, next) =&gt; { const allowedMethods = ['GET', 'POST', 'OPTIONS']; if (!allowedMethods.includes(req.method)) { return res.status(405).json({ error: 'Method Not Allowed' }); } next(); }); </pre>
+    <h2>6. Allowing Legitimate Index Deletion (with Authorization)</h2>
+    <p> To allow legitimate index deletion while keeping your app secure: </p>
+    <ul>
+        <li>Restrict DELETE requests to only authorized users (e.g., admin API keys).</li>
+        <li>Add middleware to check both the HTTP method and the API key before allowing DELETE.</li>
+    </ul>
+    <pre> app.use((req, res, next) =&gt; { if (req.method === 'DELETE') { // Only allow if API key is admin if (req.apiKey !== 'admin_key') { return res.status(403).json({ error: 'Forbidden: insufficient privileges' }); } } next(); }); </pre>
+    <ul>
+        <li>Log all DELETE requests for auditing.</li>
+        <li>Optionally, restrict DELETE to specific paths (e.g., only <code>/index/*</code>).</li>
+    </ul>
+    <h2>7. Making Indices Read-Only</h2>
+    <p> OpenSearch allows you to make indices read-only to protect them from delete, update, or write operations. </p>
+    <div class="note">How to make an index read-only:</div>
+    <pre> PUT /your_index/_settings { "index.blocks.write": true } </pre>
+    <p> This prevents write, update, and delete operations, but still allows searches. </p>
+    <div class="note">To make an index fully read-only (including metadata changes):</div>
+    <pre> PUT /your_index/_settings { "index.blocks.write": true, "index.blocks.read_only": true } </pre>
+    <p> <strong>Note:</strong>
+    <ul>
+        <li>You can still delete the index if you have cluster admin privileges, unless you set
+            <code>"index.blocks.read_only_allow_delete": true</code> (which only allows delete, blocks all else).</li>
+        <li>For maximum safety, combine read-only settings with strict API access controls.</li>
+    </ul>
+    </p>
+    <h2>8. Never Expose OpenSearch Directly to the Public</h2>
+    <div class="note">How to protect OpenSearch:</div>
+    <ul>
+        <li>Do not let your frontend (web or app) send requests directly to OpenSearch.</li>
+        <li>Have your frontend communicate only with your own backend/API server.</li>
+        <li>Your backend server should be the only service allowed to access OpenSearch (place OpenSearch behind a
+            firewall or on a private network).</li>
+        <li>Only allow connections from your backend server’s IP.</li>
+        <li>Your backend acts as a gatekeeper: it receives user requests, validates and sanitizes input, builds and
+            sends safe queries to OpenSearch, and returns only the necessary results to the user.</li>
+        <li>Never expose OpenSearch’s HTTP(S) endpoint to the internet.</li>
+    </ul>
+</body>
+
+</html>

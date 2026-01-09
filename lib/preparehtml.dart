@@ -21,6 +21,7 @@ import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
 import 'package:LegisTracerEU/main.dart';
 import 'package:path/path.dart' as path;
+import 'package:flutter/services.dart';
 
 String fileContentSK = '';
 String fileContentEN = '';
@@ -217,6 +218,26 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
   int _completedUploads = 0;
   bool _fileLoaded = false;
   bool _celexExtracted = false;
+
+  // Index name input state and validation
+  String _indexBase2 = '';
+  String? _indexError2;
+
+  String? _validateIndexName(String base, String userPrefix) {
+    if (base.isEmpty) return 'Index name is required.';
+    final value = base.trim();
+    if (value == '.' || value == '..') return 'Cannot be \'\.\' or \'..\'.';
+    if (RegExp(r'[A-Z]').hasMatch(value)) return 'Use lowercase letters only.';
+    if (RegExp(r'^[\_\-\+]').hasMatch(value)) {
+      return 'Cannot start with _ , - , or +.';
+    }
+    if (!RegExp(r'^[a-z0-9._-]+$').hasMatch(value)) {
+      return 'Allowed: a-z, 0-9, dot, underscore, hyphen.';
+    }
+    final full = 'eu_${userPrefix}_$value';
+    if (full.length > 255) return 'Full index name too long (max 255 chars).';
+    return null;
+  }
 
   void _recalcProgress() {
     final basePhases = (_fileLoaded ? 1 : 0) + (_celexExtracted ? 1 : 0);
@@ -419,17 +440,35 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
           SizedBox(height: 10),
           TextField(
             decoration: InputDecoration(
-              labelText: 'Index Name (Press Enter to Confirm):',
+              labelText:
+                  'Index Name (Press Enter to Confirm - Allowed: a-z, 0-9, dot, underscore, hyphen. Cannot start with _ , - , +)',
               border: OutlineInputBorder(),
+              errorText: _indexError2,
             ),
-            onSubmitted: (value) {
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp('[a-z0-9._-]')),
+            ],
+            onChanged: (value) {
+              final v = value.toLowerCase();
               setState(() {
-                newIndexName = '${userPasskey}_$value';
-                // indices.add(newIndexName); // Update the index name
+                _indexBase2 = v;
+                _indexError2 = _validateIndexName(v, userPasskey);
+              });
+            },
+            onSubmitted: (value) {
+              final v = value.toLowerCase();
+              final err = _validateIndexName(v, userPasskey);
+              setState(() {
+                _indexError2 = err;
+                if (err == null) {
+                  newIndexName = 'eu_${userPasskey}_$v';
+                }
               });
             },
           ),
-          (newIndexName == '' || newIndexName == "eurolex_")
+          (newIndexName == '' ||
+                  newIndexName == "eurolex_" ||
+                  _indexError2 != null)
               ? Text('Enter Index Name First!')
               : ElevatedButton(
                 onPressed: pickAndLoadFile2,
@@ -504,6 +543,26 @@ class manualCelexList extends StatefulWidget {
 
 class _manualCelexListState extends State<manualCelexList> {
   double _progress = 0.01; // 0.0 - 1.0
+
+  // Index name input state and validation
+  String _indexBaseManual = '';
+  String? _indexErrorManual;
+
+  String? _validateIndexName(String base, String userPrefix) {
+    if (base.isEmpty) return 'Index name is required.';
+    final value = base.trim();
+    if (value == '.' || value == '..') return 'Cannot be \'\.\' or \'..\'.';
+    if (RegExp(r'[A-Z]').hasMatch(value)) return 'Use lowercase letters only.';
+    if (RegExp(r'^[\_\-\+]').hasMatch(value)) {
+      return 'Cannot start with _ , - , or +.';
+    }
+    if (!RegExp(r'^[a-z0-9._-]+$').hasMatch(value)) {
+      return 'Allowed: a-z, 0-9, dot, underscore, hyphen.';
+    }
+    final full = 'eu_${userPrefix}_$value';
+    if (full.length > 255) return 'Full index name too long (max 255 chars).';
+    return null;
+  }
 
   Future manualCelexListUpload(manualCelexListEntry, newIndexName) async {
     setState(() {
@@ -595,13 +654,29 @@ class _manualCelexListState extends State<manualCelexList> {
           SizedBox(height: 10),
           TextField(
             decoration: InputDecoration(
-              labelText: 'Index Name (Press Enter to Confirm!):',
+              labelText:
+                  'Index Name (Press Enter to Confirm - Allowed: a-z, 0-9, dot, underscore, hyphen. Cannot start with _ , - , +)',
               border: OutlineInputBorder(),
+              errorText: _indexErrorManual,
             ),
-            onSubmitted: (value) {
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp('[a-z0-9._-]')),
+            ],
+            onChanged: (value) {
+              final v = value.toLowerCase();
               setState(() {
-                newIndexName = '${userPasskey}_$value';
-                // indices.add(newIndexName); // Update the index name
+                _indexBaseManual = v;
+                _indexErrorManual = _validateIndexName(v, userPasskey);
+              });
+            },
+            onSubmitted: (value) {
+              final v = value.toLowerCase();
+              final err = _validateIndexName(v, userPasskey);
+              setState(() {
+                _indexErrorManual = err;
+                if (err == null) {
+                  newIndexName = 'eu_${userPasskey}_$v';
+                }
               });
             },
           ),
@@ -623,13 +698,17 @@ class _manualCelexListState extends State<manualCelexList> {
           (newIndexName == '' || newIndexName == "eurolex_")
               ? Text('Enter Index Name First!')
               : ElevatedButton(
-                onPressed: () {
-                  if (newIndexName.isNotEmpty && newIndexName != "eurolex_") {
-                    manualCelexListUpload(manualCelex, newIndexName);
-                  } else {
-                    print('Please enter an index name first.');
-                  }
-                },
+                onPressed:
+                    (_indexErrorManual != null)
+                        ? null
+                        : () {
+                          if (newIndexName.isNotEmpty &&
+                              newIndexName != "eurolex_") {
+                            manualCelexListUpload(manualCelex, newIndexName);
+                          } else {
+                            print('Please enter an index name first.');
+                          }
+                        },
                 child: Text('Process Celex Numbers (Upload to $newIndexName)'),
               ),
 
