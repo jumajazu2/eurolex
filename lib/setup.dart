@@ -862,8 +862,7 @@ Future<List<String>> getDistinctCelexForIndex(String index) async {
     "aggs": {
       "celexes": {
         "terms": {
-          "field":
-              "celex.keyword", // fallback to "celex" if no keyword sub-field
+          "field": "celex", // fallback to "celex" if no keyword sub-field
           "size": 10000, // raise if your index holds more unique docs
         },
       },
@@ -893,7 +892,7 @@ Future<List<String>> getDistinctCelexForIndex(String index) async {
     final items = <String>[];
 
     for (final b in buckets) {
-      final key = b['key']?.toString();
+      final key = b['key']?.toString().toUpperCase();
       final count = b['doc_count'];
       if (key == null || count == null) continue;
 
