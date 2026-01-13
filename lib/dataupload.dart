@@ -42,7 +42,7 @@ class DataUploadPage extends StatelessWidget {
                 ),
                 Tab(
                   child: Text(
-                    'Upload Eur-LexData Dump Files',
+                    'Upload Own Reference Documents',
                     style: TextStyle(fontSize: 14), // Set the desired font size
                   ),
                 ),

@@ -2046,31 +2046,33 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                 ),
               ),
 
-              Tooltip(
-                message:
-                    'Temporary A/B: intervals query using informative tokens',
-                waitDuration: Duration(seconds: 1),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        Theme.of(context).colorScheme.primaryContainer,
-                    foregroundColor:
-                        Theme.of(context).colorScheme.onPrimaryContainer,
-                  ),
-                  onPressed: () {
-                    setState(() => _progressColor = Colors.teal);
-                    _startIntervalsTest();
-                  },
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.science_outlined),
-                      SizedBox(width: 6),
-                      Text('Intervals A/B'),
-                    ],
-                  ),
-                ),
-              ),
+              isAdmin
+                  ? Tooltip(
+                    message:
+                        'Temporary A/B: intervals query using informative tokens',
+                    waitDuration: Duration(seconds: 1),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            Theme.of(context).colorScheme.primaryContainer,
+                        foregroundColor:
+                            Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
+                      onPressed: () {
+                        setState(() => _progressColor = Colors.teal);
+                        _startIntervalsTest();
+                      },
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.science_outlined),
+                          SizedBox(width: 6),
+                          Text('Intervals A/B'),
+                        ],
+                      ),
+                    ),
+                  )
+                  : SizedBox.shrink(),
 
               SizedBox(
                 width: 150,

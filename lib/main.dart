@@ -14,6 +14,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:LegisTracerEU/http.dart';
 import 'package:LegisTracerEU/opensearch.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/services.dart';
 
 import 'package:LegisTracerEU/version_check.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -52,6 +53,30 @@ final isAdminNotifier = ValueNotifier<bool>(isAdmin);
 bool isAdmin = false;
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Swallow narrow classes of noisy errors in debug: clipboard PlatformExceptions
+  // and a known HardwareKeyboard KeyUp mismatch assertion on Windows.
+  FlutterError.onError = (FlutterErrorDetails details) {
+    final error = details.exception;
+    final stack = details.stack ?? StackTrace.empty;
+    final message = details.exceptionAsString();
+    if (_shouldIgnoreError(error, stack, message)) {
+      debugPrint('Ignored benign error: $message');
+      return;
+    }
+    FlutterError.presentError(details);
+  };
+
+  WidgetsBinding.instance.platformDispatcher.onError = (
+    Object error,
+    StackTrace stack,
+  ) {
+    if (_shouldIgnoreError(error, stack, error.toString())) {
+      debugPrint('Ignored benign error: $error');
+      return true; // handled
+    }
+    return false; // not handled
+  };
   try {
     // Ensure runtime fetching works even if AssetManifest.* isn't available
     GoogleFonts.config.allowRuntimeFetching = true;
@@ -94,6 +119,30 @@ void main() {
       ),
     );
   });
+}
+
+bool _shouldIgnoreError(Object error, StackTrace stack, String message) {
+  final s = stack.toString();
+
+  // 1) Clipboard-related PlatformExceptions during paste
+  if (error is PlatformException) {
+    if (s.contains('clipboard.dart') ||
+        (s.contains('editable_text.dart') && s.contains('pasteText')) ||
+        s.contains('JSONMethodCodec.decodeEnvelope')) {
+      return true;
+    }
+  }
+
+  // 2) HardwareKeyboard KeyUp mismatch assertion (debug-only)
+  //    "Failed assertion: ... _pressedKeys.containsKey(event.physicalKey)"
+  if (message.contains('hardware_keyboard.dart') &&
+      (message.contains('_pressedKeys.containsKey') ||
+          message.contains('KeyUpEvent is dispatched') ||
+          s.contains('hardware_keyboard.dart'))) {
+    return true;
+  }
+
+  return false;
 }
 
 Future<void> _initDeviceId() async {
@@ -176,7 +225,7 @@ class _MainTabbedAppState extends State<MainTabbedApp>
       if (jsonSettings["access_key"] == "trial") {
         // Ensure a context exists
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) showTrialDialog();
+          //  if (mounted) showTrialDialog();
           if (mounted)
             showBanner(
               context,
