@@ -1,0 +1,22 @@
+{
+  "keys": [
+    {
+      "key": "1234",
+      "email": "user1@example.com",
+      "allowPrefixes": ["eu_1234_"],
+      "dailyQuota": 100000
+    },
+    {
+      "key": "7239",
+      "email": "juraj@example.com",
+      "allowPrefixes": ["eu_7239_"],
+      "dailyQuota": 100000
+    },
+    {
+      "key": "trial",
+      "email": null,
+      "allowPrefixes": ["eu_trial_"],
+      "dailyQuota": 1000
+    }
+  ]
+}

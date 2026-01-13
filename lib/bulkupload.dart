@@ -6,6 +6,7 @@ import 'package:LegisTracerEU/processDOM.dart';
 import 'package:LegisTracerEU/setup.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:html/parser.dart' as html_parser;
 
@@ -58,6 +59,7 @@ class _DataUploadTabState extends State<DataUploadTab> {
   final logger = LogManager(fileName: 'bulkupload.log');
   String _selectedIndex = '';
   bool simulateUpload = false;
+  String? _indexError;
   // checkbox state
 
   @override
@@ -98,12 +100,12 @@ class _DataUploadTabState extends State<DataUploadTab> {
         children: [
           // Tool header and index selection UI
           Text(
-            'Upload Eur-Lex Data Dump Files to OpenSearch',
+            'You can upload your own references documents and search in them',
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: 20),
           const Text(
-            'First Choose Index In Dropdown List or Enter Index Name below!',
+            'First Choose Index In Dropdown List or Enter Index Name below.\nThen enter URLs of the documents or select local files to upload.',
             style: TextStyle(fontSize: 16),
           ),
 
@@ -153,17 +155,34 @@ class _DataUploadTabState extends State<DataUploadTab> {
           const SizedBox(height: 10),
           TextField(
             controller: _manualIndexController,
-            decoration: const InputDecoration(
-              labelText: 'Index Name (Press Enter to Confirm!):',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText:
+                  'Index Name (Press Enter to Confirm - Allowed: a-z, 0-9, dot, underscore, hyphen. Cannot start with _ , - , +)',
+              border: const OutlineInputBorder(),
+              errorText: _indexError,
             ),
+            inputFormatters: <TextInputFormatter>[
+              // Allow only letters, digits, dot, underscore, hyphen (we will lowercase)
+              FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9._-]')),
+              TextInputFormatter.withFunction((oldValue, newValue) {
+                return newValue.copyWith(text: newValue.text.toLowerCase());
+              }),
+            ],
+            onChanged: (value) {
+              if (_indexError != null) setState(() => _indexError = null);
+            },
             onSubmitted: (value) {
               setState(() {
-                final composed = '${userPasskey}_$value';
+                final err = _validateIndexName(value, userPasskey);
+                if (err != null) {
+                  _indexError = err;
+                  return;
+                }
+                final composed = 'eu_${userPasskey}_${value.trim()}';
                 _manualIndexController.text = composed;
                 newIndexName = composed;
                 _selectedIndex = newIndexName;
-
+                _indexError = null;
                 print('Entered manual index name for bulk upload: $composed');
               });
             },
@@ -226,28 +245,22 @@ class _DataUploadTabState extends State<DataUploadTab> {
 
           // Paste NDJSON area
           Text(
-            'Paste NDJSON (OpenSearch _bulk format):',
-            style: Theme.of(context).textTheme.bodyMedium,
+            'THIS FEATURE IS CURRENTLY UNAVAILABLE DUE TO MAINTENANCE \nCheck back later soon.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Colors.orange,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+            //   style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 6),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 220),
-            child: TextField(
-              controller: _pasteController,
-              maxLines: null,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: '{ "index": {} }\n{ "field": "value" }\n…',
-              ),
-            ),
-          ),
 
           const SizedBox(height: 10),
 
           // Action buttons
           Row(
             children: [
-              ElevatedButton.icon(
+              /*   ElevatedButton.icon(
                 icon: const Icon(Icons.cloud_upload),
                 label: const Text('Upload pasted NDJSON'),
                 onPressed:
@@ -257,7 +270,7 @@ class _DataUploadTabState extends State<DataUploadTab> {
                           _effectiveIndex,
                           _pasteController.text,
                         ),
-              ),
+              )*/
               const SizedBox(width: 12),
               OutlinedButton.icon(
                 icon: const Icon(Icons.upload_file),
@@ -282,6 +295,22 @@ class _DataUploadTabState extends State<DataUploadTab> {
         ],
       ),
     );
+  }
+
+  String? _validateIndexName(String base, String userPrefix) {
+    if (base.isEmpty) return 'Index name is required.';
+    final value = base.trim();
+    if (value == '.' || value == '..') return 'Cannot be \'.\' or \'..\'.';
+    if (RegExp(r'[A-Z]').hasMatch(value)) return 'Use lowercase letters only.';
+    if (RegExp(r'^[_\-+]').hasMatch(value)) {
+      return 'Cannot start with _ , - , or +.';
+    }
+    if (!RegExp(r'^[a-z0-9._-]+$').hasMatch(value)) {
+      return 'Allowed: a-z, 0-9, dot, underscore, hyphen.';
+    }
+    final full = 'eu_${userPrefix}_$value';
+    if (full.length > 255) return 'Full index name too long (max 255 chars).';
+    return null;
   }
 
   @override
