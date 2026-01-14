@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
-  <script defer src="script.js?v=20251216b"></script>
+  <script defer src="script.js"></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to main content</a>
@@ -17,7 +17,7 @@
   <header class="site-header">
     <div class="container flex between center-v gap-m">
       <a class="brand" href="/">
-        <span class="" aria-hidden="true"><img src="app_icon.ico" alt="LegisTracerEU logo" style="height:3.5em;vertical-align:middle;" /></span>
+        <span class="brand__logo" aria-hidden="true">⚖️</span>
         <span class="brand__text">LegisTracerEU</span>
       </a>
       <nav class="primary-nav" aria-label="Main navigation">
@@ -45,46 +45,39 @@
   <main id="main">
     <section class="section">
       <div class="container">
-        <footer class="site-footer">
-          <div class="container footer-grid">
-            <div class="footer-brand">
-              <div class="brand small">
-                <span class="" aria-hidden="true"><img src="app_icon.ico" alt="LegisTracerEU logo" style="height:3.5em;vertical-align:middle;" /></span>
-                <span class="brand__text">LegisTracerEU</span>
-              </div>
-              <p class="foot-note">EU Law Toolbox for linguists, translators, and legal professionals.</p>
-              <p class="foot-copy">© <span id="year"></span> LegisTracerEU. All rights reserved.</p>
-            </div>
-            <div class="footer-col">
-              <h4>Product</h4>
-              <ul>
-                <li><a href="index.html#features">Features</a></li>
-                <li><a href="index.html#pricing">Pricing</a></li>
-                <li><a href="#">Try Demo</a></li>
-              </ul>
-            </div>
-            <div class="footer-col">
-              <h4>Resources</h4>
-              <ul>
-                <li><a href="index.html#data-sources-faq">Data Sources</a></li>
-                <li><a href="support.html">Support</a></li>
-                <li><a href="privacy.html">Privacy Policy</a></li>
-              </ul>
-            </div>
-            <div class="footer-col">
-              <h4>Stay Updated</h4>
-              <form class="newsletter-form" id="newsletterForm">
-                <label for="emailInput" class="sr-only">Email address</label>
-                <input type="email" id="emailInput" placeholder="your@email.com" required />
-                <button class="btn small primary" type="submit">Subscribe for News</button>
-              </form>
-            </div>
+        <header class="section-header center narrow">
+          <h2>Support</h2>
+          <p class="section-lead">We're here to help. If you encounter technical issues or features not working as expected, please contact us.</p>
+        </header>
+
+        <div class="data-sources-content">
+          <div class="data-source-card">
+            <h3>How to Reach Us</h3>
+            <p>
+              In case of technical issues with the service or features not working as expected, send us an email with a description of the issue.
+              Please include the email address you use for access in your message, along with any steps to reproduce and screenshots (if possible).
+            </p>
+            <p>
+              You can start with this preformatted message and customize it before sending:
+            </p>
+            <p>
+              <a
+                class="btn primary"
+                href="mailto:juraj.kuban.sk@gmail.com?subject=Support%20request%20for%20LegisTracerEU&body=Hello%20Support%2C%0A%0AIssue%20description%3A%20%5Bdescribe%20the%20problem%5D%0AUser%20email%20used%20for%20access%3A%20%5Byour%20email%5D%0ASteps%20to%20reproduce%3A%0A1.%20%5Bstep%5D%0A2.%20%5Bstep%5D%0A%0AExpected%20result%3A%20%5B...%5D%0AActual%20result%3A%20%5B...%5D%0A%0AAdditional%20notes%3A%20%5Boptional%5D%0A%0AThank%20you%2C%0A%5Byour%20name%5D">
+                Email Support
+              </a>
+            </p>
           </div>
-        </footer>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
     <div class="container footer-grid">
       <div class="footer-brand">
         <div class="brand small">
-          <span class="" aria-hidden="true"><img src="app_icon.ico" alt="LegisTracerEU logo" style="height:3.5em;vertical-align:middle;" /></span>
+          <span class="brand__logo">⚖️</span>
           <span class="brand__text">LegisTracerEU</span>
         </div>
         <p class="foot-note">EU Law Toolbox for linguists, translators, and legal professionals.</p>
@@ -121,8 +114,8 @@
         <h4>Stay Updated</h4>
         <form class="newsletter-form" id="newsletterForm">
           <label for="emailInput" class="sr-only">Email address</label>
-          <input type="email" id="emailInput" placeholder="your@email.com" required />
-          <button class="btn small primary" type="submit">Subscribe for News</button>
+          <input type="email" id="emailInput" placeholder="you@company.com" required />
+          <button class="btn small primary" type="submit">Subscribe</button>
         </form>
       </div>
     </div>

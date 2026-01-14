@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'testHtmlDumps.dart';
 import 'package:http/http.dart' as http;
 import 'package:LegisTracerEU/logger.dart';
 import 'package:LegisTracerEU/main.dart' show deviceId;

@@ -12,39 +12,70 @@ String getExecutableDir() {
   return File(Platform.resolvedExecutable).parent.path;
 }
 
-String getFilePath(String filename) {
-  if (kReleaseMode) {
-    // Windows release: use %APPDATA%\LegistracerEU
-    final appData =
-        Platform.environment['APPDATA']; // e.g. C:\Users\User\AppData\Roaming
-    final baseDir =
-        (appData != null && appData.isNotEmpty)
-            ? p.join(appData, 'LegistracerEU')
-            : getExecutableDir(); // fallback if APPDATA missing
-    try {
-      Directory(baseDir).createSync(recursive: true);
-    } catch (_) {}
-    print("Production mode detected. Using $baseDir, $filename.");
-    return p.join(baseDir, filename);
-  } else {
-    // Debug: keep existing project-relative path
-    print(
-      "Debug mode detected. Using relative path, c:/Users/Juraj/Documents/IT/OSLex/eurolex/lib/$filename.",
-    );
-    return 'c:/Users/Juraj/Documents/IT/OSLex/eurolex/lib/$filename';
-  }
+/// Returns the canonical, OS-appropriate application support path for [filename].
+///
+/// Uses `path_provider` so MSIX Store installs resolve under
+/// `AppData/Local/Packages/<PFN>/LocalState` (or equivalent), while
+/// unpackaged builds resolve under `AppData/Roaming`.
+Future<String> getFilePath(String filename) async {
+  final Directory supportDir = await getApplicationSupportDirectory();
+  try {
+    await supportDir.create(recursive: true);
+  } catch (_) {}
+
+  final resolved = p.join(supportDir.path, filename);
+  print(
+    '${kReleaseMode ? 'Production' : 'Debug'} mode. Using support dir: ${supportDir.path} → $filename',
+  );
+  return resolved;
+}
+
+/// Returns the legacy `%APPDATA%/LegistracerEU/<filename>` path if the file exists.
+Future<String?> getLegacyAppDataPathIfExists(String filename) async {
+  final appData = Platform.environment['APPDATA'];
+  if (appData == null || appData.isEmpty) return null;
+  final legacyDir = p.join(appData, 'LegistracerEU');
+  final legacyPath = p.join(legacyDir, filename);
+  final f = File(legacyPath);
+  return await f.exists() ? legacyPath : null;
+}
+
+/// Returns the MSIX LocalState path `%LOCALAPPDATA%/Packages/<PFN>/LocalState/<filename>`
+/// if it exists. PFN is taken from `msix.identity_name` in pubspec.
+Future<String?> getMsixLocalStatePathIfExists(String filename) async {
+  final localAppData = Platform.environment['LOCALAPPDATA'];
+  if (localAppData == null || localAppData.isEmpty) return null;
+  // PFN from pubspec msix.identity_name
+  const String pfn = 'Jumajazu.LegisTracerEU';
+  final base = p.join(localAppData, 'Packages', pfn, 'LocalState');
+  final candidate = p.join(base, filename);
+  final f = File(candidate);
+  return await f.exists() ? candidate : null;
 }
 
 Future<void>
 loadJsonFromFile() async //loads JSON from config.json file to the global variable jsonData
 {
   try {
-    // Read the JSON file
-    final file = File(getFilePath('config.json'));
+    // Prefer the canonical support location
+    final supportPath = await getFilePath('config.json');
+    File file = File(supportPath);
+    if (!await file.exists()) {
+      // Fallback to legacy Roaming location if present (for migration)
+      final legacyPath = await getLegacyAppDataPathIfExists('config.json');
+      if (legacyPath != null) {
+        file = File(legacyPath);
+        print('Using legacy config at $legacyPath');
+      }
+    }
     final jsonString = await file.readAsString();
-
-    // Decode the JSON
     jsonData = jsonDecode(jsonString);
+
+    // If we loaded from legacy, migrate to support dir
+    if (p.normalize(file.path) != p.normalize(supportPath)) {
+      await writeConfigToFile(jsonData);
+      print('Migrated config.json to $supportPath');
+    }
   } catch (e) {
     print("Error loading JSON: $e");
 
@@ -71,7 +102,7 @@ Future<void> writeJsonToFile(
   Map<String, dynamic> newJsonData,
   String filename,
 ) async {
-  File file = File(getFilePath(filename));
+  File file = File(await getFilePath(filename));
   // Ensure parent directory exists
   try {
     await file.parent.create(recursive: true);
@@ -88,10 +119,9 @@ Future<void> writeJsonToFile(
 
 Future<void> writeTextToFile(String text, String filename) async {
   try {
-    final directory = await getApplicationDocumentsDirectory();
-
-    final file = File("${directory.path}/$filename");
-
+    final directory = await getApplicationSupportDirectory();
+    await directory.create(recursive: true);
+    final file = File(p.join(directory.path, filename));
     await file.writeAsString(text);
     print("Text written successfully to: ${file.path}");
   } catch (e) {
@@ -108,17 +138,27 @@ Future<void>
 loadSettingsFromFile() async //loads JSON from config.json file to the global variable jsonSettings
 {
   try {
-    // Read the JSON file
-    final file = File(getFilePath('settings.json'));
+    final supportPath = await getFilePath('settings.json');
+    File file = File(supportPath);
+    if (!await file.exists()) {
+      final legacyPath = await getLegacyAppDataPathIfExists('settings.json');
+      if (legacyPath != null) {
+        file = File(legacyPath);
+        print('Using legacy settings at $legacyPath');
+      }
+    }
     final jsonString = await file.readAsString();
-
-    // Decode the JSON
     jsonSettings = jsonDecode(jsonString);
 
     print("JSON Settings from $file loaded successfully: $jsonSettings");
 
     LogManager logger = LogManager();
     logger.log("{$TimeOfDay.now()} $file loaded ok");
+
+    if (p.normalize(file.path) != p.normalize(supportPath)) {
+      await writeSettingsToFile(jsonSettings);
+      print('Migrated settings.json to $supportPath');
+    }
   } catch (e) {
     print(
       "Error loading JSON Settings: $e creating new file with default values",
@@ -153,7 +193,7 @@ loadSettingsFromFile() async //loads JSON from config.json file to the global va
 Future<void> writeSettingsToFile(Map<String, dynamic> newJsonData) async {
   try {
     // Get the writable settings file
-    final file = File(getFilePath('settings.json'));
+    final file = File(await getFilePath('settings.json'));
 
     // Encode the JSON with indentation for readability
     final jsonString = const JsonEncoder.withIndent('  ').convert(newJsonData);
@@ -168,7 +208,7 @@ Future<void> writeSettingsToFile(Map<String, dynamic> newJsonData) async {
 Future<void> writeConfigToFile(Map<String, dynamic> newJsonData) async {
   try {
     // Get the writable config file
-    final file = File(getFilePath('config.json'));
+    final file = File(await getFilePath('config.json'));
 
     // Encode the JSON with indentation for readability
     final jsonString = const JsonEncoder.withIndent('  ').convert(newJsonData);
@@ -183,7 +223,7 @@ Future<void> writeConfigToFile(Map<String, dynamic> newJsonData) async {
 Future<void> debugToFile(Map<String, dynamic> newJsonData) async {
   try {
     // Get the writable config file
-    final file = File(getFilePath('debug.json'));
+    final file = File(await getFilePath('debug.json'));
 
     // Encode the JSON with indentation for readability
     final jsonString = const JsonEncoder.withIndent('  ').convert(newJsonData);
@@ -198,12 +238,33 @@ Future<void> debugToFile(Map<String, dynamic> newJsonData) async {
 Future<Map<String, dynamic>> loadCelexYears([
   String path = 'data/celex_years.json',
 ]) async {
-  final file = File(getFilePath(path));
+  final supportPath = await getFilePath(path);
+  File file = File(supportPath);
+  if (!await file.exists()) {
+    // Prefer MSIX LocalState if present
+    final msixPath = await getMsixLocalStatePathIfExists(path);
+    if (msixPath != null) {
+      file = File(msixPath);
+      print('Using MSIX LocalState celex years at $msixPath');
+    } else {
+      // Fallback to legacy Roaming location if present
+      final legacyPath = await getLegacyAppDataPathIfExists(path);
+      if (legacyPath != null) {
+        file = File(legacyPath);
+        print('Using legacy celex years at $legacyPath');
+      }
+    }
+  }
   if (!await file.exists()) {
     throw Exception('Celex years file not found: ${file.path}');
   }
   final s = await file.readAsString();
-  return jsonDecode(s) as Map<String, dynamic>;
+  final data = jsonDecode(s) as Map<String, dynamic>;
+  if (p.normalize(file.path) != p.normalize(supportPath)) {
+    await saveCelexYears(data, path);
+    print('Migrated $path to $supportPath');
+  }
+  return data;
 }
 
 Future<void> saveCelexYears(

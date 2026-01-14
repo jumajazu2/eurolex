@@ -1,22 +1,14 @@
 import 'dart:ui';
 
-import 'package:LegisTracerEU/browseFiles.dart';
 import 'package:LegisTracerEU/preparehtml.dart';
-import 'package:LegisTracerEU/processDOM.dart';
 import 'package:LegisTracerEU/setup.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:html/parser.dart' as html_parser;
 
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
 
-import 'package:http/http.dart' as http;
-import 'package:file_picker/file_picker.dart';
 import 'package:LegisTracerEU/main.dart';
-import 'package:path/path.dart' as path;
 import 'package:LegisTracerEU/logger.dart';
 
 bool debugMode = false; // global debug mode flag

@@ -6,15 +6,12 @@ import 'package:LegisTracerEU/file_handling.dart';
 import 'package:LegisTracerEU/processDOM.dart';
 import 'package:LegisTracerEU/search.dart';
 import 'package:LegisTracerEU/setup.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:LegisTracerEU/bulkupload.dart';
 import 'dart:convert';
 
 import 'package:html/parser.dart' as html_parser;
 
 import 'dart:io';
-import 'package:path_provider/path_provider.dart';
 import 'package:LegisTracerEU/logger.dart';
 import 'package:LegisTracerEU/testHtmlDumps.dart';
 import 'package:http/http.dart' as http;

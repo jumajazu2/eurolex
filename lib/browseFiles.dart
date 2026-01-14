@@ -355,7 +355,23 @@ class BrowseFilesWidget extends StatelessWidget {
 Future<Map<String, dynamic>> loadCelexYears([
   String path = 'data/celex_years.json',
 ]) async {
-  final file = File(getFilePath(path));
+  final supportPath = await getFilePath(path);
+  File file = File(supportPath);
+  if (!await file.exists()) {
+    // Try MSIX PFN LocalState first
+    final msixPath = await getMsixLocalStatePathIfExists(path);
+    if (msixPath != null) {
+      file = File(msixPath);
+      print('Using MSIX LocalState celex years at $msixPath');
+    } else {
+      // Fallback to legacy Roaming
+      final legacyPath = await getLegacyAppDataPathIfExists(path);
+      if (legacyPath != null) {
+        file = File(legacyPath);
+        print('Using legacy celex years at $legacyPath');
+      }
+    }
+  }
   if (!await file.exists()) {
     throw Exception('Celex years file not found: ${file.path}');
   }

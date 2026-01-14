@@ -862,3 +862,5 @@
 2026-01-13T01:33:19.947325, {TimeOfDay.now()} File: 'c:/Users/Juraj/Documents/IT/OSLex/eurolex/lib/settings.json' loaded ok
 2026-01-13T01:33:19.953449, {TimeOfDay.now()} File: 'c:/Users/Juraj/Documents/IT/OSLex/eurolex/lib/settings.json' loaded ok
 2026-01-13T01:34:10.007157, {TimeOfDay.now()} File: 'c:/Users/Juraj/Documents/IT/OSLex/eurolex/lib/settings.json' loaded ok
+2026-01-14T09:38:40.333493, {TimeOfDay.now()} File: 'c:/Users/Juraj/Documents/IT/OSLex/eurolex/lib/settings.json' loaded ok
+2026-01-14T09:38:40.354728, {TimeOfDay.now()} File: 'c:/Users/Juraj/Documents/IT/OSLex/eurolex/lib/settings.json' loaded ok
