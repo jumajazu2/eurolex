@@ -6,8 +6,7 @@ import 'package:LegisTracerEU/ui_notices.dart';
 import 'package:flutter/material.dart';
 import 'package:LegisTracerEU/preparehtml.dart';
 import 'package:LegisTracerEU/browseFiles.dart';
-import 'package:html/parser.dart' as html_parser;
-import 'package:LegisTracerEU/browseFiles.dart';
+
 import 'package:LegisTracerEU/search.dart';
 import 'package:LegisTracerEU/analyser.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -20,6 +19,7 @@ import 'package:LegisTracerEU/version_check.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:LegisTracerEU/support.dart';
 import 'dart:io';
 
 //String osServer = 'localhost:9200'; // add to Settings or Autolookup
@@ -406,6 +406,12 @@ class _MainTabbedAppState extends State<MainTabbedApp>
               ),
             ),
             body: TabBarView(children: _buildTabViews(isAdmin)),
+            floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+            floatingActionButton: FloatingActionButton.small(
+              onPressed: reportProblem,
+              child: const Icon(Icons.help_outline),
+              tooltip: 'Report a problem',
+            ),
           ),
         );
       },

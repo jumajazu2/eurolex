@@ -1,12 +1,8 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:LegisTracerEU/main.dart';
 import 'package:LegisTracerEU/search.dart';
-import 'package:LegisTracerEU/preparehtml.dart';
-import 'package:LegisTracerEU/setup.dart';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:LegisTracerEU/search.dart';
+
 import 'package:LegisTracerEU/processDOM.dart';
 import 'dart:math';
 import 'dart:convert';

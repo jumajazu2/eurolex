@@ -3,11 +3,9 @@ import 'dart:math';
 
 import 'package:LegisTracerEU/file_handling.dart';
 import 'package:LegisTracerEU/main.dart';
-import 'package:LegisTracerEU/opensearch.dart';
 import 'package:LegisTracerEU/sparql.dart';
 import 'package:flutter/material.dart';
 import 'package:LegisTracerEU/processDOM.dart';
-import 'package:LegisTracerEU/display.dart';
 import 'package:LegisTracerEU/preparehtml.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
@@ -16,7 +14,7 @@ import 'package:LegisTracerEU/ui_notices.dart';
 import 'dart:async';
 import 'dart:io';
 
-import 'package:path_provider/path_provider.dart';
+import 'package:LegisTracerEU/logger.dart';
 
 // Simple globals (no `library` / `part`).
 // User
@@ -30,6 +28,29 @@ class indicesMaintenance extends StatefulWidget {
 }
 
 class _indicesMaintenanceState extends State<indicesMaintenance> {
+    Future<void> _openFolder(String path) async {
+      try {
+        await Process.run('explorer', [path]);
+      } catch (_) {
+        try {
+          await launchUrl(Uri.file(path));
+        } catch (e) {
+          // swallow
+        }
+      }
+    }
+
+    Future<void> _openLogsFolder() async {
+      final logPath = await getFilePath(LogManager.fileName);
+      final dirPath = File(logPath).parent.path;
+      await _openFolder(dirPath);
+    }
+
+    Future<String?> _legacyLogsDir() async {
+      final legacyLog = await getLegacyAppDataPathIfExists(LogManager.fileName);
+      if (legacyLog == null) return null;
+      return File(legacyLog).parent.path;
+    }
   final _emailCtrl = TextEditingController(text: userEmail);
   final _passkeyCtrl = TextEditingController(text: userPasskey);
   double _fontScale = 1.0;
@@ -845,7 +866,37 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            Text(File(getFilePath('settings.json')).path),
+            FutureBuilder<String>(
+              future: getFilePath('settings.json'),
+              builder: (context, snapshot) {
+                final text = snapshot.hasData
+                    ? snapshot.data!
+                    : 'Resolving settings path...';
+                return Text(text);
+              },
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                OutlinedButton(
+                  onPressed: _openLogsFolder,
+                  child: const Text('Open Logs Folder'),
+                ),
+                const SizedBox(width: 12),
+                FutureBuilder<String?>(
+                  future: _legacyLogsDir(),
+                  builder: (context, snap) {
+                    if (!snap.hasData || snap.data == null) {
+                      return const SizedBox.shrink();
+                    }
+                    return OutlinedButton(
+                      onPressed: () => _openFolder(snap.data!),
+                      child: const Text('Open Legacy Logs Folder'),
+                    );
+                  },
+                ),
+              ],
+            ),
             if (isAdminNotifier.value) Text(jsonSettings.toString()),
           ],
         ),

@@ -3,23 +3,19 @@ import 'dart:math';
 //import 'dart:nativewrappers/_internal/vm/lib/internal_patch.dart';
 
 import 'package:LegisTracerEU/main.dart';
-import 'package:LegisTracerEU/setup.dart';
 import 'package:LegisTracerEU/sparql.dart';
 import 'package:flutter/material.dart';
 import 'package:LegisTracerEU/processDOM.dart';
 import 'package:LegisTracerEU/display.dart';
 import 'package:LegisTracerEU/preparehtml.dart';
 import 'package:LegisTracerEU/analyser.dart';
-import 'package:LegisTracerEU/http.dart';
 import 'package:LegisTracerEU/ui_notices.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
 
-import 'dart:isolate';
 import 'dart:io';
 import 'package:LegisTracerEU/file_handling.dart';
-import 'package:LegisTracerEU/testHtmlDumps.dart';
 import 'package:xml/xml.dart' as xml;
 
 import 'package:path_provider/path_provider.dart';
@@ -2455,22 +2451,41 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                       ? lang3HighlightedResults[index].span
                       : const TextSpan();
 
-              return ((lang1Results.isNotEmpty &&
-                              index < lang1Results.length &&
-                              lang1Results[index].toLowerCase().contains(
-                                containsFilter.toLowerCase(),
-                              ) ||
-                          containsFilter == '') &&
-                      (metaCelex.isNotEmpty &&
-                              index < metaCelex.length &&
-                              metaCelex[index].toLowerCase().contains(
-                                celexFilter.toLowerCase(),
-                              ) ||
-                          celexFilter == '') &&
-                      (parNotMatched.isNotEmpty &&
-                              index < parNotMatched.length &&
-                              parNotMatched[index] == 'false' ||
-                          !_matchedOnly))
+              // Build explicit filter booleans to avoid precedence issues
+              final String _containsLower = containsFilter.toLowerCase();
+              final String _celexLower = celexFilter.toLowerCase();
+
+              final bool _matchesContains =
+                  containsFilter == '' ||
+                  ((lang1Results.isNotEmpty &&
+                          index < lang1Results.length &&
+                          lang1Results[index].toLowerCase().contains(
+                            _containsLower,
+                          )) ||
+                      (lang2Results.isNotEmpty &&
+                          index < lang2Results.length &&
+                          lang2Results[index].toLowerCase().contains(
+                            _containsLower,
+                          )) ||
+                      (lang3Results.isNotEmpty &&
+                          index < lang3Results.length &&
+                          lang3Results[index].toLowerCase().contains(
+                            _containsLower,
+                          )));
+
+              final bool _matchesCelex =
+                  celexFilter == '' ||
+                  (metaCelex.isNotEmpty &&
+                      index < metaCelex.length &&
+                      metaCelex[index].toLowerCase().contains(_celexLower));
+
+              final bool _matchesAlignment =
+                  !_matchedOnly ||
+                  (parNotMatched.isNotEmpty &&
+                      index < parNotMatched.length &&
+                      parNotMatched[index] == 'false');
+
+              return (_matchesContains && _matchesCelex && _matchesAlignment)
                   ? Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10.0,

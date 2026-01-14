@@ -5,12 +5,10 @@ import 'package:http/http.dart' as http;
 import 'package:LegisTracerEU/main.dart' show deviceId;
 import 'package:html/parser.dart' as html_parser;
 import 'dart:convert';
-import 'package:xml/xml.dart' as xml;
 import 'package:LegisTracerEU/logger.dart';
 
 import 'package:html/dom.dart' as dom;
 import 'package:LegisTracerEU/preparehtml.dart';
-import 'package:LegisTracerEU/preparehtml.dart' show loadHtmlFromCelex;
 import 'dart:async'; // for TimeoutException
 import 'dart:io';
 import 'package:url_launcher/url_launcher.dart';

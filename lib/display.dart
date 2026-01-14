@@ -3,10 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'package:LegisTracerEU/main.dart';
 
-import 'package:LegisTracerEU/setup.dart';
 import 'package:LegisTracerEU/processDOM.dart';
-import 'package:http/http.dart' as http;
-import 'package:html/parser.dart' as html_parser;
 import 'dart:convert';
 
 /*
