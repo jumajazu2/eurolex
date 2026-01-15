@@ -41,6 +41,8 @@ List<HighlightResult> lang1HighlightedResults = [];
 List<HighlightResult> lang2HighlightedResults = [];
 List<HighlightResult> lang3HighlightedResults = [];
 var activeIndex = '*';
+List<String> resultIndices = [];
+int _contextWindow = 10;
 
 // Restore selected index from settings if available
 void restoreActiveIndexFromSettings() {
@@ -1412,6 +1414,8 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     var hits = decodedResults['hits']['hits'] as List;
 
     setState(() {
+      resultIndices =
+          hits.map((hit) => (hit['_index'] ?? index).toString()).toList();
       lang2Results =
           hits
               .map(
@@ -2723,129 +2727,180 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
 
                         Container(
                           color: const Color.fromARGB(200, 210, 238, 241),
-                          child: ExpansionTile(
-                            title: Text(
-                              _isContentExpanded
-                                  ? 'Collapse Context'
-                                  : 'Expand Context',
-                            ),
-                            onExpansionChanged: (bool expanded) {
-                              setState(() {
-                                _isContentExpanded = expanded;
-                              });
 
-                              if (expanded) {
-                                // Wrap the async call in an anonymous async function
-                                () async {
-                                  final result = await getContext(
-                                    metaCelex[index],
-                                    pointerPar[index],
-                                  );
-                                  setState(() {
-                                    contextEnSkCz = result;
-                                  });
-                                  print('Tile was expanded');
-                                }(); // Immediately invoke the async function
-                              } else {
-                                print('Tile was collapsed');
-                              }
-                            },
-
-                            children: [
-                              ListView.builder(
-                                shrinkWrap: true,
-                                physics: NeverScrollableScrollPhysics(),
-                                itemCount:
-                                    (contextEnSkCz != null &&
-                                            contextEnSkCz[0] != null)
-                                        ? contextEnSkCz[0].length
-                                        : 0,
-                                itemBuilder: (context, index) {
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10.0,
-                                      vertical: 5.0,
-                                    ),
-                                    child: Column(
-                                      children: [
-                                        Container(
-                                          color:
-                                              (index == 10)
-                                                  ? Colors.grey[200]
-                                                  : null,
-                                          child: Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-
-                                            children: [
-                                              jsonSettings['display_lang1'] ==
-                                                      true
-                                                  ? Expanded(
-                                                    child: SelectableText(
-                                                      style: TextStyle(
-                                                        fontSize: 18.0,
-                                                      ),
-                                                      (jsonSettings['display_lang1'] ==
-                                                                  true &&
-                                                              contextEnSkCz[0]
-                                                                      .length >
-                                                                  index)
-                                                          ? contextEnSkCz[3][index] +
-                                                              " : " +
-                                                              contextEnSkCz[0][index]
-                                                          : '',
-                                                    ),
-                                                  )
-                                                  : SizedBox.shrink(),
-                                              jsonSettings['display_lang2'] ==
-                                                      true
-                                                  ? Expanded(
-                                                    child: SelectableText(
-                                                      style: TextStyle(
-                                                        fontSize: 18.0,
-                                                      ),
-                                                      (jsonSettings['display_lang2'] ==
-                                                                  true &&
-                                                              contextEnSkCz[1]
-                                                                      .length >
-                                                                  index)
-                                                          ? contextEnSkCz[1][index +
-                                                              offsetlang2]
-                                                          : '',
-                                                    ),
-                                                  )
-                                                  : SizedBox.shrink(),
-                                              jsonSettings['display_lang3'] ==
-                                                      true
-                                                  ? Expanded(
-                                                    child: SelectableText(
-                                                      style: TextStyle(
-                                                        fontSize: 18.0,
-                                                      ),
-                                                      (jsonSettings['display_lang3'] ==
-                                                                  true &&
-                                                              contextEnSkCz[2]
-                                                                      .length >
-                                                                  index)
-                                                          ? contextEnSkCz[2][index +
-                                                              offsetlang3]
-                                                          : '',
-                                                    ),
-                                                  )
-                                                  : SizedBox.shrink(),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
+                          child: Theme(
+                            data: Theme.of(context).copyWith(
+                              listTileTheme: const ListTileThemeData(
+                                minVerticalPadding: 0,
+                                dense: true,
+                                horizontalTitleGap: 8,
                               ),
-                            ],
+                            ),
+                            child: ExpansionTile(
+                              shape: const Border(),
+                              collapsedShape: const Border(),
+                              tilePadding: const EdgeInsets.symmetric(
+                                horizontal: 12.0,
+                                vertical: 0.0,
+                              ),
+                              title: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      _isContentExpanded
+                                          ? 'Collapse Context'
+                                          : 'Expand Context',
+                                      style: const TextStyle(
+                                        fontSize: 12.0,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.refresh, size: 16),
+                                    tooltip: 'Load more context (+10 segments)',
+                                    onPressed: () async {
+                                      setState(() {
+                                        _contextWindow += 10;
+                                      });
+                                      final result = await getContext(
+                                        metaCelex[index],
+                                        pointerPar[index],
+                                        resultIndices.length > index
+                                            ? resultIndices[index]
+                                            : activeIndex,
+                                        _contextWindow,
+                                      );
+                                      if (!mounted) return;
+                                      setState(() {
+                                        contextEnSkCz = result;
+                                      });
+                                    },
+                                  ),
+                                ],
+                              ),
+                              onExpansionChanged: (bool expanded) {
+                                setState(() {
+                                  _isContentExpanded = expanded;
+                                });
+
+                                if (expanded) {
+                                  _contextWindow = 10;
+                                  // Wrap the async call in an anonymous async function
+                                  () async {
+                                    final result = await getContext(
+                                      metaCelex[index],
+                                      pointerPar[index],
+                                      resultIndices.length > index
+                                          ? resultIndices[index]
+                                          : activeIndex,
+                                      _contextWindow,
+                                    );
+                                    setState(() {
+                                      contextEnSkCz = result;
+                                    });
+                                    print('Tile was expanded');
+                                  }(); // Immediately invoke the async function
+                                } else {
+                                  print('Tile was collapsed');
+                                }
+                              },
+
+                              children: [
+                                ListView.builder(
+                                  shrinkWrap: true,
+                                  physics: NeverScrollableScrollPhysics(),
+                                  itemCount:
+                                      (contextEnSkCz != null &&
+                                              contextEnSkCz[0] != null)
+                                          ? contextEnSkCz[0].length
+                                          : 0,
+                                  itemBuilder: (context, index) {
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10.0,
+                                        vertical: 5.0,
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          Container(
+                                            color:
+                                                (index == _contextWindow)
+                                                    ? Colors.grey[200]
+                                                    : null,
+                                            child: Row(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+
+                                              children: [
+                                                jsonSettings['display_lang1'] ==
+                                                        true
+                                                    ? Expanded(
+                                                      child: SelectableText(
+                                                        style: TextStyle(
+                                                          fontSize: 18.0,
+                                                        ),
+                                                        (jsonSettings['display_lang1'] ==
+                                                                    true &&
+                                                                contextEnSkCz[0]
+                                                                        .length >
+                                                                    index)
+                                                            ? contextEnSkCz[3][index] +
+                                                                " : " +
+                                                                contextEnSkCz[0][index]
+                                                            : '',
+                                                      ),
+                                                    )
+                                                    : SizedBox.shrink(),
+                                                jsonSettings['display_lang2'] ==
+                                                        true
+                                                    ? Expanded(
+                                                      child: SelectableText(
+                                                        style: TextStyle(
+                                                          fontSize: 18.0,
+                                                        ),
+                                                        (jsonSettings['display_lang2'] ==
+                                                                    true &&
+                                                                contextEnSkCz[1]
+                                                                        .length >
+                                                                    index)
+                                                            ? contextEnSkCz[1][index +
+                                                                offsetlang2]
+                                                            : '',
+                                                      ),
+                                                    )
+                                                    : SizedBox.shrink(),
+                                                jsonSettings['display_lang3'] ==
+                                                        true
+                                                    ? Expanded(
+                                                      child: SelectableText(
+                                                        style: TextStyle(
+                                                          fontSize: 18.0,
+                                                        ),
+                                                        (jsonSettings['display_lang3'] ==
+                                                                    true &&
+                                                                contextEnSkCz[2]
+                                                                        .length >
+                                                                    index)
+                                                            ? contextEnSkCz[2][index +
+                                                                offsetlang3]
+                                                            : '',
+                                                      ),
+                                                    )
+                                                    : SizedBox.shrink(),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        // Bottom buttons
-                        /* Padding(
+                          // Bottom buttons
+                          /* Padding(
                           padding: const EdgeInsets.symmetric(vertical: 8.0),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -2857,6 +2912,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                             }),
                           ),
                         ),*/
+                        ),
                       ],
                     ),
                   )

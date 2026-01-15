@@ -74,11 +74,12 @@ int offsetlang1 = 0;
 int offsetlang2 = 0;
 int offsetlang3 = 0;
 
-Future getContext(celex, pointer) async {
+Future getContext(celex, pointer, String index, int window) async {
   // Simulate fetching context from a database or API
-
-  int gte = int.tryParse(pointer) != null ? int.parse(pointer) - 10 : 0;
-  int lte = int.tryParse(pointer) != null ? int.parse(pointer) + 10 : 0;
+  final center = int.tryParse(pointer) ?? 0;
+  int gte = center - window;
+  if (gte < 0) gte = 0;
+  int lte = center + window;
 
   var query = {
     "query": {
@@ -112,13 +113,14 @@ Future getContext(celex, pointer) async {
     ],
     "size": 50,
   };
-  print(
-    "Active index: $activeIndex, getting context for Celex: $celex, pointer: $pointer, gte: $gte, lte: $lte, query: $query",
-  );
+
   var resultsContext = await sendToOpenSearch(
-    'https://$osServer/$activeIndex/_search',
+    'https://$osServer/$index/_search',
     [jsonEncode(query)],
   ); //BUG: when searching in all indices, which is appropriate, the sequence_id data does not match, now specific index is used, but it will not work for global search
+  print(
+    "Active index: $activeIndex, getting context for Celex: $celex, pointer: $pointer, gte: $gte, lte: $lte, query: $query, $resultsContext",
+  );
   Map<String, dynamic> decodedResults;
   try {
     decodedResults = jsonDecode(resultsContext) as Map<String, dynamic>;
