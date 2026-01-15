@@ -2807,94 +2807,249 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                               },
 
                               children: [
-                                ListView.builder(
-                                  shrinkWrap: true,
-                                  physics: NeverScrollableScrollPhysics(),
-                                  itemCount:
-                                      (contextEnSkCz != null &&
-                                              contextEnSkCz[0] != null)
-                                          ? contextEnSkCz[0].length
-                                          : 0,
-                                  itemBuilder: (context, index) {
-                                    return Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10.0,
-                                        vertical: 5.0,
-                                      ),
-                                      child: Column(
-                                        children: [
-                                          Container(
-                                            color:
-                                                (index == _contextWindow)
-                                                    ? Colors.grey[200]
-                                                    : null,
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10.0,
+                                    vertical: 4.0,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      jsonSettings['display_lang1'] == true
+                                          ? Expanded(
                                             child: Row(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
                                               children: [
-                                                jsonSettings['display_lang1'] ==
-                                                        true
-                                                    ? Expanded(
-                                                      child: SelectableText(
-                                                        style: TextStyle(
-                                                          fontSize: 18.0,
-                                                        ),
-                                                        (jsonSettings['display_lang1'] ==
-                                                                    true &&
-                                                                contextEnSkCz[0]
-                                                                        .length >
-                                                                    index)
-                                                            ? contextEnSkCz[3][index] +
-                                                                " : " +
-                                                                contextEnSkCz[0][index]
-                                                            : '',
-                                                      ),
-                                                    )
-                                                    : SizedBox.shrink(),
-                                                jsonSettings['display_lang2'] ==
-                                                        true
-                                                    ? Expanded(
-                                                      child: SelectableText(
-                                                        style: TextStyle(
-                                                          fontSize: 18.0,
-                                                        ),
-                                                        (jsonSettings['display_lang2'] ==
-                                                                    true &&
-                                                                contextEnSkCz[1]
-                                                                        .length >
-                                                                    index)
-                                                            ? contextEnSkCz[1][index +
-                                                                offsetlang2]
-                                                            : '',
-                                                      ),
-                                                    )
-                                                    : SizedBox.shrink(),
-                                                jsonSettings['display_lang3'] ==
-                                                        true
-                                                    ? Expanded(
-                                                      child: SelectableText(
-                                                        style: TextStyle(
-                                                          fontSize: 18.0,
-                                                        ),
-                                                        (jsonSettings['display_lang3'] ==
-                                                                    true &&
-                                                                contextEnSkCz[2]
-                                                                        .length >
-                                                                    index)
-                                                            ? contextEnSkCz[2][index +
-                                                                offsetlang3]
-                                                            : '',
-                                                      ),
-                                                    )
-                                                    : SizedBox.shrink(),
+                                                IconButton(
+                                                  icon: const Icon(
+                                                    Icons.arrow_upward,
+                                                    size: 16,
+                                                  ),
+                                                  padding: EdgeInsets.zero,
+                                                  constraints:
+                                                      const BoxConstraints(),
+                                                  tooltip:
+                                                      'Move ${lang1 ?? 'L1'} up',
+                                                  onPressed: () {
+                                                    setState(() {
+                                                      offsetlang1++;
+                                                    });
+                                                  },
+                                                ),
+                                                IconButton(
+                                                  icon: const Icon(
+                                                    Icons.arrow_downward,
+                                                    size: 16,
+                                                  ),
+                                                  padding: EdgeInsets.zero,
+                                                  constraints:
+                                                      const BoxConstraints(),
+                                                  tooltip:
+                                                      'Move ${lang1 ?? 'L1'} down',
+                                                  onPressed: () {
+                                                    setState(() {
+                                                      offsetlang1--;
+                                                    });
+                                                  },
+                                                ),
                                               ],
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
+                                          )
+                                          : const SizedBox.shrink(),
+                                      jsonSettings['display_lang2'] == true
+                                          ? Expanded(
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                IconButton(
+                                                  icon: const Icon(
+                                                    Icons.arrow_upward,
+                                                    size: 16,
+                                                  ),
+                                                  padding: EdgeInsets.zero,
+                                                  constraints:
+                                                      const BoxConstraints(),
+                                                  tooltip:
+                                                      'Move ${lang2 ?? 'L2'} up',
+                                                  onPressed: () {
+                                                    setState(() {
+                                                      offsetlang2++;
+                                                    });
+                                                  },
+                                                ),
+                                                IconButton(
+                                                  icon: const Icon(
+                                                    Icons.arrow_downward,
+                                                    size: 16,
+                                                  ),
+                                                  padding: EdgeInsets.zero,
+                                                  constraints:
+                                                      const BoxConstraints(),
+                                                  tooltip:
+                                                      'Move ${lang2 ?? 'L2'} down',
+                                                  onPressed: () {
+                                                    setState(() {
+                                                      offsetlang2--;
+                                                    });
+                                                  },
+                                                ),
+                                              ],
+                                            ),
+                                          )
+                                          : const SizedBox.shrink(),
+                                      jsonSettings['display_lang3'] == true
+                                          ? Expanded(
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                IconButton(
+                                                  icon: const Icon(
+                                                    Icons.arrow_upward,
+                                                    size: 16,
+                                                  ),
+                                                  padding: EdgeInsets.zero,
+                                                  constraints:
+                                                      const BoxConstraints(),
+                                                  tooltip:
+                                                      'Move ${lang3 ?? 'L3'} up',
+                                                  onPressed: () {
+                                                    setState(() {
+                                                      offsetlang3++;
+                                                    });
+                                                  },
+                                                ),
+                                                IconButton(
+                                                  icon: const Icon(
+                                                    Icons.arrow_downward,
+                                                    size: 16,
+                                                  ),
+                                                  padding: EdgeInsets.zero,
+                                                  constraints:
+                                                      const BoxConstraints(),
+                                                  tooltip:
+                                                      'Move ${lang3 ?? 'L3'} down',
+                                                  onPressed: () {
+                                                    setState(() {
+                                                      offsetlang3--;
+                                                    });
+                                                  },
+                                                ),
+                                              ],
+                                            ),
+                                          )
+                                          : const SizedBox.shrink(),
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(
+                                  height:
+                                      MediaQuery.of(context).size.height * 0.55,
+                                  child: ListView.builder(
+                                    itemCount:
+                                        (contextEnSkCz != null &&
+                                                contextEnSkCz[0] != null)
+                                            ? contextEnSkCz[0].length
+                                            : 0,
+                                    itemBuilder: (context, index) {
+                                      return Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10.0,
+                                          vertical: 5.0,
+                                        ),
+                                        child: Column(
+                                          children: [
+                                            Container(
+                                              color:
+                                                  (index == _contextWindow)
+                                                      ? Colors.grey[200]
+                                                      : null,
+                                              child: Row(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+
+                                                children: [
+                                                  jsonSettings['display_lang1'] ==
+                                                          true
+                                                      ? Expanded(
+                                                        child: SelectableText(
+                                                          style: TextStyle(
+                                                            fontSize: 18.0,
+                                                          ),
+                                                          (jsonSettings['display_lang1'] ==
+                                                                      true &&
+                                                                  index >= 0 &&
+                                                                  contextEnSkCz[3]
+                                                                          .length >
+                                                                      index &&
+                                                                  index +
+                                                                          offsetlang1 >=
+                                                                      0 &&
+                                                                  contextEnSkCz[0]
+                                                                          .length >
+                                                                      index +
+                                                                          offsetlang1)
+                                                              ? contextEnSkCz[3][index] +
+                                                                  " : " +
+                                                                  contextEnSkCz[0][index +
+                                                                      offsetlang1]
+                                                              : '',
+                                                        ),
+                                                      )
+                                                      : SizedBox.shrink(),
+                                                  jsonSettings['display_lang2'] ==
+                                                          true
+                                                      ? Expanded(
+                                                        child: SelectableText(
+                                                          style: TextStyle(
+                                                            fontSize: 18.0,
+                                                          ),
+                                                          (jsonSettings['display_lang2'] ==
+                                                                      true &&
+                                                                  index +
+                                                                          offsetlang2 >=
+                                                                      0 &&
+                                                                  contextEnSkCz[1]
+                                                                          .length >
+                                                                      index +
+                                                                          offsetlang2)
+                                                              ? contextEnSkCz[1][index +
+                                                                  offsetlang2]
+                                                              : '',
+                                                        ),
+                                                      )
+                                                      : SizedBox.shrink(),
+                                                  jsonSettings['display_lang3'] ==
+                                                          true
+                                                      ? Expanded(
+                                                        child: SelectableText(
+                                                          style: TextStyle(
+                                                            fontSize: 18.0,
+                                                          ),
+                                                          (jsonSettings['display_lang3'] ==
+                                                                      true &&
+                                                                  index +
+                                                                          offsetlang3 >=
+                                                                      0 &&
+                                                                  contextEnSkCz[2]
+                                                                          .length >
+                                                                      index +
+                                                                          offsetlang3)
+                                                              ? contextEnSkCz[2][index +
+                                                                  offsetlang3]
+                                                              : '',
+                                                        ),
+                                                      )
+                                                      : SizedBox.shrink(),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
                                 ),
                               ],
                             ),
