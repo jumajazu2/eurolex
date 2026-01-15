@@ -28,31 +28,33 @@ class indicesMaintenance extends StatefulWidget {
 }
 
 class _indicesMaintenanceState extends State<indicesMaintenance> {
-    Future<void> _openFolder(String path) async {
+  Future<void> _openFolder(String path) async {
+    try {
+      await Process.run('explorer', [path]);
+    } catch (_) {
       try {
-        await Process.run('explorer', [path]);
-      } catch (_) {
-        try {
-          await launchUrl(Uri.file(path));
-        } catch (e) {
-          // swallow
-        }
+        await launchUrl(Uri.file(path));
+      } catch (e) {
+        // swallow
       }
     }
+  }
 
-    Future<void> _openLogsFolder() async {
-      final logPath = await getFilePath(LogManager.fileName);
-      final dirPath = File(logPath).parent.path;
-      await _openFolder(dirPath);
-    }
+  Future<void> _openLogsFolder() async {
+    final logPath = await getFilePath(LogManager.fileName);
+    final dirPath = File(logPath).parent.path;
+    await _openFolder(dirPath);
+  }
 
-    Future<String?> _legacyLogsDir() async {
-      final legacyLog = await getLegacyAppDataPathIfExists(LogManager.fileName);
-      if (legacyLog == null) return null;
-      return File(legacyLog).parent.path;
-    }
+  Future<String?> _legacyLogsDir() async {
+    final legacyLog = await getLegacyAppDataPathIfExists(LogManager.fileName);
+    if (legacyLog == null) return null;
+    return File(legacyLog).parent.path;
+  }
+
   final _emailCtrl = TextEditingController(text: userEmail);
   final _passkeyCtrl = TextEditingController(text: userPasskey);
+  String? _emailError;
   double _fontScale = 1.0;
   String _fontFamily = 'System';
   bool _autoScaleWithSystem = false;
@@ -144,6 +146,12 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
   String? _availableVersion;
   bool _checkingUpdate = false;
   String? _updateError;
+
+  bool _isValidEmail(String value) {
+    if (value.isEmpty) return true; // allow blank, only format-check non-empty
+    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
+    return emailRegex.hasMatch(value);
+  }
 
   Future<void> _checkForStoreUpdate() async {
     setState(() {
@@ -283,30 +291,69 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                       Row(
                         children: [
                           Expanded(
-                            child: TextField(
-                              controller: _emailCtrl,
-                              decoration: const InputDecoration(
-                                labelText: 'Email',
-                                border: OutlineInputBorder(),
-                              ),
-                              keyboardType: TextInputType.emailAddress,
-                              onChanged: (v) {
-                                userEmail = v;
-                                jsonSettings['user_email'] = v;
-                                // no setState here
-                              },
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                TextField(
+                                  controller: _emailCtrl,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Email',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  keyboardType: TextInputType.emailAddress,
+                                  onChanged: (v) {
+                                    final value = v.trim();
+                                    final valid = _isValidEmail(value);
+                                    setState(() {
+                                      userEmail = value;
+                                      jsonSettings['user_email'] = value;
+                                      _emailError = valid
+                                          ? null
+                                          : 'Please enter a valid email address';
+                                    });
+                                  },
+                                ),
+                                const SizedBox(height: 4),
+                                SizedBox(
+                                  height: 16,
+                                  child:
+                                      _emailError == null
+                                          ? const SizedBox.shrink()
+                                          : Text(
+                                            _emailError!,
+                                            style: TextStyle(
+                                              color:
+                                                  Theme.of(context)
+                                                      .colorScheme
+                                                      .error,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                ),
+                              ],
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: TextField(
-                              controller: _passkeyCtrl,
-                              decoration: const InputDecoration(
-                                labelText: 'Passkey',
-                                border: OutlineInputBorder(),
-                              ),
-                              obscureText: false,
-                              onChanged: (v) => userPasskey = v,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                TextField(
+                                  controller: _passkeyCtrl,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Passkey',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  obscureText: false,
+                                  onChanged: (v) => userPasskey = v,
+                                ),
+                                const SizedBox(height: 4),
+                                const SizedBox(
+                                  height: 16,
+                                  // reserved space so it aligns vertically with the email field
+                                  child: SizedBox.shrink(),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -869,9 +916,10 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
             FutureBuilder<String>(
               future: getFilePath('settings.json'),
               builder: (context, snapshot) {
-                final text = snapshot.hasData
-                    ? snapshot.data!
-                    : 'Resolving settings path...';
+                final text =
+                    snapshot.hasData
+                        ? snapshot.data!
+                        : 'Resolving settings path...';
                 return Text(text);
               },
             ),
