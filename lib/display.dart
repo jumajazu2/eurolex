@@ -119,7 +119,7 @@ Future getContext(celex, pointer, String index, int window) async {
     [jsonEncode(query)],
   ); //BUG: when searching in all indices, which is appropriate, the sequence_id data does not match, now specific index is used, but it will not work for global search
   print(
-    "Active index: $activeIndex, getting context for Celex: $celex, pointer: $pointer, gte: $gte, lte: $lte, query: $query, $resultsContext",
+    "Active index: $activeIndex, getting context for Celex: $celex, pointer: $pointer, gte: $gte, lte: $lte, query: $query",
   );
   Map<String, dynamic> decodedResults;
   try {
