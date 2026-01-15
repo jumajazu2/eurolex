@@ -222,7 +222,10 @@ class _MainTabbedAppState extends State<MainTabbedApp>
     });
 */
     loadSettingsFromFile().then((_) {
-      if (jsonSettings["access_key"] == "trial") {
+      final accessKey = (jsonSettings['access_key'] ?? '').toString();
+      final savedEmail = (jsonSettings['user_email'] ?? '').toString().trim();
+
+      if (accessKey == 'trial') {
         // Ensure a context exists
         WidgetsBinding.instance.addPostFrameCallback((_) {
           //  if (mounted) showTrialDialog();
@@ -234,6 +237,87 @@ class _MainTabbedAppState extends State<MainTabbedApp>
               dismisable: false,
               backgroundColor: Colors.orange.shade200,
             );
+        });
+      }
+
+      // If first startup without email, prompt for email once
+      if (savedEmail.isEmpty && mounted) {
+        // Delay slightly so the splash dialog (closed after 3s) is gone
+        Future.delayed(const Duration(milliseconds: 3500), () {
+          if (!mounted) return;
+          final ctx = navigatorKey.currentContext ?? context;
+          if (ctx == null) return;
+          showDialog(
+            context: ctx,
+            barrierDismissible: false,
+            builder: (dCtx) {
+              final ctrl = TextEditingController(text: savedEmail);
+              String? error;
+              bool isValid(String value) {
+                if (value.trim().isEmpty) return false;
+                final re = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
+                return re.hasMatch(value.trim());
+              }
+
+              return StatefulBuilder(
+                builder: (dCtx, setSB) {
+                  return PopScope(
+                    canPop: false,
+                    child: AlertDialog(
+                      title: const Text('Enter your email'),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Please enter the email you use for access, even in Trial Mode. It helps identify your account for support and licensing.',
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: ctrl,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: InputDecoration(
+                              labelText: 'Email',
+                              border: const OutlineInputBorder(),
+                              errorText: error,
+                            ),
+                            onChanged: (v) {
+                              setSB(() {
+                                error =
+                                    isValid(v)
+                                        ? null
+                                        : 'Please enter a valid email address';
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () async {
+                            final v = ctrl.text.trim();
+                            if (!isValid(v)) {
+                              setSB(() {
+                                error = 'Please enter a valid email address';
+                              });
+                              return;
+                            }
+                            jsonSettings['user_email'] = v;
+                            userEmail = v;
+                            try {
+                              await writeSettingsToFile(jsonSettings);
+                            } catch (_) {}
+                            if (dCtx.mounted) Navigator.of(dCtx).pop();
+                          },
+                          child: const Text('Save'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
+          );
         });
       }
 
