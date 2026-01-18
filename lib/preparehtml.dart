@@ -869,6 +869,7 @@ Future getCustomIndices(server, isAdmin, id) async {
       headers: {
         'Authorization': basicAuth,
         'x-api-key': jsonSettings['access_key'],
+        'x-email': jsonSettings['user_email'],
       },
     );
     if (response.statusCode == 200) {
@@ -934,6 +935,7 @@ Future getListIndices(server) async {
       headers: {
         'Authorization': basicAuth,
         'x-api-key': jsonSettings['access_key'],
+        'x-email': jsonSettings['user_email'],
       },
     );
     if (response.statusCode == 200) {
