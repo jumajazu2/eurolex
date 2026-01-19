@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bible Search</title>
+
+    <!-- Office JavaScript API -->
+    <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 15px;
+            background-color: #f5f5f5;
+        }
+
+        h2 {
+            color: #2b579a;
+            margin-top: 0;
+        }
+
+        #searchSection {
+            background: white;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        #searchText {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #2b579a;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        button:hover {
+            background-color: #1d3f73;
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        #resultsContainer {
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .result-item {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .result-item:hover {
+            background-color: #f0f7ff;
+        }
+
+        .result-reference {
+            font-weight: bold;
+            color: #2b579a;
+            margin-bottom: 5px;
+        }
+
+        .result-text {
+            color: #333;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        #status {
+            margin-top: 10px;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 13px;
+            display: none;
+        }
+
+        #status.info {
+            background-color: #e7f3ff;
+            color: #0066cc;
+            display: block;
+        }
+
+        #status.error {
+            background-color: #ffe7e7;
+            color: #cc0000;
+            display: block;
+        }
+
+        #status.success {
+            background-color: #e7ffe7;
+            color: #00cc00;
+            display: block;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="searchSection">
+        <h2>🔍 Bible Search</h2>
+        <input type="text" id="searchText" placeholder="Enter text to search..." />
+        <button id="btnSearchSelection">Search Selection</button>
+        <button id="btnSearch">Search Typed Text</button>
+        <div id="status"></div>
+    </div>
+
+    <div id="resultsContainer">
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // API Configuration
+        const API_URL = 'https://search.pts-translation.sk/eu_7239_bibles/_search';
+        const API_KEY = '7239';
+        const API_EMAIL = 'juraj.kuban.sk@gmail.com';
+
+        // Initialize Office
+        Office.onReady((info) => {
+            if (info.host === Office.HostType.Word) {
+                document.getElementById('btnSearchSelection').onclick = searchSelection;
+                document.getElementById('btnSearch').onclick = searchTypedText;
+                document.getElementById('searchText').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') searchTypedText();
+                });
+            }
+        });
+
+        // Search selected text in Word
+        async function searchSelection() {
+            try {
+                await Word.run(async (context) => {
+                    const selection = context.document.getSelection();
+                    selection.load('text');
+                    await context.sync();
+
+                    if (selection.text.trim()) {
+                        document.getElementById('searchText').value = selection.text.trim();
+                        await performSearch(selection.text.trim());
+                    } else {
+                        showStatus('Please select some text in the document first.', 'error');
+                    }
+                });
+            } catch (error) {
+                showStatus('Error reading selection: ' + error.message, 'error');
+            }
+        }
+
+        // Search typed text
+        async function searchTypedText() {
+            const searchText = document.getElementById('searchText').value.trim();
+            if (searchText) {
+                await performSearch(searchText);
+            } else {
+                showStatus('Please enter search text.', 'error');
+            }
+        }
+
+        // Perform search API call
+        async function performSearch(searchText) {
+            showStatus('Searching...', 'info');
+            document.getElementById('results').innerHTML = '<div class="loading">🔄 Searching Bible...</div>';
+
+            const query = {
+                query: {
+                    bool: {
+                        must: [
+                            { exists: { field: 'en_text' } },
+                            {
+                                multi_match: {
+                                    query: searchText,
+                                    fields: ['en_text', 'sk_text', 'de_text', 'fr_text', 'de2_text'],
+                                    fuzziness: 'AUTO',
+                                    minimum_should_match: '60%'
+                                }
+                            }
+                        ]
+                    }
+                },
+                size: 20,
+                highlight: {
+                    fields: {
+                        en_text: {},
+                        sk_text: {},
+                        de_text: {},
+                        fr_text: {},
+                        de2_text: {}
+                    }
+                }
+            };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': API_KEY,
+                        'x-email': API_EMAIL
+                    },
+                    body: JSON.stringify(query)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                displayResults(data);
+            } catch (error) {
+                showStatus('Search failed: ' + error.message, 'error');
+                document.getElementById('results').innerHTML = '';
+            }
+        }
+
+        // Display search results
+        function displayResults(data) {
+            const resultsDiv = document.getElementById('results');
+            const hits = data.hits.hits;
+
+            if (hits.length === 0) {
+                resultsDiv.innerHTML = '<div class="loading">No results found.</div>';
+                showStatus('No verses found.', 'info');
+                return;
+            }
+
+            showStatus(`Found ${data.hits.total.value} verses.`, 'success');
+
+            let html = '';
+            hits.forEach(hit => {
+                const source = hit._source;
+                const bookName = source.book_name || 'Unknown';
+                const chapter = source.bible_chapter || '?';
+                const verse = source.verse || '?';
+                
+                // Get text from any language field
+                const text = source.en_text || source.sk_text || source.de_text || 
+                             source.fr_text || source.de2_text || '';
+
+                html += `
+                    <div class="result-item" onclick='insertVerse("${bookName}", ${chapter}, ${verse}, ${JSON.stringify(text).replace(/'/g, "&apos;")})'>
+                        <div class="result-reference">${bookName} ${chapter}:${verse}</div>
+                        <div class="result-text">${escapeHtml(text.substring(0, 200))}${text.length > 200 ? '...' : ''}</div>
+                    </div>
+                `;
+            });
+
+            resultsDiv.innerHTML = html;
+        }
+
+        // Insert verse into document
+        async function insertVerse(bookName, chapter, verse, text) {
+            try {
+                await Word.run(async (context) => {
+                    const reference = `${bookName} ${chapter}:${verse}`;
+                    const fullText = `${reference}\n${text}\n\n`;
+                    
+                    const selection = context.document.getSelection();
+                    selection.insertText(fullText, Word.InsertLocation.end);
+                    
+                    await context.sync();
+                    showStatus(`Inserted: ${reference}`, 'success');
+                });
+            } catch (error) {
+                showStatus('Error inserting text: ' + error.message, 'error');
+            }
+        }
+
+        // Show status message
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = type;
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    status.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

@@ -79,7 +79,8 @@ class _FilePickerButtonState extends State<FilePickerButton> {
       // Read the content of the file
       File file = File(filePath);
       if (await file.exists()) {
-        String content = await file.readAsString();
+        final bytes = await file.readAsBytes();
+        String content = utf8.decode(bytes, allowMalformed: true);
         print('File content loaded successfully: $content');
         if (!mounted) return;
         setState(()
@@ -310,7 +311,8 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
     final file = File(filePath);
     if (!await file.exists()) return;
 
-    final content = await file.readAsString();
+    final bytes = await file.readAsBytes();
+    final content = utf8.decode(bytes, allowMalformed: true);
     fileContent2 = content;
     _fileLoaded = true;
 
@@ -784,16 +786,17 @@ Future<String> loadHtmtFromCelex(celex, lang) async {
         .timeout(const Duration(seconds: 225));
     // ...existing code...
     if (response.statusCode == 200) {
-      String htmlContent = response.body;
+      String htmlContent = utf8.decode(response.bodyBytes, allowMalformed: true);
       print('HTML content loaded successfully: celex: $celex, lang: $lang');
       return htmlContent;
     } else {
+      final bodyText = utf8.decode(response.bodyBytes, allowMalformed: true);
       final snippetLen =
-          response.body.length > 100 ? 100 : response.body.length;
+          bodyText.length > 100 ? 100 : bodyText.length;
       final errorMsg =
           'Failed to load HTML in Harvest for celex: $celex, lang: $lang. '
           'Status code: ${response.statusCode}, ${response.headers}\n'
-          '${response.body.substring(0, snippetLen)}';
+          '${bodyText.substring(0, snippetLen)}';
       print(errorMsg);
       throw Exception(errorMsg);
     }
@@ -826,16 +829,17 @@ Future<String> loadHtmtFromCellar(url, lang) async {
         .timeout(const Duration(seconds: 1000));
     // ...existing code...
     if (response.statusCode == 200) {
-      String htmlContent = response.body;
+      String htmlContent = utf8.decode(response.bodyBytes, allowMalformed: true);
       print('HTML content loaded successfully: $url, lang: $lang');
       return htmlContent;
     } else {
+      final bodyText = utf8.decode(response.bodyBytes, allowMalformed: true);
       final snippetLen =
-          response.body.length > 100 ? 100 : response.body.length;
+          bodyText.length > 100 ? 100 : bodyText.length;
       final errorMsg =
           'Failed to load HTML in Harvest for $url, lang: $lang. '
           'Status code: ${response.statusCode}, ${response.headers}\n'
-          '${response.body.substring(0, snippetLen)}';
+          '${bodyText.substring(0, snippetLen)}';
       print(errorMsg);
       throw Exception(errorMsg);
     }
@@ -873,11 +877,10 @@ Future getCustomIndices(server, isAdmin, id) async {
       },
     );
     if (response.statusCode == 200) {
-      String responseBody = response.body;
+      String responseBody = utf8.decode(response.bodyBytes, allowMalformed: true);
 
       if (isAdmin) {
         print('Admin user detected, loading all indices.');
-        String responseBody = response.body;
         indices =
             responseBody
                 .split('\n') // Split the response into lines
@@ -939,7 +942,7 @@ Future getListIndices(server) async {
       },
     );
     if (response.statusCode == 200) {
-      String responseBody = response.body;
+      String responseBody = utf8.decode(response.bodyBytes, allowMalformed: true);
 
       // Extract the index names from the JSON response
       indices =
@@ -980,7 +983,7 @@ Future<List<List<String>>> getListIndicesFull(server, isAdmin) async {
       },
     );
     if (response.statusCode == 200) {
-      String responseBody = response.body;
+      String responseBody = utf8.decode(response.bodyBytes, allowMalformed: true);
 
       // Each line: indexName store.size docs.count
       if (isAdmin) {

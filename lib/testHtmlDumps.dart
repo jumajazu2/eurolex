@@ -625,9 +625,9 @@ Future uploadSparqlForCelex(
 Future uploadURLs(String indexName, [int startPointer = 0]) async {
   //final lines = await fetchSectorXCelexTitles(sector, year);
   final downloadLinks = <String, Map<String, String>>{
-    "Call_for_evidence_improved": {
-      "EN": "https://www.pts-translation.sk/EN_final.html",
-      "SK": "https://www.pts-translation.sk/SK_final.html",
+    "FISMA01301": {
+      "EN": "https://www.pts-translation.sk/FISMA01301.html",
+      "SK": "https://www.pts-translation.sk/FISMA01301SK.html",
     },
   };
   //this reads a map of celex->lang->links

@@ -246,7 +246,8 @@ Future<String> getFile(dir) async {
               (file.path.endsWith('.html') || file.path.endsWith('.rdf'))) {
             // If the subfile is a file, read it
             print(file.path);
-            String readFile = await file.readAsString();
+            final bytes = await file.readAsBytes();
+            String readFile = utf8.decode(bytes, allowMalformed: true);
             // print('Reading file: ${readFile.substring(0, 50)}...');
 
             if (readFile.isNotEmpty) {
@@ -277,7 +278,8 @@ Future<String> getFile(dir) async {
                 print(subfile.path);
 
                 try {
-                  String readFile = await subfile.readAsString();
+                  final bytes = await subfile.readAsBytes();
+                  String readFile = utf8.decode(bytes, allowMalformed: true);
                   //  print('Reading file: ${readFile.substring(0, 50)}...');
 
                   if (readFile.isNotEmpty) {
@@ -309,7 +311,8 @@ Future<String> getFile(dir) async {
 
                 for (var fileEntity in filesInSubDir) {
                   if (fileEntity is File) {
-                    String readFile = await fileEntity.readAsString();
+                    final bytes = await fileEntity.readAsBytes();
+                    String readFile = utf8.decode(bytes, allowMalformed: true);
                     print('Reading file: ${readFile.substring(0, 50)}...');
 
                     if (readFile.isNotEmpty) {

@@ -1,0 +1,27 @@
+{
+  "name": "bible-search-addin",
+  "version": "1.0.0",
+  "description": "Office Add-in for searching Bible references from Word",
+  "main": "src/taskpane/taskpane.html",
+  "scripts": {
+    "start": "office-addin-debugging start manifest.xml desktop",
+    "stop": "office-addin-debugging stop manifest.xml",
+    "validate": "office-addin-manifest validate manifest.xml",
+    "serve": "webpack serve --mode development"
+  },
+  "dependencies": {
+    "core-js": "^3.32.0",
+    "regenerator-runtime": "^0.14.0"
+  },
+  "devDependencies": {
+    "@types/office-js": "^1.0.356",
+    "html-webpack-plugin": "^5.5.3",
+    "office-addin-cli": "^1.5.7",
+    "office-addin-debugging": "^5.0.11",
+    "office-addin-dev-certs": "^1.11.3",
+    "office-addin-manifest": "^1.12.3",
+    "webpack": "^5.88.2",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^4.15.1"
+  }
+}

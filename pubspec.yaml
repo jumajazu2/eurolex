@@ -39,6 +39,7 @@ dependencies:
   url_launcher: ^6.3.0
   package_info_plus: ^8.0.0
   device_info_plus: ^10.1.0
+  sqlite3: ^2.4.0
   
 
 
