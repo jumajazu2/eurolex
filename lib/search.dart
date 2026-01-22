@@ -3,7 +3,7 @@ import 'dart:math';
 //import 'dart:nativewrappers/_internal/vm/lib/internal_patch.dart';
 
 import 'package:LegisTracerEU/main.dart';
-import 'package:LegisTracerEU/sparql.dart';
+import 'package:LegisTracerEU/sparql.dart' hide addDeviceIdHeader;
 import 'package:flutter/material.dart';
 import 'package:LegisTracerEU/processDOM.dart';
 import 'package:LegisTracerEU/display.dart';
@@ -1513,6 +1513,224 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     //BUG too power hungry to get titles with titlesForCelex();
   }
 
+  Future processQueryNew(query, searchTerm, index) async {
+    queryPattern = query;
+
+    lang1Results.clear();
+    lang2Results.clear();
+    lang3Results.clear();
+    lang1HighlightedResults.clear();
+    lang2HighlightedResults.clear();
+    lang3HighlightedResults.clear();
+    enHighlightedResults.clear();
+    if (mounted) setState(() => _isLoading = true);
+    print('New API Query: ${jsonEncode(query)}');
+
+    // Use http.post directly for new search endpoint
+    try {
+      final response = await http
+          .post(
+            Uri.parse('https://$osServer/search'),
+            headers: addDeviceIdHeader({
+              'Content-Type': 'application/json',
+              'x-api-key': '${jsonSettings['access_key']}',
+              'x-email': '${jsonSettings['user_email']}',
+            }),
+            body: jsonEncode(query),
+          )
+          .timeout(const Duration(seconds: 20));
+
+      if (!mounted) return;
+
+      // Check for authentication/authorization errors
+      if (response.statusCode == 401 || response.statusCode == 429) {
+        print("Auth/Rate limit error: ${response.statusCode}");
+        showSubscriptionDialog(response.statusCode);
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
+
+      // Check for other errors
+      if (response.statusCode != 200) {
+        print("Error: ${response.statusCode} - ${response.body}");
+        showInfo(
+          context,
+          'Server error: ${response.statusCode}\n${response.body}',
+        );
+        setState(() {
+          _progressColor = Colors.redAccent;
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Guard: if offline or invalid response, fail gracefully
+      Map<String, dynamic> decodedResults;
+      try {
+        decodedResults = jsonDecode(response.body) as Map<String, dynamic>;
+      } on FormatException catch (_) {
+        showInfo(
+          context,
+          'You appear to be offline or the server response was invalid. Please check your connection and try again.',
+        );
+        setState(() {
+          _progressColor = Colors.redAccent;
+          _isLoading = false;
+        });
+        return;
+      }
+
+      //if query returns error, stop processing, display error
+      if (decodedResults['error'] != null) {
+        print("Error in OpenSearch response: ${decodedResults['error']}");
+
+        showInfo(
+          context,
+          'Error in OpenSearch response: ${decodedResults['error']}',
+        );
+
+        setState(() {
+          _progressColor = Colors.redAccent; // indicate error via color
+        });
+
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
+
+      var hits = decodedResults['hits']['hits'] as List;
+
+      setState(() {
+        resultIndices =
+            hits.map((hit) => (hit['_index'] ?? index).toString()).toList();
+        lang2Results =
+            hits
+                .map(
+                  (hit) =>
+                      (hit['_source']?['${lang2?.toLowerCase()}_text']
+                              as String?)
+                          ?.trim(),
+                )
+                .map((s) => (s == null || s.isEmpty) ? 'N/A' : s)
+                .toList();
+        lang1Results =
+            hits
+                .map(
+                  (hit) =>
+                      (hit['_source']?['${lang1?.toLowerCase()}_text']
+                              as String?)
+                          ?.trim(),
+                )
+                .map((s) => (s == null || s.isEmpty) ? 'N/A' : s)
+                .toList();
+        lang3Results =
+            hits
+                .map(
+                  (hit) =>
+                      (hit['_source']?['${lang3?.toLowerCase()}_text']
+                              as String?)
+                          ?.trim(),
+                )
+                .map((s) => (s == null || s.isEmpty) ? 'N/A' : s)
+                .toList();
+
+        metaCelex =
+            hits.map((hit) => hit['_source']['celex'].toString()).toList();
+        metaCellar =
+            hits.map((hit) => hit['_source']['dir_id'].toString()).toList();
+        sequenceNo =
+            hits
+                .map((hit) => hit['_source']['sequence_id'].toString())
+                .toList();
+        parNotMatched =
+            hits
+                .map((hit) => hit['_source']['paragraphsNotMatched'].toString())
+                .toList();
+        pointerPar =
+            hits
+                .map((hit) => hit['_source']['sequence_id'].toString())
+                .toList();
+
+        className =
+            hits.map((hit) => hit['_source']['class'].toString()).toList();
+
+        docDate = hits.map((hit) => hit['_source']['date'].toString()).toList();
+      });
+    } on TimeoutException catch (e) {
+      print("Timeout: $e");
+      showInfo(context, 'Connection timeout. Please try again.');
+      setState(() {
+        _progressColor = Colors.redAccent;
+        _isLoading = false;
+      });
+      return;
+    } on SocketException catch (e) {
+      print("Connection error: $e");
+      showInfo(context, 'Network error. Please check your connection.');
+      setState(() {
+        _progressColor = Colors.redAccent;
+        _isLoading = false;
+      });
+      return;
+    } catch (e) {
+      print("Unexpected error: $e");
+      showInfo(context, 'Unexpected error: $e');
+      setState(() {
+        _progressColor = Colors.redAccent;
+        _isLoading = false;
+      });
+      return;
+    }
+
+    // Prefetch titles for the current result set (async, non-blocking)
+    //await _prefetchTitles(metaCelex.toSet());
+
+    print("Query: $query, Results SK = $lang2Results");
+
+    queryText = searchTerm; //_searchController.text;
+    //converting the results to TextSpans for highlighting
+    final queryWords =
+        queryText
+            .replaceAll(RegExp(r"[^\p{L}\p{M}\p{N}\s'’\-‑]", unicode: true), '')
+            .split(RegExp(r"\s+", unicode: true))
+            .where((String w) => w.isNotEmpty)
+            .toList();
+    queryWords.add(
+      queryText,
+    ); //the whole phrase added to facilitate highlighting
+
+    print("Query Words: $queryWords");
+
+    for (var hit in lang1Results) {
+      final res = highlightPhrasePreservingLayout(hit, queryWords);
+      enHighlightedResults.add(res);
+      lang1HighlightedResults.add(res);
+      // You can store these highlights in a list or map if needed
+    }
+
+    for (var hit in lang2Results) {
+      final res = highlightPhrasePreservingLayout(hit, queryWords);
+
+      lang2HighlightedResults.add(res);
+      // You can store these highlights in a list or map if needed
+    }
+
+    for (var hit in lang3Results) {
+      final res = highlightPhrasePreservingLayout(hit, queryWords);
+
+      lang3HighlightedResults.add(res);
+      // You can store these highlights in a list or map if needed
+    }
+    print(
+      "EN Highlight all: ${enHighlightedResults.length}, $enHighlightedResults",
+    );
+
+    if (!mounted) return;
+    setState(() {});
+    if (mounted) setState(() => _isLoading = false);
+
+    //BUG too power hungry to get titles with titlesForCelex();
+  }
+
   // Build OpenSearch exists clauses for displayed working languages
   List<Map<String, dynamic>> _existsClausesForDisplayedLangs() {
     final clauses = <Map<String, dynamic>>[];
@@ -1536,169 +1754,147 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
 
       enHighlightedResults.clear();
     });
-    final must = [
-      ..._existsClausesForDisplayedLangs(),
-      {
-        "match_phrase": {
-          "${lang1?.toLowerCase()}_text": {
-            "query": _searchController.text,
-            "slop": 2,
-            "boost": 1.5,
-          },
-        },
-      },
-    ];
-    var query = {
-      "query": {
-        "bool": {"must": must},
-      },
-      "size": 50,
-    };
-    //var queryText = _searchController.text;
 
-    processQuery(query, _searchController.text, activeIndex);
+    // OLD METHOD (for reference): Full query construction
+    // final must = [
+    //   ..._existsClausesForDisplayedLangs(),
+    //   {
+    //     "match_phrase": {
+    //       "${lang1?.toLowerCase()}_text": {
+    //         "query": _searchController.text,
+    //         "slop": 2,
+    //         "boost": 1.5,
+    //       },
+    //     },
+    //   },
+    // ];
+    // var query = {
+    //   "query": {
+    //     "bool": {"must": must},
+    //   },
+    //   "size": 50,
+    // };
+    // processQuery(query, _searchController.text, activeIndex);
+
+    // NEW METHOD: Parameter-based API
+    Map<String, dynamic> queryFormed = {
+      "index": "$activeIndex", // Index name, "*" for all, or specific index
+      "term": _searchController.text, // Search term (required)
+      "langs": [
+        "$lang1",
+        "$lang2",
+        "$lang3",
+      ], // Array of language codes (required)
+      "pattern": 1, // Query pattern 1-5 (optional, default: 1)
+      "size": 50, // Max results (optional, default: 50, max: 100)
+      "existsLangs": [
+        "$lang1",
+        "$lang2",
+        "$lang3",
+      ], // Languages that must exist (optional, defaults to langs)
+    };
+
+    processQueryNew(queryFormed, _searchController.text, activeIndex);
   }
 
   void _startSearch2() async {
-    // : Implement your search logic here
     setState(() {
       _results.clear();
       enHighlightedResults.clear();
     });
 
-    var query = {
-      "query": {
-        "multi_match": {
-          "query": _searchController.text, // Search term with a typo
-          "fields": [
-            "en_text",
-            "sk_text",
-            "cs_text",
-          ], // Search across all language fields
-          "fuzziness": "0",
-          "minimum_should_match": "75%", // Allow fuzzy matching
-        },
-      },
+    // OLD METHOD (for reference): Full query construction
+    // var query = {
+    //   "query": {
+    //     "bool": {
+    //       "must": [
+    //         ..._existsClausesForDisplayedLangs(),
+    //         {
+    //           "multi_match": {
+    //             "query": _searchController.text,
+    //             "fields": [
+    //               "${lang1?.toLowerCase()}_text",
+    //               "${lang2?.toLowerCase()}_text",
+    //               "${lang3?.toLowerCase()}_text",
+    //             ],
+    //             "fuzziness": "AUTO",
+    //             "minimum_should_match": "80%",
+    //           },
+    //         },
+    //         {
+    //           "term": {"paragraphsNotMatched": false},
+    //         },
+    //       ],
+    //     },
+    //   },
+    //   "size": 50,
+    // };
+    // processQuery(query, _searchController.text, activeIndex);
+
+    // NEW METHOD: Parameter-based API
+    Map<String, dynamic> queryFormed = {
+      "index": "$activeIndex",
+      "term": _searchController.text,
+      "langs": ["$lang1", "$lang2", "$lang3"],
+      "pattern": 2, // Multi-match with fuzziness
       "size": 50,
-      "highlight": {
-        "fields": {"en_text": {}, "sk_text": {}, "cz_text": {}},
-      },
-    }; // Increase the number of results to 50
-    //BUG auto search less effective than Multi button, difference in type = phrase
-    var query2 = {
-      "query": {
-        "bool": {
-          "must": [
-            ..._existsClausesForDisplayedLangs(),
-            {
-              "multi_match": {
-                "query": _searchController.text,
-                "fields": [
-                  "${lang1?.toLowerCase()}_text",
-                  "${lang2?.toLowerCase()}_text",
-                  "${lang3?.toLowerCase()}_text",
-                ],
-                "fuzziness": "AUTO",
-                "minimum_should_match": "80%",
-              },
-            },
-            {
-              "term": {"paragraphsNotMatched": false},
-            },
-          ],
-        },
-      },
-      "size": 50,
-      "highlight": {
-        "fields": {
-          "${lang1?.toLowerCase()}_text": {},
-          "${lang2?.toLowerCase()}_text": {},
-          "${lang3?.toLowerCase()}_text": {},
-        },
-      },
+      "existsLangs": ["$lang1", "$lang2", "$lang3"],
     };
 
-    processQuery(query2, _searchController.text, activeIndex);
+    processQueryNew(queryFormed, _searchController.text, activeIndex);
   }
 
   void _startSearch3() async {
-    // : Implement your search logic here
     setState(() {
       _results.clear();
-
       enHighlightedResults.clear();
     });
-    var query = {
-      "query": {
-        "bool": {
-          "must": [..._existsClausesForDisplayedLangs()],
-          "should": [
-            {
-              "match_phrase": {
-                "${lang1?.toLowerCase()}_text": {
-                  "query": _searchController.text,
-                  "slop": 2,
-                  "boost": 3.0,
-                },
-              },
-            },
-            {
-              "match": {
-                "${lang1?.toLowerCase()}_text": {
-                  "query": _searchController.text,
-                  "fuzziness": "AUTO",
-                  "operator": "and",
-                  "boost": 1.0,
-                },
-              },
-            },
-            {
-              "match_phrase": {
-                "${lang2?.toLowerCase()}_text": {
-                  "query": _searchController.text,
-                  "slop": 2,
-                  "boost": 3.0,
-                },
-              },
-            },
-            {
-              "match": {
-                "${lang2?.toLowerCase()}_text": {
-                  "query": _searchController.text,
-                  "fuzziness": "AUTO",
-                  "operator": "and",
-                  "boost": 1.0,
-                },
-              },
-            },
-            {
-              "match_phrase": {
-                "${lang3?.toLowerCase()}_text": {
-                  "query": _searchController.text,
-                  "slop": 2,
-                  "boost": 3.0,
-                },
-              },
-            },
-            {
-              "match": {
-                "${lang3?.toLowerCase()}_text": {
-                  "query": _searchController.text,
-                  "fuzziness": "AUTO",
-                  "operator": "and",
-                  "boost": 1.0,
-                },
-              },
-            },
-          ],
-          "minimum_should_match": 1,
-        },
-      },
-      "size": 25,
-    };
-    //var queryText = _searchController.text;
 
-    processQuery(query, _searchController.text, activeIndex);
+    // OLD METHOD (for reference): Full query construction
+    // var query = {
+    //   "query": {
+    //     "bool": {
+    //       "must": [..._existsClausesForDisplayedLangs()],
+    //       "should": [
+    //         {
+    //           "match_phrase": {
+    //             "${lang1?.toLowerCase()}_text": {
+    //               "query": _searchController.text,
+    //               "slop": 2,
+    //               "boost": 3.0,
+    //             },
+    //           },
+    //         },
+    //         {
+    //           "match": {
+    //             "${lang1?.toLowerCase()}_text": {
+    //               "query": _searchController.text,
+    //               "fuzziness": "AUTO",
+    //               "operator": "and",
+    //               "boost": 1.0,
+    //             },
+    //           },
+    //         },
+    //         // ... similar blocks for lang2 and lang3 ...
+    //       ],
+    //       "minimum_should_match": 1,
+    //     },
+    //   },
+    //   "size": 25,
+    // };
+    // processQuery(query, _searchController.text, activeIndex);
+
+    // NEW METHOD: Parameter-based API
+    Map<String, dynamic> queryFormed = {
+      "index": "$activeIndex",
+      "term": _searchController.text,
+      "langs": ["$lang1", "$lang2", "$lang3"],
+      "pattern": 3, // Combined phrase + fuzzy
+      "size": 25,
+      "existsLangs": ["$lang1", "$lang2", "$lang3"],
+    };
+
+    processQueryNew(queryFormed, _searchController.text, activeIndex);
   }
 
   void _startIntervalsTest() async {
@@ -1707,19 +1903,30 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
       enHighlightedResults.clear();
     });
 
-    final query = buildIntervalsQueryFromText(
-      _searchController.text,
-      l1: lang1,
-      l2: lang2,
-      l3: lang3,
-      maxGaps: 3,
-      maxTokens: 4,
-      size: 50,
-    );
+    // OLD METHOD (for reference): Full query construction
+    // final query = buildIntervalsQueryFromText(
+    //   _searchController.text,
+    //   l1: lang1,
+    //   l2: lang2,
+    //   l3: lang3,
+    //   maxGaps: 3,
+    //   maxTokens: 4,
+    //   size: 50,
+    // );
+    // processQuery(query, _searchController.text, activeIndex);
 
-    print('Intervals A/B query JSON: ${jsonEncode(query)}');
+    // NEW METHOD: Parameter-based API
+    Map<String, dynamic> queryFormed = {
+      "index": "$activeIndex",
+      "term": _searchController.text,
+      "langs": ["$lang1", "$lang2", "$lang3"],
+      "pattern": 4, // Intervals ordered tokens
+      "size": 50,
+      "existsLangs": ["$lang1", "$lang2", "$lang3"],
+    };
+
     setState(() => _progressColor = Colors.teal);
-    processQuery(query, _searchController.text, activeIndex);
+    processQueryNew(queryFormed, _searchController.text, activeIndex);
   }
 
   void _startSearchPhraseAll() async {
@@ -1728,32 +1935,40 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
       enHighlightedResults.clear();
     });
 
-    final query = {
-      "query": {
-        "bool": {
-          "must": [
-            ..._existsClausesForDisplayedLangs(),
-            {
-              "multi_match": {
-                "type": "phrase",
-                "query": _searchController.text,
-                "slop": 10,
-                "fields": ["*_text"],
-                "auto_generate_synonyms_phrase_query": false,
-                "lenient": true,
-              },
-            },
-          ],
-        },
-      },
+    // OLD METHOD (for reference): Full query construction
+    // final query = {
+    //   "query": {
+    //     "bool": {
+    //       "must": [
+    //         ..._existsClausesForDisplayedLangs(),
+    //         {
+    //           "multi_match": {
+    //             "type": "phrase",
+    //             "query": _searchController.text,
+    //             "slop": 10,
+    //             "fields": ["*_text"],
+    //             "auto_generate_synonyms_phrase_query": false,
+    //             "lenient": true,
+    //           },
+    //         },
+    //       ],
+    //     },
+    //   },
+    //   "size": 50,
+    // };
+    // processQuery(query, _searchController.text, "*");
+
+    // NEW METHOD: Parameter-based API
+    Map<String, dynamic> queryFormed = {
+      "index": "*", // Search ALL indices
+      "term": _searchController.text,
+      "langs": ["$lang1", "$lang2", "$lang3"],
+      "pattern": 5, // Phrase search across all indices
       "size": 50,
-      "highlight": {
-        "require_field_match": false,
-        "fields": {"*_text": {}},
-      },
+      "existsLangs": ["$lang1", "$lang2", "$lang3"],
     };
 
-    processQuery(query, _searchController.text, "*");
+    processQueryNew(queryFormed, _searchController.text, "*");
   }
 
   Color backgroundColor = Colors.white12;

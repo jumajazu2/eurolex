@@ -626,8 +626,10 @@ Future uploadURLs(String indexName, [int startPointer = 0]) async {
   //final lines = await fetchSectorXCelexTitles(sector, year);
   final downloadLinks = <String, Map<String, String>>{
     "FISMA01301": {
-      "EN": "https://www.pts-translation.sk/FISMA01301.html",
-      "SK": "https://www.pts-translation.sk/FISMA01301SK.html",
+      "EN":
+          "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=PI_COM:C(2025)6800",
+      "SK":
+          "https://eur-lex.europa.eu/legal-content/SK/TXT/HTML/?uri=PI_COM:C(2025)6800",
     },
   };
   //this reads a map of celex->lang->links

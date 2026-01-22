@@ -472,15 +472,16 @@ void openSearchUpload(json, indexName) {
 // Function to send the NDJSON data to OpenSearch
 Future<String> sendToOpenSearch(String url, List<String> bulkData) async {
   try {
+    final ndjsonBody = bulkData.join("\n") + "\n";
     final response = await http
         .post(
           Uri.parse(url),
           headers: addDeviceIdHeader({
-            "Content-Type": "application/x-ndjson",
+            "Content-Type": "application/x-ndjson; charset=utf-8",
             'x-api-key': '${jsonSettings['access_key']}',
             'x-email': '${jsonSettings['user_email']}',
           }),
-          body: bulkData.join("\n") + "\n",
+          body: utf8.encode(ndjsonBody),
         )
         .timeout(const Duration(seconds: 20));
 

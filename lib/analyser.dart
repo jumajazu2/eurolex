@@ -346,7 +346,10 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
 
 Future<Map> searchNGrams(List<dynamic> ngrams) async {
   final opensearchUrl = Uri.parse("https://$osServer/$activeIndex/_msearch");
-  final headers = {"Content-Type": "application/x-ndjson", 'x-api-key': '1234'};
+  final headers = {
+    "Content-Type": "application/x-ndjson; charset=utf-8",
+    'x-api-key': '1234',
+  };
 
   // Step 1: Build NDJSON request body
   final buffer = StringBuffer();
@@ -391,7 +394,7 @@ Future<Map> searchNGrams(List<dynamic> ngrams) async {
   final response = await http.post(
     opensearchUrl,
     headers: headers,
-    body: buffer.toString(),
+    body: utf8.encode(buffer.toString()),
   );
 
   if (response.statusCode != 200) {

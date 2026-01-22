@@ -2,13 +2,13 @@
   "keys": [
     {
       "key": "1234",
-      "email": "user1@example.com",
+      "email": "juraj.kuban.sk@gmail.com",
       "allowPrefixes": ["eu_1234_"],
       "dailyQuota": 100000
     },
     {
       "key": "7239",
-      "email": "juraj@example.com",
+      "email": "juraj.kuban.sk@gmail.com",
       "allowPrefixes": ["eu_7239_"],
       "dailyQuota": 100000
     },

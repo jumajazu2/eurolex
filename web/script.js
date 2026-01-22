@@ -199,6 +199,20 @@ async function doSearch(mode) {
   
   if (!demoInput || !resultsDiv) return;
 
+  // Check if email is set, if not prompt user for trial access
+  let localEmail = localStorage.getItem('lt_email');
+  if (!localEmail || !localEmail.trim() || !localEmail.includes('@')) {
+    localEmail = prompt('Please enter your email address to use the trial search (7 searches per day):');
+    if (!localEmail || !localEmail.trim() || !localEmail.includes('@')) {
+      resultsDiv.innerHTML = '<div class="search-error">Valid email address is required for trial access.</div>';
+      return;
+    }
+    // Save email and set trial passkey
+    localStorage.setItem('lt_email', localEmail.trim());
+    localStorage.setItem('lt_passkey', 'trial');
+    updateAccountStatusBar();
+  }
+
   const q = demoInput.value.trim();
 
   // Prepare client context
@@ -285,8 +299,8 @@ async function doSearch(mode) {
     let localPasskey = localStorage.getItem('lt_passkey');
     if (!localPasskey || !localPasskey.trim()) localPasskey = 'trial';
     const localEmail = localStorage.getItem('lt_email');
-    // Exclude system indices (starting with a dot) using /*,-.*
-    const indexPattern = '/*,-.*';
+    // Use wildcard for all indices
+    const indexPattern = '*';
     const url = `${OPENSEARCH_URL}/${indexPattern}/_search`;
     const headers = {
       'Content-Type': 'application/json',
