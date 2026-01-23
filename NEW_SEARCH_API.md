@@ -424,9 +424,197 @@ final results = await searchWithNewAPI(
 );
 ```
 
+## Secure Upload Endpoint
+
+### Overview
+
+The new `/upload` endpoint provides a secure, parameter-based API for bulk document uploads. Unlike the legacy `/:index/_bulk` route, the server constructs all bulk operations, preventing delete/update injections.
+
+### Endpoint
+
+```
+POST https://search.pts-translation.sk/upload
+```
+
+### Security Improvements
+
+1. **Client cannot control operation type** - Always "index", never delete/update
+2. **Server validates index access** - Enforces `allowPrefixes` check
+3. **Server blocks dangerous fields** - Rejects script, runtime_mappings
+4. **Server constructs bulk operations** - Client only sends documents
+
+### Request Format
+
+#### Headers
+```dart
+{
+  'Content-Type': 'application/json',
+  'x-api-key': 'your-api-key',      // Required
+  'x-email': 'your@email.com',       // Required for trial
+  'x-device-id': 'device-uuid',      // Optional
+}
+```
+
+#### Body Parameters
+
+```json
+{
+  "index": "eu_7239_0132b",
+  "documents": [
+    {
+      "celex": "32023R1234",
+      "en_text": "Article 1. This regulation applies...",
+      "sk_text": "Článok 1. Toto nariadenie sa uplatňuje...",
+      "cs_text": "Článek 1. Toto nařízení se používá...",
+      "dir_id": "0132b",
+      "sequence_id": "001",
+      "class": "regulation",
+      "date": "2023-07-15",
+      "paragraphsNotMatched": false
+    },
+    {
+      "celex": "32023R1234",
+      "en_text": "Article 2. Member States shall...",
+      "sk_text": "Článok 2. Členské štáty...",
+      "cs_text": "Článek 2. Členské státy...",
+      "dir_id": "0132b",
+      "sequence_id": "002",
+      "class": "regulation",
+      "date": "2023-07-15",
+      "paragraphsNotMatched": false
+    }
+  ]
+}
+```
+
+### Flutter Example
+
+#### Old Method (Legacy)
+```dart
+// OLD: Using sendToOpenSearch with full NDJSON control
+final bulkLines = <String>[];
+for (final doc in documents) {
+  bulkLines.add(jsonEncode({'index': {'_index': index}}));
+  bulkLines.add(jsonEncode(doc));
+}
+final response = await sendToOpenSearch(
+  'https://$osServer/$index/_bulk',
+  bulkLines,
+);
+```
+
+#### New Method (Secure)
+```dart
+// NEW: Using /upload endpoint (recommended)
+final response = await http.post(
+  Uri.parse('https://$osServer/upload'),
+  headers: addDeviceIdHeader({
+    'Content-Type': 'application/json',
+    'x-api-key': jsonSettings['access_key'],
+    'x-email': jsonSettings['user_email'],
+  }),
+  body: jsonEncode({
+    'index': 'eu_7239_0132b',
+    'documents': documents,  // Just the documents, no bulk format
+  }),
+).timeout(const Duration(seconds: 30));
+
+if (response.statusCode == 200) {
+  final result = jsonDecode(response.body);
+  final hasErrors = result['errors'] == true;
+  final itemCount = result['items']?.length ?? 0;
+  print('Upload: ${hasErrors ? 'with errors' : 'OK'}, $itemCount items');
+} else if (response.statusCode == 403) {
+  print('Access denied. Check index permissions.');
+} else if (response.statusCode == 429) {
+  showSubscriptionDialog(429);
+}
+```
+
+### Response Format
+
+Same as OpenSearch `/_bulk` response:
+
+```json
+{
+  "took": 142,
+  "errors": false,
+  "items": [
+    {
+      "index": {
+        "_index": "eu_7239_0132b",
+        "_id": "abc123",
+        "_version": 1,
+        "result": "created",
+        "_shards": { "total": 2, "successful": 2, "failed": 0 },
+        "status": 201
+      }
+    }
+  ]
+}
+```
+
+### Error Responses
+
+- **400** - Invalid index name or documents array
+- **403** - Access denied (index prefix doesn't match allowPrefixes)
+- **429** - Rate limit exceeded
+- **500** - Internal server error
+
+### Complete Upload Function Example
+
+```dart
+Future<Map<String, dynamic>?> uploadDocuments({
+  required String index,
+  required List<Map<String, dynamic>> documents,
+}) async {
+  try {
+    final response = await http.post(
+      Uri.parse('https://$osServer/upload'),
+      headers: addDeviceIdHeader({
+        'Content-Type': 'application/json',
+        'x-api-key': jsonSettings['access_key'],
+        'x-email': jsonSettings['user_email'],
+      }),
+      body: jsonEncode({
+        'index': index,
+        'documents': documents,
+      }),
+    ).timeout(const Duration(seconds: 30));
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else if (response.statusCode == 403) {
+      print('Access denied: ${response.body}');
+      return null;
+    } else if (response.statusCode == 429) {
+      showSubscriptionDialog(429);
+      return null;
+    } else {
+      print('Upload error: ${response.statusCode} - ${response.body}');
+      return null;
+    }
+  } catch (e) {
+    print('Upload exception: $e');
+    return null;
+  }
+}
+
+// Usage
+final result = await uploadDocuments(
+  index: 'eu_7239_0132b',
+  documents: myDocuments,
+);
+if (result != null && result['errors'] != true) {
+  print('Successfully uploaded ${result['items'].length} documents');
+}
+```
+
 ## Backward Compatibility
 
-**The legacy method still works!** You can continue using:
+**The legacy methods still work!** You can continue using:
+
+**For search:**
 ```dart
 final response = await sendToOpenSearch(
   'https://$osServer/$activeIndex/_search',
@@ -434,4 +622,12 @@ final response = await sendToOpenSearch(
 );
 ```
 
-This allows gradual migration without breaking existing functionality.
+**For bulk uploads:**
+```dart
+final response = await sendToOpenSearch(
+  'https://$osServer/$index/_bulk',
+  bulkLines,
+);
+```
+
+This allows gradual migration without breaking existing functionality. However, the new endpoints (`/search` and `/upload`) are recommended for better security.

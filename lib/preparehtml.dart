@@ -604,7 +604,7 @@ class _manualCelexListState extends State<manualCelexList> {
         children: [
           SizedBox(height: 10),
           Text(
-            'Manually Enter Comma-Separated Celex References to Upload',
+            'nter Comma-Separated Celex References to Upload',
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           SizedBox(height: 20), // Space between the button and content box
@@ -786,13 +786,15 @@ Future<String> loadHtmtFromCelex(celex, lang) async {
         .timeout(const Duration(seconds: 225));
     // ...existing code...
     if (response.statusCode == 200) {
-      String htmlContent = utf8.decode(response.bodyBytes, allowMalformed: true);
+      String htmlContent = utf8.decode(
+        response.bodyBytes,
+        allowMalformed: true,
+      );
       print('HTML content loaded successfully: celex: $celex, lang: $lang');
       return htmlContent;
     } else {
       final bodyText = utf8.decode(response.bodyBytes, allowMalformed: true);
-      final snippetLen =
-          bodyText.length > 100 ? 100 : bodyText.length;
+      final snippetLen = bodyText.length > 100 ? 100 : bodyText.length;
       final errorMsg =
           'Failed to load HTML in Harvest for celex: $celex, lang: $lang. '
           'Status code: ${response.statusCode}, ${response.headers}\n'
@@ -829,13 +831,15 @@ Future<String> loadHtmtFromCellar(url, lang) async {
         .timeout(const Duration(seconds: 1000));
     // ...existing code...
     if (response.statusCode == 200) {
-      String htmlContent = utf8.decode(response.bodyBytes, allowMalformed: true);
+      String htmlContent = utf8.decode(
+        response.bodyBytes,
+        allowMalformed: true,
+      );
       print('HTML content loaded successfully: $url, lang: $lang');
       return htmlContent;
     } else {
       final bodyText = utf8.decode(response.bodyBytes, allowMalformed: true);
-      final snippetLen =
-          bodyText.length > 100 ? 100 : bodyText.length;
+      final snippetLen = bodyText.length > 100 ? 100 : bodyText.length;
       final errorMsg =
           'Failed to load HTML in Harvest for $url, lang: $lang. '
           'Status code: ${response.statusCode}, ${response.headers}\n'
@@ -877,7 +881,10 @@ Future getCustomIndices(server, isAdmin, id) async {
       },
     );
     if (response.statusCode == 200) {
-      String responseBody = utf8.decode(response.bodyBytes, allowMalformed: true);
+      String responseBody = utf8.decode(
+        response.bodyBytes,
+        allowMalformed: true,
+      );
 
       if (isAdmin) {
         print('Admin user detected, loading all indices.');
@@ -942,7 +949,10 @@ Future getListIndices(server) async {
       },
     );
     if (response.statusCode == 200) {
-      String responseBody = utf8.decode(response.bodyBytes, allowMalformed: true);
+      String responseBody = utf8.decode(
+        response.bodyBytes,
+        allowMalformed: true,
+      );
 
       // Extract the index names from the JSON response
       indices =
@@ -983,7 +993,10 @@ Future<List<List<String>>> getListIndicesFull(server, isAdmin) async {
       },
     );
     if (response.statusCode == 200) {
-      String responseBody = utf8.decode(response.bodyBytes, allowMalformed: true);
+      String responseBody = utf8.decode(
+        response.bodyBytes,
+        allowMalformed: true,
+      );
 
       // Each line: indexName store.size docs.count
       if (isAdmin) {

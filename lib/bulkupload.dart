@@ -1,12 +1,16 @@
 import 'dart:ui';
+import 'dart:io';
+import 'dart:convert';
 
 import 'package:LegisTracerEU/preparehtml.dart';
 import 'package:LegisTracerEU/setup.dart';
+import 'package:LegisTracerEU/tmx_parser.dart';
+import 'package:LegisTracerEU/processDOM.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
-
+import 'package:file_picker/file_picker.dart';
+import 'package:path/path.dart' as path;
 
 import 'package:LegisTracerEU/main.dart';
 import 'package:LegisTracerEU/logger.dart';
@@ -97,7 +101,7 @@ class _DataUploadTabState extends State<DataUploadTab> {
           ),
           const SizedBox(height: 20),
           const Text(
-            'First Choose Index In Dropdown List or Enter Index Name below.\nThen enter URLs of the documents or select local files to upload.',
+            'First Choose Index In Dropdown List or Enter Index Name below.\nThen select TMX files or other reference documents to upload.',
             style: TextStyle(fontSize: 16),
           ),
 
@@ -266,7 +270,7 @@ class _DataUploadTabState extends State<DataUploadTab> {
               const SizedBox(width: 12),
               OutlinedButton.icon(
                 icon: const Icon(Icons.upload_file),
-                label: const Text('Pick file and upload'),
+                label: const Text('Pick TMX/Reference file and upload'),
                 onPressed: processBulk,
               ),
             ],
@@ -316,6 +320,155 @@ class _DataUploadTabState extends State<DataUploadTab> {
     logger.log(
       "*****Started Bulk upload into $newIndexName ******/Simulate:$simulateUpload",
     );
+
+    // Open file picker dialog
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['tmx', 'xml', 'html', 'htm'],
+      withData: true,
+    );
+
+    if (result == null) {
+      logger.log('No file selected');
+      return;
+    }
+
+    final filePath = result.files.single.path;
+    final fileName = result.files.single.name;
+
+    if (filePath == null) {
+      logger.log('ERROR: File path is null');
+      if (!mounted) return;
+      setState(() {
+        // Show error in UI
+      });
+      return;
+    }
+
+    logger.log('Selected file: $fileName at $filePath');
+
+    // Check file extension to determine file type
+    final extension = path.extension(fileName).toLowerCase();
+
+    if (extension == '.tmx' ||
+        (extension == '.xml' && fileName.toLowerCase().contains('tmx'))) {
+      await _processTmxFile(filePath, fileName);
+    } else {
+      logger.log(
+        'Unsupported file type: $extension. Currently only TMX files are supported.',
+      );
+      if (!mounted) return;
+      setState(() {
+        // Show error in UI about unsupported file type
+      });
+    }
+  }
+
+  Future<void> _processTmxFile(String filePath, String fileName) async {
+    try {
+      logger.log('Processing TMX file: $fileName');
+
+      // Read the file
+      final file = File(filePath);
+      if (!await file.exists()) {
+        logger.log('ERROR: File does not exist: $filePath');
+        return;
+      }
+
+      final bytes = await file.readAsBytes();
+      final content = utf8.decode(bytes, allowMalformed: true);
+
+      // Parse TMX content
+      final tmxParser = TmxParser(
+        logFileName: 'logs/${fileSafeStamp}_${_selectedIndex}_tmx.log',
+      );
+
+      final parsedData = tmxParser.parseTmxContent(content, fileName);
+
+      if (parsedData.isEmpty) {
+        logger.log('ERROR: No valid translation units found in TMX file');
+        return;
+      }
+
+      // Get statistics
+      final stats = tmxParser.getStatistics(parsedData);
+      logger.log('TMX Statistics: ${jsonEncode(stats)}');
+      print(
+        'TMX parsed: ${stats['total_entries']} entries, '
+        'Languages: ${(stats['languages'] as List).join(", ")}',
+      );
+
+      // Upload to OpenSearch if not simulating
+      if (!simulateUpload) {
+        logger.log('Uploading ${parsedData.length} entries to $_selectedIndex');
+        await _uploadTmxToOpenSearch(parsedData, _selectedIndex);
+      } else {
+        logger.log(
+          'SIMULATION MODE: Would upload ${parsedData.length} entries',
+        );
+      }
+
+      // Debug mode: save JSON file
+      if (debugMode) {
+        await _saveTmxDebugFile(parsedData, fileName);
+      }
+
+      logger.log('TMX processing completed successfully');
+
+      // Refresh indices
+      await getCustomIndices(
+        server,
+        isAdmin,
+        jsonSettings['access_key'] ?? DEFAULT_ACCESS_KEY,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        // Update UI to show completion
+      });
+    } catch (e) {
+      logger.log('ERROR processing TMX file: $e');
+      print('Error processing TMX file: $e');
+    }
+  }
+
+  Future<void> _uploadTmxToOpenSearch(
+    List<Map<String, dynamic>> tmxData,
+    String indexName,
+  ) async {
+    try {
+      // Use the existing openSearchUpload function from processDOM
+      openSearchUpload(tmxData, indexName);
+      logger.log('Successfully uploaded TMX data to OpenSearch');
+    } catch (e) {
+      logger.log('ERROR uploading to OpenSearch: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> _saveTmxDebugFile(
+    List<Map<String, dynamic>> tmxData,
+    String originalFileName,
+  ) async {
+    try {
+      final debugDir = Directory('debug_output');
+      if (!await debugDir.exists()) {
+        await debugDir.create(recursive: true);
+      }
+
+      final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
+      final debugFileName =
+          'tmx_${path.basenameWithoutExtension(originalFileName)}_$timestamp.json';
+      final debugFile = File(path.join(debugDir.path, debugFileName));
+
+      final jsonOutput = const JsonEncoder.withIndent('  ').convert(tmxData);
+      await debugFile.writeAsString(jsonOutput);
+
+      logger.log('Debug file saved: ${debugFile.path}');
+      print('Debug JSON saved to: ${debugFile.path}');
+    } catch (e) {
+      logger.log('ERROR saving debug file: $e');
+    }
   }
 }
 
