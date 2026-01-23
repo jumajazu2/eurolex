@@ -604,7 +604,8 @@ class _manualCelexListState extends State<manualCelexList> {
         children: [
           SizedBox(height: 10),
           Text(
-            'nter Comma-Separated Celex References to Upload',
+            'Enter Comma-Separated Celex References to Upload',
+
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           SizedBox(height: 20), // Space between the button and content box

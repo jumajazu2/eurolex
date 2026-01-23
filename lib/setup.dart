@@ -60,6 +60,7 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
   bool _autoScaleWithSystem = false;
   // Search results-only font scale (does not affect global UI)
   double _resultsFontScale = 1.0;
+  bool _adminUIEnabled = true;
   // Update: hosted JSON endpoint (editable as needed)
   static const String updateInfoUrl =
       'https://www.pts-translation.sk/updateInfoUrl.json';
@@ -83,6 +84,7 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
         _resultsFontScale =
             ((jsonSettings['search_results_font_scale'] ?? 1.0) as num)
                 .toDouble();
+        _adminUIEnabled = (jsonSettings['admin_ui_enabled'] ?? true) == true;
         final all =
             (langsEU ?? const <String>[])
                 .map((e) => e.toUpperCase())
@@ -211,7 +213,9 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
 
     final nowAdmin =
         _emailCtrl.text.trim().toLowerCase() == 'juraj.kuban.sk@gmail.com';
-    isAdminNotifier.value = nowAdmin; // triggers tabs rebuild
+    jsonSettings['admin_ui_enabled'] = _adminUIEnabled;
+    adminUIEnabled = _adminUIEnabled;
+    isAdminNotifier.value = nowAdmin && _adminUIEnabled; // triggers tabs rebuild
     isAdmin = nowAdmin;
 
     if (!userPasskey.contains('trial') && userPasskey.isNotEmpty) {
@@ -307,9 +311,10 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                                     setState(() {
                                       userEmail = value;
                                       jsonSettings['user_email'] = value;
-                                      _emailError = valid
-                                          ? null
-                                          : 'Please enter a valid email address';
+                                      _emailError =
+                                          valid
+                                              ? null
+                                              : 'Please enter a valid email address';
                                     });
                                   },
                                 ),
@@ -323,9 +328,9 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                                             _emailError!,
                                             style: TextStyle(
                                               color:
-                                                  Theme.of(context)
-                                                      .colorScheme
-                                                      .error,
+                                                  Theme.of(
+                                                    context,
+                                                  ).colorScheme.error,
                                               fontSize: 12,
                                             ),
                                           ),
@@ -613,6 +618,22 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                 } catch (_) {}
               },
             ),
+
+            if (_emailCtrl.text.trim().toLowerCase() == 'juraj.kuban.sk@gmail.com')
+              SwitchListTile(
+                title: const Text('Enable Admin UI'),
+                contentPadding: EdgeInsets.zero,
+                value: _adminUIEnabled,
+                onChanged: (v) async {
+                  setState(() => _adminUIEnabled = v);
+                  jsonSettings['admin_ui_enabled'] = v;
+                  adminUIEnabled = v;
+                  isAdminNotifier.value = isAdmin && v;
+                  try {
+                    await writeSettingsToFile(jsonSettings);
+                  } catch (_) {}
+                },
+              ),
 
             const SizedBox(height: 24),
 

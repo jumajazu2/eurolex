@@ -96,13 +96,26 @@ class _DataUploadTabState extends State<DataUploadTab> {
         children: [
           // Tool header and index selection UI
           Text(
-            'You can upload your own references documents and search in them',
+            'Use Alignment in Trados Studio to prepare a bilingual pair of documents and upload them to your index',
             style: Theme.of(context).textTheme.headlineMedium,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
           const Text(
-            'First Choose Index In Dropdown List or Enter Index Name below.\nThen select TMX files or other reference documents to upload.',
+            'If you have two language versions of a reference document, it is impractical to search each version individually. \nThanks to this feature combined with Trados Studio Alignment you can have the documents uploaded to your index very quickly and search in them efficiently.',
             style: TextStyle(fontSize: 16),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Image.asset('lib/data/align.png', width: 96, height: 96),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Text(
+                  'First Choose Index In Dropdown List or Enter Index Name below.\nThen select TMX files created via Alignment in Trados Studio.\n\nTo make an alignment in Trados Studio:\n1. Use Align Documents to choose two documents to align.\n2. Check the alignment and correct mismatched rows. (For details about Alignment, see Trados Studio Documentation)\n3. Export the alignment as TMX Translation Memory.\n4. Use the export TMX file here to upload the aligned documents to your index for searching.',
+                  style: TextStyle(fontSize: 16),
+                ),
+              ),
+            ],
           ),
 
           const SizedBox(height: 20),
@@ -191,9 +204,7 @@ class _DataUploadTabState extends State<DataUploadTab> {
                 children: [
                   ElevatedButton(
                     onPressed: processBulk,
-                    child: Text(
-                      'Start Bulk Upload Process (Uploading to $_selectedIndex)',
-                    ),
+                    child: Text('Pick TMX file and upload to $_selectedIndex'),
                   ),
                   const SizedBox(width: 12),
                   Tooltip(
@@ -239,20 +250,6 @@ class _DataUploadTabState extends State<DataUploadTab> {
 
           const SizedBox(height: 20),
 
-          // Paste NDJSON area
-          Text(
-            'THIS FEATURE IS CURRENTLY UNAVAILABLE DUE TO MAINTENANCE \nCheck back later soon.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.orange,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-            //   style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 6),
-
-          const SizedBox(height: 10),
-
           // Action buttons
           Row(
             children: [
@@ -267,12 +264,6 @@ class _DataUploadTabState extends State<DataUploadTab> {
                           _pasteController.text,
                         ),
               )*/
-              const SizedBox(width: 12),
-              OutlinedButton.icon(
-                icon: const Icon(Icons.upload_file),
-                label: const Text('Pick TMX/Reference file and upload'),
-                onPressed: processBulk,
-              ),
             ],
           ),
 
@@ -387,6 +378,38 @@ class _DataUploadTabState extends State<DataUploadTab> {
 
       if (parsedData.isEmpty) {
         logger.log('ERROR: No valid translation units found in TMX file');
+
+        if (!mounted) return;
+
+        showDialog(
+          context: context,
+          builder:
+              (context) => AlertDialog(
+                title: const Text('TMX Upload Failed'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('File: $fileName'),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'No valid translation units found in the TMX file.',
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Please ensure the file contains valid TMX translation memories with at least 2 languages.',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+        );
         return;
       }
 
@@ -423,12 +446,76 @@ class _DataUploadTabState extends State<DataUploadTab> {
       );
 
       if (!mounted) return;
+
+      // Show success message with details
+      showDialog(
+        context: context,
+        builder:
+            (context) => AlertDialog(
+              title: const Text('TMX Upload Successful'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('File: $fileName'),
+                  const SizedBox(height: 8),
+                  Text('Total entries: ${stats['total_entries']}'),
+                  const SizedBox(height: 8),
+                  Text('Languages: ${(stats['languages'] as List).join(", ")}'),
+                  const SizedBox(height: 8),
+                  Text('Index: $_selectedIndex'),
+                  if (debugMode) ...[
+                    const SizedBox(height: 8),
+                    const Text('Debug file saved to debug_output/'),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+      );
+
       setState(() {
         // Update UI to show completion
       });
     } catch (e) {
       logger.log('ERROR processing TMX file: $e');
       print('Error processing TMX file: $e');
+
+      if (!mounted) return;
+
+      // Show error dialog
+      showDialog(
+        context: context,
+        builder:
+            (context) => AlertDialog(
+              title: const Text('TMX Upload Failed'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('File: $fileName'),
+                  const SizedBox(height: 8),
+                  const Text('Error:'),
+                  const SizedBox(height: 4),
+                  Text(
+                    e.toString(),
+                    style: const TextStyle(color: Colors.red, fontSize: 12),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+      );
     }
   }
 

@@ -51,6 +51,7 @@ String? deviceId;
 final isAdminNotifier = ValueNotifier<bool>(isAdmin);
 
 bool isAdmin = false;
+bool adminUIEnabled = true; // Toggle to disable admin UI even when logged in as admin
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -327,8 +328,9 @@ class _MainTabbedAppState extends State<MainTabbedApp>
       isAdmin =
           jsonSettings['user_email']?.toString().toLowerCase() ==
           'juraj.kuban.sk@gmail.com';
-      isAdminNotifier.value = isAdmin;
-      print("isAdmin: $isAdmin");
+      adminUIEnabled = jsonSettings['admin_ui_enabled'] ?? true;
+      isAdminNotifier.value = isAdmin && adminUIEnabled;
+      print("isAdmin: $isAdmin, adminUIEnabled: $adminUIEnabled");
 
       // Initialize font scale from settings
       final fs = jsonSettings['font_scale'];

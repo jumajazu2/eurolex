@@ -1,8 +1,5 @@
-
 import 'package:LegisTracerEU/preparehtml.dart';
 import 'package:flutter/material.dart';
-
-
 
 import 'package:LegisTracerEU/bulkupload.dart';
 
@@ -19,19 +16,19 @@ class DataUploadPage extends StatelessWidget {
               tabs: [
                 Tab(
                   child: Text(
-                    'Upload from Celex Numbers',
+                    'Upload Celex Numbers',
                     style: TextStyle(fontSize: 14), // Set the desired font size
                   ),
                 ),
                 Tab(
                   child: Text(
-                    'Upload from List of References',
+                    'Upload List of References',
                     style: TextStyle(fontSize: 14), // Set the desired font size
                   ),
                 ),
                 Tab(
                   child: Text(
-                    'Upload Own Reference Documents',
+                    'Upload Trados Studio Alignment (TMX)',
                     style: TextStyle(fontSize: 14), // Set the desired font size
                   ),
                 ),

@@ -27,6 +27,8 @@ var lang2Results = [];
 var lang1Results = ["N/A"];
 var lang3Results = [];
 List<String> metaCelex = [];
+List<String> metaFilename = [];
+List<String> metaSource = [];
 var metaCellar = [];
 var sequenceNo;
 var parNotMatched = ["N/A"];
@@ -43,6 +45,8 @@ List<HighlightResult> lang3HighlightedResults = [];
 var activeIndex = '*';
 List<String> resultIndices = [];
 int _contextWindow = 10;
+int _originalPointerPosition =
+    10; // Tracks the highlighted search result position
 
 // Restore selected index from settings if available
 void restoreActiveIndexFromSettings() {
@@ -1445,9 +1449,21 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
               .toList();
 
       metaCelex =
-          hits.map((hit) => hit['_source']['celex'].toString()).toList();
+          hits
+              .map((hit) => (hit['_source']['celex'] ?? '').toString())
+              .toList();
+      metaFilename =
+          hits
+              .map((hit) => (hit['_source']['filename'] ?? '').toString())
+              .toList();
+      metaSource =
+          hits
+              .map((hit) => (hit['_source']['source'] ?? '').toString())
+              .toList();
       metaCellar =
-          hits.map((hit) => hit['_source']['dir_id'].toString()).toList();
+          hits
+              .map((hit) => (hit['_source']['dir_id'] ?? '').toString())
+              .toList();
       sequenceNo =
           hits.map((hit) => hit['_source']['sequence_id'].toString()).toList();
       parNotMatched =
@@ -1634,9 +1650,21 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                 .toList();
 
         metaCelex =
-            hits.map((hit) => hit['_source']['celex'].toString()).toList();
+            hits
+                .map((hit) => (hit['_source']['celex'] ?? '').toString())
+                .toList();
+        metaFilename =
+            hits
+                .map((hit) => (hit['_source']['filename'] ?? '').toString())
+                .toList();
+        metaSource =
+            hits
+                .map((hit) => (hit['_source']['source'] ?? '').toString())
+                .toList();
         metaCellar =
-            hits.map((hit) => hit['_source']['dir_id'].toString()).toList();
+            hits
+                .map((hit) => (hit['_source']['dir_id'] ?? '').toString())
+                .toList();
         sequenceNo =
             hits
                 .map((hit) => hit['_source']['sequence_id'].toString())
@@ -1748,6 +1776,21 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     return clauses;
   }
 
+  // Get list of displayed language codes for API queries
+  List<String> _getDisplayedLangs() {
+    final langs = <String>[];
+    void addIf(bool? display, String? lang) {
+      if ((display ?? false) && (lang != null) && lang.isNotEmpty) {
+        langs.add(lang);
+      }
+    }
+
+    addIf(jsonSettings['display_lang1'] as bool?, lang1);
+    addIf(jsonSettings['display_lang2'] as bool?, lang2);
+    addIf(jsonSettings['display_lang3'] as bool?, lang3);
+    return langs;
+  }
+
   void _startSearch() async {
     setState(() {
       _results.clear();
@@ -1777,21 +1820,15 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     // processQuery(query, _searchController.text, activeIndex);
 
     // NEW METHOD: Parameter-based API
+    final displayedLangs = _getDisplayedLangs();
     Map<String, dynamic> queryFormed = {
       "index": "$activeIndex", // Index name, "*" for all, or specific index
       "term": _searchController.text, // Search term (required)
-      "langs": [
-        "$lang1",
-        "$lang2",
-        "$lang3",
-      ], // Array of language codes (required)
+      "langs": displayedLangs, // Array of language codes (required)
       "pattern": 1, // Query pattern 1-5 (optional, default: 1)
       "size": 50, // Max results (optional, default: 50, max: 100)
-      "existsLangs": [
-        "$lang1",
-        "$lang2",
-        "$lang3",
-      ], // Languages that must exist (optional, defaults to langs)
+      "existsLangs":
+          displayedLangs, // Languages that must exist (only displayed ones)
     };
 
     processQueryNew(queryFormed, _searchController.text, activeIndex);
@@ -1832,13 +1869,14 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     // processQuery(query, _searchController.text, activeIndex);
 
     // NEW METHOD: Parameter-based API
+    final displayedLangs = _getDisplayedLangs();
     Map<String, dynamic> queryFormed = {
       "index": "$activeIndex",
       "term": _searchController.text,
-      "langs": ["$lang1", "$lang2", "$lang3"],
+      "langs": displayedLangs,
       "pattern": 2, // Multi-match with fuzziness
       "size": 50,
-      "existsLangs": ["$lang1", "$lang2", "$lang3"],
+      "existsLangs": displayedLangs,
     };
 
     processQueryNew(queryFormed, _searchController.text, activeIndex);
@@ -1885,13 +1923,14 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     // processQuery(query, _searchController.text, activeIndex);
 
     // NEW METHOD: Parameter-based API
+    final displayedLangs = _getDisplayedLangs();
     Map<String, dynamic> queryFormed = {
       "index": "$activeIndex",
       "term": _searchController.text,
-      "langs": ["$lang1", "$lang2", "$lang3"],
+      "langs": displayedLangs,
       "pattern": 3, // Combined phrase + fuzzy
       "size": 25,
-      "existsLangs": ["$lang1", "$lang2", "$lang3"],
+      "existsLangs": displayedLangs,
     };
 
     processQueryNew(queryFormed, _searchController.text, activeIndex);
@@ -1916,13 +1955,14 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     // processQuery(query, _searchController.text, activeIndex);
 
     // NEW METHOD: Parameter-based API
+    final displayedLangs = _getDisplayedLangs();
     Map<String, dynamic> queryFormed = {
       "index": "$activeIndex",
       "term": _searchController.text,
-      "langs": ["$lang1", "$lang2", "$lang3"],
+      "langs": displayedLangs,
       "pattern": 4, // Intervals ordered tokens
       "size": 50,
-      "existsLangs": ["$lang1", "$lang2", "$lang3"],
+      "existsLangs": displayedLangs,
     };
 
     setState(() => _progressColor = Colors.teal);
@@ -1959,13 +1999,14 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     // processQuery(query, _searchController.text, "*");
 
     // NEW METHOD: Parameter-based API
+    final displayedLangs = _getDisplayedLangs();
     Map<String, dynamic> queryFormed = {
       "index": "*", // Search ALL indices
       "term": _searchController.text,
-      "langs": ["$lang1", "$lang2", "$lang3"],
+      "langs": displayedLangs,
       "pattern": 5, // Phrase search across all indices
       "size": 50,
-      "existsLangs": ["$lang1", "$lang2", "$lang3"],
+      "existsLangs": displayedLangs,
     };
 
     processQueryNew(queryFormed, _searchController.text, "*");
@@ -2978,6 +3019,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                       setState(() {
                                         _contextWindow += 10;
                                       });
+
                                       final result = await getContext(
                                         metaCelex[index],
                                         pointerPar[index],
@@ -2985,10 +3027,30 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                             ? resultIndices[index]
                                             : activeIndex,
                                         _contextWindow,
+                                        filename:
+                                            metaFilename.length > index
+                                                ? metaFilename[index]
+                                                : null,
+                                        source:
+                                            metaSource.length > index
+                                                ? metaSource[index]
+                                                : null,
                                       );
                                       if (!mounted) return;
                                       setState(() {
                                         contextEnSkCz = result;
+                                        // Find the position of the original search result in the expanded context
+                                        if (result != null &&
+                                            result[3] != null) {
+                                          final originalSeqId =
+                                              pointerPar[index];
+                                          _originalPointerPosition =
+                                              (result[3] as List).indexWhere(
+                                                (id) =>
+                                                    id.toString() ==
+                                                    originalSeqId.toString(),
+                                              );
+                                        }
                                       });
                                     },
                                   ),
@@ -3010,14 +3072,29 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                           ? resultIndices[index]
                                           : activeIndex,
                                       _contextWindow,
+                                      filename:
+                                          metaFilename.length > index
+                                              ? metaFilename[index]
+                                              : null,
+                                      source:
+                                          metaSource.length > index
+                                              ? metaSource[index]
+                                              : null,
                                     );
                                     setState(() {
                                       contextEnSkCz = result;
+                                      // Find the position of the original search result in the context
+                                      if (result != null && result[3] != null) {
+                                        final originalSeqId = pointerPar[index];
+                                        _originalPointerPosition =
+                                            (result[3] as List).indexWhere(
+                                              (id) =>
+                                                  id.toString() ==
+                                                  originalSeqId.toString(),
+                                            );
+                                      }
                                     });
-                                    print('Tile was expanded');
                                   }(); // Immediately invoke the async function
-                                } else {
-                                  print('Tile was collapsed');
                                 }
                               },
 
@@ -3177,7 +3254,8 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                           children: [
                                             Container(
                                               color:
-                                                  (index == _contextWindow)
+                                                  (index ==
+                                                          _originalPointerPosition)
                                                       ? Colors.grey[200]
                                                       : null,
                                               child: Row(

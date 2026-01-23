@@ -123,26 +123,13 @@ class TmxParser {
       final entry = <String, dynamic>{
         'sequence_id': sequenceId,
         'filename': fileName,
-        'source': 'TMX',
-        'creation_date': creationDate,
-        'change_date': changeDate,
-        'creator': creationId,
-        'paragraphsNotMatched': false,  // Required for search filters
-        'namesNotMatched': false,        // Required for search filters
+        'paragraphsNotMatched': false, // Required for search filters
+        'namesNotMatched': false, // Required for search filters
       };
 
       // Add language segments with standardized keys
       for (final langEntry in segments.entries) {
         entry['${langEntry.key}_text'] = langEntry.value;
-      }
-
-      // Add empty fields for common languages to satisfy exists clauses
-      // This ensures searches with 3 languages enabled will still find 2-language pairs
-      final commonLangs = ['en', 'sk', 'cz', 'de', 'fr', 'es', 'it'];
-      for (final lang in commonLangs) {
-        if (!segments.containsKey(lang)) {
-          entry['${lang}_text'] = '';  // Empty string for missing languages
-        }
       }
 
       // Add a combined languages field for reference

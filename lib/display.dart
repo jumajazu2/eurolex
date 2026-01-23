@@ -74,30 +74,66 @@ int offsetlang1 = 0;
 int offsetlang2 = 0;
 int offsetlang3 = 0;
 
-Future getContext(celex, pointer, String index, int window) async {
+Future getContext(
+  celex,
+  pointer,
+  String index,
+  int window, {
+  String? filename,
+  String? source,
+}) async {
+  print("=== getContext called ===");
+  print("  celex: $celex");
+  print("  pointer: $pointer");
+  print("  index: $index");
+  print("  window: $window");
+  print("  filename: $filename");
+  print("  source: $source");
+
   // Simulate fetching context from a database or API
   final center = int.tryParse(pointer) ?? 0;
   int gte = center - window;
   if (gte < 0) gte = 0;
   int lte = center + window;
 
+  // Build document identifier query
+  // Use celex if available (CELEX documents), otherwise use filename (TMX documents)
+  Map<String, dynamic> documentIdentifier;
+
+  if (celex != null && celex.toString().isNotEmpty) {
+    // Document has celex number - match by celex
+    documentIdentifier = {
+      "bool": {
+        "should": [
+          {"term": {"celex": celex}},
+          {"term": {"celex.keyword": celex}},
+        ],
+        "minimum_should_match": 1,
+      },
+    };
+  } else if (filename != null && filename.isNotEmpty) {
+    // No celex - match by filename (TMX documents)
+    documentIdentifier = {
+      "bool": {
+        "should": [
+          {"term": {"filename": filename}},
+          {"term": {"filename.keyword": filename}},
+        ],
+        "minimum_should_match": 1,
+      },
+    };
+  } else {
+    // Fallback - shouldn't happen but handle gracefully
+    documentIdentifier = {
+      "match_all": {},
+    };
+  }
+
   var query = {
     "query": {
       "bool": {
         "must": [
-          {
-            "bool": {
-              "should": [
-                {
-                  "term": {"celex": celex},
-                },
-                {
-                  "term": {"celex.keyword": celex},
-                },
-              ],
-              "minimum_should_match": 1, // At least one condition must match
-            },
-          },
+          documentIdentifier,
           {
             "range": {
               "sequence_id": {"gte": gte, "lte": lte},
@@ -118,12 +154,17 @@ Future getContext(celex, pointer, String index, int window) async {
     'https://$osServer/$index/_search',
     [jsonEncode(query)],
   ); //BUG: when searching in all indices, which is appropriate, the sequence_id data does not match, now specific index is used, but it will not work for global search
-  print(
-    "Active index: $activeIndex, getting context for Celex: $celex, pointer: $pointer, gte: $gte, lte: $lte, query: $query",
-  );
+
   Map<String, dynamic> decodedResults;
   try {
     decodedResults = jsonDecode(resultsContext) as Map<String, dynamic>;
+    print("  OpenSearch response hits: ${decodedResults['hits']?['total']}");
+    print(
+      "  Number of hits returned: ${(decodedResults['hits']?['hits'] as List?)?.length ?? 0}",
+    );
+    if (decodedResults['error'] != null) {
+      print("  ERROR in response: ${decodedResults['error']}");
+    }
   } on FormatException catch (_) {
     // Likely offline or invalid response; return empty context safely
     print('Context fetch failed: offline or invalid response.');
@@ -134,6 +175,7 @@ Future getContext(celex, pointer, String index, int window) async {
   }
 
   var hits = decodedResults['hits']['hits'] as List;
+  print("  Processing ${hits.length} context hits");
 
   {
     var contextLang1 =
