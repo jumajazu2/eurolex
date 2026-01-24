@@ -8,6 +8,7 @@ import 'dart:math';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:LegisTracerEU/ui_notices.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 StreamSubscription<Map<String, dynamic>>? _sub1;
 var nGrams = [];
@@ -96,6 +97,88 @@ Future<List> searchQuery(query, queryString) async {
   return [lang1Results, lang2Results];
 }
 
+/// Batch search n-grams in OpenSearch using the _msearch API.
+/// Returns a map: ngram -> best match (or '<no match>')
+/// Batch search n-grams in OpenSearch using the _msearch API, only returning results where all working language fields exist.
+/// workingLangs: e.g. ['en', 'sk', 'cz']
+Future<Map<String, String>> searchNGrams(
+  List ngrams, [
+  List<String>? workingLangs,
+]) async {
+  // If not provided, fallback to all _text fields
+  final langs = workingLangs ?? ['en', 'sk', 'cz'];
+  final fields = langs.map((l) => l.toLowerCase() + '_text').toList();
+  final opensearchUrl = Uri.parse(
+    'https://search.pts-translation.sk/iate_7239_iate_terminology/_msearch',
+  );
+  final headers = {'Content-Type': 'application/x-ndjson'};
+  final buffer = StringBuffer();
+  for (final ngram in ngrams) {
+    final mustExists =
+        fields
+            .map(
+              (f) => {
+                "exists": {"field": f},
+              },
+            )
+            .toList();
+    buffer.writeln('{}');
+    buffer.writeln(
+      jsonEncode({
+        "query": {
+          "bool": {
+            "must": [
+              {
+                "multi_match": {
+                  "query": ngram,
+                  "fields": fields,
+                  "fuzziness": "AUTO",
+                },
+              },
+              ...mustExists,
+            ],
+          },
+        },
+        "size": 1,
+      }),
+    );
+    print("Prepared IATE ngram query for: $ngram\n${buffer.toString()}");
+  }
+  if (buffer.isEmpty) {
+    return {};
+  }
+  final response = await http.post(
+    opensearchUrl,
+    headers: headers,
+    body: buffer.toString(),
+  );
+
+  print("OpenSearch ngram IATE search response: ${response.body}");
+  if (response.statusCode != 200) {
+    print('Error from OpenSearch: ${response.statusCode}');
+    print(response.body);
+    return {"error": "Error: ${response.statusCode}"};
+  }
+  final jsonResponse = jsonDecode(response.body);
+  final results = <String, String>{};
+  final responses = jsonResponse['responses'] as List;
+  for (int i = 0; i < responses.length; i++) {
+    final ngram = ngrams[i];
+    final hits = responses[i]['hits']['hits'] as List;
+    if (hits.isNotEmpty) {
+      final doc = hits[0]['_source'];
+      final textFields = fields
+          .map((f) => doc[f])
+          .where((v) => v != null)
+          .join(' | ');
+      results[ngram] = textFields.isNotEmpty ? textFields : '<no match>';
+    } else {
+      results[ngram] = '<no match>';
+    }
+  }
+  return results;
+}
+
 class AnalyserWidget extends StatefulWidget {
   @override
   _FileDisplayWidgetState createState() => _FileDisplayWidgetState();
@@ -103,6 +186,103 @@ class AnalyserWidget extends StatefulWidget {
 
 class _FileDisplayWidgetState extends State<AnalyserWidget>
     with WidgetsBindingObserver {
+  final TextEditingController _searchController = TextEditingController();
+  List<Map<String, dynamic>> _searchResults = [];
+  bool _searching = false;
+
+  Future<void> _searchIateIndex() async {
+    setState(() => _searching = true);
+    final queryText = _searchController.text.trim();
+    if (queryText.isEmpty) {
+      setState(() {
+        _searchResults = [];
+        _searching = false;
+      });
+      return;
+    }
+    // Get working langs from settings or UI
+    List<String> workingLangs =
+        [
+          if (lang1 != null) lang1,
+          if (lang2 != null) lang2,
+          if (lang3 != null) lang3,
+        ].where((l) => l != null && l != '').cast<String>().toList();
+    if (workingLangs.isEmpty) workingLangs = ['en', 'sk', 'cz'];
+    final fields = workingLangs.map((l) => l.toLowerCase() + '_text').toList();
+    final mustExists =
+        fields
+            .map(
+              (f) => {
+                "exists": {"field": f},
+              },
+            )
+            .toList();
+    final url = Uri.parse(
+      'https://search.pts-translation.sk/iate_7239_iate_terminology/_search',
+    );
+    final body = jsonEncode({
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "multi_match": {
+                "query": queryText,
+                "fields": fields,
+                "fuzziness": "AUTO",
+              },
+            },
+            ...mustExists,
+          ],
+        },
+      },
+      "size": 20,
+    });
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          'x-api-key': '${jsonSettings['access_key']}',
+          'x-email': '${jsonSettings['user_email']}',
+        },
+        body: body,
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final hits = data['hits']?['hits'] as List?;
+        setState(() {
+          _searchResults =
+              (hits ?? [])
+                  .map((e) => Map<String, dynamic>.from(e['_source'] ?? {}))
+                  .map(
+                    (doc) => Map.fromEntries(
+                      doc.entries.where(
+                        (entry) =>
+                            fields.contains(entry.key) ||
+                            [
+                              'concept_id',
+                              'subject_field',
+                              'term_types',
+                              'reliability_codes',
+                            ].contains(entry.key),
+                      ),
+                    ),
+                  )
+                  .toList();
+        });
+      } else {
+        setState(() {
+          _searchResults = [];
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _searchResults = [];
+      });
+    }
+    setState(() => _searching = false);
+  }
+
   String _fileContent = "Loading...";
   Timer? _pollingTimer;
   bool _isVisible = true;
@@ -191,7 +371,17 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
     //
     // var wholeSegment = search
     nGrams.insert(0, lastFileContent);
-    nGramsResults = await searchNGrams(nGrams);
+    // Use working langs from settings or UI, fallback to en/sk/cz
+    List<String> workingLangs =
+        [
+          if (lang1 != null) lang1,
+          if (lang2 != null) lang2,
+          if (lang3 != null) lang3,
+        ].where((l) => l != null && l != '').cast<String>().toList();
+    nGramsResults = await searchNGrams(
+      nGrams,
+      workingLangs.isNotEmpty ? workingLangs : null,
+    );
     nGramResultList =
         nGramsResults.entries.map((e) => "${e.key} => ${e.value}").toList();
     setState(() {}); // You may need to call setState again to update the UI
@@ -277,183 +467,207 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
         SizedBox(height: 16),
         Text(activeIndex),
         SizedBox(height: 16),
-
-        //  Text("EN: ${enResults.isEmpty ? "N/A" : enResults[0]}"),
-        // SizedBox(height: 8),
-        // Text("SK: ${skResults.isEmpty ? "N/A" : skResults[0]}"),
-        // SizedBox(height: 8),
-        Row(
-          children: [
-            /*
-            Expanded(
-              child: Container(
-                height: 500,
-                color: Colors.green[100],
-                child: Center(
-                  child: ListView.builder(
-                    padding: EdgeInsets.all(8),
-                    shrinkWrap: true,
-                    itemCount: nGrams.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      return ListTile(
-                        title: SelectableText(nGrams[index]),
-                        onTap: () {
-                          // Handle tap on nGram
-                          print("Tapped on nGram: ${nGrams[index]}");
-                        },
-                      );
-                    },
+        // --- IATE SEARCH FIELD ---
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    labelText: 'Search IATE index',
+                    border: OutlineInputBorder(),
                   ),
+                  onSubmitted: (_) => _searchIateIndex(),
                 ),
               ),
-            ),
-            SizedBox(width: 8),
-            */
-            Expanded(
-              child: Container(
-                height: 500,
-                color: Colors.orange[100],
-                child: Center(
-                  child: ListView.builder(
-                    padding: EdgeInsets.all(8),
-                    shrinkWrap: true,
-                    itemCount: nGramResultList.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      return !(nGramResultList[index].toString().contains(
-                            "no match",
-                          ))
-                          ? ListTile(
-                            title: SelectableText(nGramResultList[index]),
-                            onTap: () {
-                              // Handle tap on nGram
-                              print(
-                                "Tapped on nGram: ${nGramResultList[index]}",
-                              );
-                            },
-                          )
-                          : SizedBox.shrink();
-                    },
-                  ),
-                ),
+              SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: _searching ? null : _searchIateIndex,
+                child:
+                    _searching
+                        ? SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                        : Text('Search'),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
+        SizedBox(height: 16),
+        if (_searchResults.isNotEmpty)
+          Expanded(
+            child: ListView.builder(
+              itemCount: _searchResults.length,
+              itemBuilder: (context, idx) {
+                final doc = _searchResults[idx];
+                // Use the same logic as _getDisplayedLangs from search.dart
+                List<String> displayedLangs = [];
+                void addIf(bool? display, String? lang) {
+                  if ((display ?? false) && (lang != null) && lang.isNotEmpty) {
+                    displayedLangs.add(lang);
+                  }
+                }
+
+                addIf(jsonSettings['display_lang1'] as bool?, lang1);
+                addIf(jsonSettings['display_lang2'] as bool?, lang2);
+                addIf(jsonSettings['display_lang3'] as bool?, lang3);
+                final langFields =
+                    displayedLangs
+                        .map((l) => l.toLowerCase() + '_text')
+                        .toSet();
+                return Card(
+                  margin: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Table(
+                          columnWidths: const {0: IntrinsicColumnWidth()},
+                          defaultVerticalAlignment:
+                              TableCellVerticalAlignment.middle,
+                          children: [
+                            TableRow(
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (doc['concept_id'] != null)
+                                      Tooltip(
+                                        message:
+                                            'Open the term in IATE for full details and definitions',
+                                        child: InkWell(
+                                          onTap: () {
+                                            final langPart =
+                                                (displayedLangs.join(
+                                                  '-',
+                                                )).toLowerCase();
+                                            final url =
+                                                'https://iate.europa.eu/entry/result/${doc['concept_id']}/$langPart';
+                                            launchUrl(Uri.parse(url));
+                                          },
+                                          child: Text(
+                                            'ID: ${doc['concept_id']}',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.blue,
+                                              decoration:
+                                                  TextDecoration.underline,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    if (doc['subject_field'] != null)
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 4.0,
+                                        ),
+                                        child: Text(
+                                          'Subject: ${doc['subject_field']}',
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            TableRow(
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    for (
+                                      var i = 0;
+                                      i < displayedLangs.length;
+                                      i++
+                                    )
+                                      if (doc[displayedLangs[i].toLowerCase() +
+                                              '_text'] !=
+                                          null)
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            top: 8.0,
+                                            bottom: 2.0,
+                                          ),
+                                          child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                '${displayedLangs[i].toUpperCase()}: ',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                              Expanded(
+                                                child: Text(
+                                                  doc[displayedLangs[i]
+                                                          .toLowerCase() +
+                                                      '_text'],
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 16,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            TableRow(
+                              children: [
+                                Row(
+                                  children: [
+                                    if (doc['term_types'] != null)
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          right: 8.0,
+                                          top: 4.0,
+                                        ),
+                                        child: Text(
+                                          'Types: ${doc['term_types']}',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey[700],
+                                          ),
+                                        ),
+                                      ),
+                                    if (doc['reliability_codes'] != null)
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 4.0,
+                                        ),
+                                        child: Text(
+                                          'Reliability: ${doc['reliability_codes']}',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey[700],
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        SizedBox(height: 16),
+        // (rest of your UI, e.g. nGram results)
       ],
     );
   }
-}
-
-Future<Map> searchNGrams(List<dynamic> ngrams) async {
-  final opensearchUrl = Uri.parse("https://$osServer/$activeIndex/_msearch");
-  final headers = {
-    "Content-Type": "application/x-ndjson; charset=utf-8",
-    'x-api-key': '1234',
-  };
-
-  // Step 1: Build NDJSON request body
-  final buffer = StringBuffer();
-  for (final ngram in ngrams) {
-    buffer.writeln('{}'); // metadata line
-    buffer.writeln(
-      jsonEncode({
-        "query": {
-          "bool": {
-            "must": [
-              {
-                "match_phrase": {
-                  "${lang1?.toLowerCase()}_text": {
-                    "query": ngram,
-                    // Allow some flexibility in word order
-                    // Boost the phrase match
-                  },
-                },
-              },
-              {
-                "term": {"paragraphsNotMatched": false},
-              },
-            ],
-          },
-        },
-        "highlight": {
-          "fields": {
-            "${lang1?.toLowerCase()}_text": {"type": "plain"},
-          },
-        },
-        "size": 1, // Only top result
-      }),
-    );
-  }
-  print("Buffer content: ${buffer.toString()}");
-  // Step 2: Send request
-
-  if (buffer.isEmpty) {
-    print("No ngrams to search, returning empty results.");
-    return {};
-  }
-  final response = await http.post(
-    opensearchUrl,
-    headers: headers,
-    body: utf8.encode(buffer.toString()),
-  );
-
-  if (response.statusCode != 200) {
-    print('Error from OpenSearch: ${response.statusCode}');
-    print(response.body);
-    return {"error": "Error: ${response.statusCode}"};
-  }
-
-  final jsonResponse = jsonDecode(response.body);
-  print("JSON Response: $jsonResponse");
-  // Step 3: Map responses to original ngrams
-  final results = <String, String>{};
-
-  final responses = jsonResponse['responses'] as List;
-  for (int i = 0; i < responses.length; i++) {
-    final ngram = ngrams[i] + " ";
-    final hits = responses[i]['hits']['hits'] as List;
-    if (hits.isNotEmpty) {
-      var bestMatch = hits[0]['_source']['sk_text'];
-      var bestMatchEN = hits[0]['_source']['en_text'];
-      var highlightedString = hits[0]['highlight']['en_text']?.first ?? '';
-
-      print("Highlighted string: $highlightedString, best match: $bestMatch");
-      var highlightedStartOffset =
-          (highlightedString.split('<em>')[0].length) - 30;
-      if (highlightedStartOffset < 0) {
-        highlightedStartOffset = 0;
-      }
-      var highlightedEndOffset = (highlightedString.lastIndexOf('</em>')) + 50;
-      while (bestMatch[highlightedStartOffset] != " " &&
-          highlightedStartOffset > 1) {
-        print("Highlighted start offset: $highlightedStartOffset");
-        highlightedStartOffset -= 1;
-      }
-
-      while (highlightedEndOffset < bestMatch.length &&
-          bestMatch[highlightedEndOffset] != " ") {
-        highlightedEndOffset += 1;
-      }
-
-      var bestMatchSub = bestMatch.substring(
-        max(highlightedStartOffset, 0),
-        min(highlightedEndOffset, (bestMatch.length)),
-      );
-
-      var bestMatchEnSub = bestMatchEN.substring(
-        max(highlightedStartOffset, 0),
-        min(highlightedEndOffset, (bestMatchEN.length)),
-      );
-
-      results[ngram] = bestMatchEnSub + " /// " + bestMatchSub;
-    } else {
-      results[ngram] = "<no match>";
-    }
-  }
-
-  // Step 4: Output
-  results.forEach((ngram, match) {
-    print('N-gram: "$ngram" => Match: "$match"');
-  });
-  return results;
 }

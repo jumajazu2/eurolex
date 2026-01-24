@@ -597,6 +597,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.6.1"
+  xmlstream:
+    dependency: "direct main"
+    description:
+      name: xmlstream
+      sha256: cfc14e3f256997897df9481ae630d94c2d85ada5187ebeb868bb1aabc2c977b4
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.1"
   yaml:
     dependency: transitive
     description:
