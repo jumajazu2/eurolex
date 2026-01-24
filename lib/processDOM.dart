@@ -480,6 +480,7 @@ Future<String> sendToOpenSearch(String url, List<String> bulkData) async {
             "Content-Type": "application/x-ndjson; charset=utf-8",
             'x-api-key': '${jsonSettings['access_key']}',
             'x-email': '${jsonSettings['user_email']}',
+            
           }),
           body: utf8.encode(ndjsonBody),
         )

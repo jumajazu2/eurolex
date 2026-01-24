@@ -458,15 +458,16 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Container(
+        /* Container(
           padding: EdgeInsets.all(16),
           color: Colors.blue[50],
           width: double.infinity,
           child: SelectableText(_fileContent, style: TextStyle(fontSize: 16)),
         ),
         SizedBox(height: 16),
-        Text(activeIndex),
-        SizedBox(height: 16),
+       Text(activeIndex),*/
+        SizedBox(height: 26),
+
         // --- IATE SEARCH FIELD ---
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -476,7 +477,7 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
                 child: TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
-                    labelText: 'Search IATE index',
+                    labelText: 'Search IATE Terminology',
                     border: OutlineInputBorder(),
                   ),
                   onSubmitted: (_) => _searchIateIndex(),

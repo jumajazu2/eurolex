@@ -1169,104 +1169,23 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
               .redAccent; //when auto lookup from Studio, the progress bar color is redAccent
     });
 
-    ///BUG does not find what Multi button finds
-    var queryAnalyser = {
-      "query": {
-        "bool": {
-          "must": [
-            {
-              "multi_match": {
-                "query": _httpSource,
-                //"type": "phrase",
-                "fields": [
-                  "${lang1?.toLowerCase()}_text",
-                  "${lang2?.toLowerCase()}_text",
-                  "${lang3?.toLowerCase()}_text",
-                ],
-
-                "minimum_should_match": "60%",
-              },
-            },
-          ],
-        },
-      },
-      "size": 3,
+    // NEW METHOD: Safe parameter-based API via server.js
+    final displayedLangs = _getDisplayedLangs();
+    Map<String, dynamic> queryFormed = {
+      "index": "$activeIndex",
+      "term": _httpSource,
+      "langs": displayedLangs,
+      "pattern":
+          2, // Multi-match with fuzziness (similar to old queryAnalyserMulti)
+      "size": 10,
+      "existsLangs": displayedLangs,
     };
 
-    var queryAnalyserMulti = {
-      "query": {
-        "bool": {
-          "must": [..._existsClausesForDisplayedLangs()],
-          "should": [
-            {
-              "match_phrase": {
-                "${lang1?.toLowerCase()}_text": {
-                  "query": _httpSource,
-                  "slop": 6,
-                  "boost": 3.0,
-                },
-              },
-            },
-            {
-              "match": {
-                "${lang1?.toLowerCase()}_text": {
-                  "query": _httpSource,
-                  "fuzziness": "AUTO",
-                  "operator": "and",
-                  "boost": 1.0,
-                },
-              },
-            },
-            {
-              "match_phrase": {
-                "${lang2?.toLowerCase()}_text": {
-                  "query": _httpSource,
-                  "slop": 2,
-                  "boost": 3.0,
-                },
-              },
-            },
-            {
-              "match": {
-                "${lang2?.toLowerCase()}_text": {
-                  "query": _httpSource,
-                  "fuzziness": "AUTO",
-                  "operator": "and",
-                  "boost": 1.0,
-                },
-              },
-            },
-            {
-              "match_phrase": {
-                "${lang3?.toLowerCase()}_text": {
-                  "query": _httpSource,
-                  "slop": 2,
-                  "boost": 3.0,
-                },
-              },
-            },
-            {
-              "match": {
-                "${lang3?.toLowerCase()}_text": {
-                  "query": _httpSource,
-                  "fuzziness": "AUTO",
-                  "operator": "and",
-                  "boost": 1.0,
-                },
-              },
-            },
-          ],
-          "minimum_should_match": 1,
-        },
-      },
-      "size": 25,
-    };
-
-    await processQuery(
-      queryAnalyser,
+    await processQueryNew(
+      queryFormed,
       _httpSource,
       activeIndex,
-    ); // reverted to legacy path for auto-lookup
+    ); // Now using safe parameterized API via server.js
     if (!mounted) return;
     setState(() {
       queryText = "Auto-analyse: $_httpSource";
@@ -2302,7 +2221,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                 ),
               ),
 
-              isAdmin
+              adminUIEnabled
                   ? Tooltip(
                     message:
                         'Temporary A/B: intervals query using informative tokens',

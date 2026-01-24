@@ -51,7 +51,8 @@ String? deviceId;
 final isAdminNotifier = ValueNotifier<bool>(isAdmin);
 
 bool isAdmin = false;
-bool adminUIEnabled = true; // Toggle to disable admin UI even when logged in as admin
+bool adminUIEnabled =
+    true; // Toggle to disable admin UI even when logged in as admin
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -457,7 +458,7 @@ class _MainTabbedAppState extends State<MainTabbedApp>
       builder: (_, isAdmin, __) {
         return DefaultTabController(
           key: ValueKey(isAdmin), // recreate controller on admin flip
-          length: isAdmin ? 5 : 3, // tab count depends on isAdmin
+          length: isAdmin ? 5 : 4, // tab count depends on isAdmin
           child: Scaffold(
             appBar: AppBar(
               toolbarHeight: 1,
@@ -506,7 +507,7 @@ class _MainTabbedAppState extends State<MainTabbedApp>
 
   List<Widget> _buildTabs(bool isAdmin) => [
     const Tab(text: 'Search'),
-    if (isAdmin) const Tab(text: 'Auto Analyser'),
+    const Tab(text: 'IATE Terminology'),
     const Tab(text: 'Setup'),
     if (isAdmin) const Tab(text: 'Data Process'),
     const Tab(text: 'Upload References'),
@@ -514,7 +515,7 @@ class _MainTabbedAppState extends State<MainTabbedApp>
 
   List<Widget> _buildTabViews(bool isAdmin) => [
     Center(child: SearchTabWidget(queryText: "", queryName: "")),
-    if (isAdmin) Center(child: AnalyserWidget()),
+    Center(child: AnalyserWidget()),
     Center(child: indicesMaintenance()),
     if (isAdmin) BrowseFilesWidget(),
     DataUploadPage(),

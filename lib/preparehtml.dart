@@ -887,7 +887,7 @@ Future getCustomIndices(server, isAdmin, id) async {
         allowMalformed: true,
       );
 
-      if (isAdmin) {
+      if (adminUIEnabled && isAdmin) {
         print('Admin user detected, loading all indices.');
         indices =
             responseBody
@@ -899,7 +899,7 @@ Future getCustomIndices(server, isAdmin, id) async {
 
         return responseBody; // Return the indices as a string
       }
-      if (!isAdmin) {
+      if (!adminUIEnabled) {
         if (jsonSettings['access_key'] == "trial") {
           // In trial mode, show only the global index "*"
           indices = ["*"];
