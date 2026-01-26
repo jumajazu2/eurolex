@@ -1,12 +1,13 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:LegisTracerEU/preparehtml.dart';
 
-/// Checks for the latest app version from a remote endpoint.
+/// Checks for the latest app version from server endpoint.
 /// Returns the version string if successful, otherwise null.
 Future<String?> fetchLatestAppVersion() async {
   try {
-    // Replace with your actual version endpoint
-    final url = Uri.parse('https://www.pts-translation.sk/updateInfoUrl.json');
+    // Use secure server endpoint instead of direct website call
+    final url = Uri.parse('$server/version');
     final response = await http.get(url);
     if (response.statusCode == 200) {
       final data = json.decode(response.body);

@@ -5,6 +5,8 @@ import 'package:LegisTracerEU/main.dart';
 
 import 'package:LegisTracerEU/processDOM.dart';
 import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'dart:async';
 
 /*
 TextSpan highlightFoundWords(returnedResult, foundWords) {
@@ -90,94 +92,71 @@ Future getContext(
   print("  filename: $filename");
   print("  source: $source");
 
-  // Simulate fetching context from a database or API
+  // Parse sequenceId
   final center = int.tryParse(pointer) ?? 0;
-  int gte = center - window;
-  if (gte < 0) gte = 0;
-  int lte = center + window;
 
-  // Build document identifier query
-  // Use celex if available (CELEX documents), otherwise use filename (TMX documents)
-  Map<String, dynamic> documentIdentifier;
+  // Prepare safe API parameters
+  final List<String> langs = [
+    if (lang1 != null && lang1!.isNotEmpty) lang1!,
+    if (lang2 != null && lang2!.isNotEmpty) lang2!,
+    if (lang3 != null && lang3!.isNotEmpty) lang3!,
+  ];
 
-  if (celex != null && celex.toString().isNotEmpty) {
-    // Document has celex number - match by celex
-    documentIdentifier = {
-      "bool": {
-        "should": [
-          {"term": {"celex": celex}},
-          {"term": {"celex.keyword": celex}},
-        ],
-        "minimum_should_match": 1,
-      },
-    };
-  } else if (filename != null && filename.isNotEmpty) {
-    // No celex - match by filename (TMX documents)
-    documentIdentifier = {
-      "bool": {
-        "should": [
-          {"term": {"filename": filename}},
-          {"term": {"filename.keyword": filename}},
-        ],
-        "minimum_should_match": 1,
-      },
-    };
-  } else {
-    // Fallback - shouldn't happen but handle gracefully
-    documentIdentifier = {
-      "match_all": {},
-    };
-  }
-
-  var query = {
-    "query": {
-      "bool": {
-        "must": [
-          documentIdentifier,
-          {
-            "range": {
-              "sequence_id": {"gte": gte, "lte": lte},
-            },
-          },
-        ],
-      },
-    },
-    "sort": [
-      {
-        "sequence_id": {"order": "asc"},
-      },
-    ],
-    "size": 50,
+  Map<String, dynamic> contextRequest = {
+    "index": index,
+    "sequenceId": center,
+    "window": window,
+    "langs": langs,
   };
 
-  var resultsContext = await sendToOpenSearch(
-    'https://$osServer/$index/_search',
-    [jsonEncode(query)],
-  ); //BUG: when searching in all indices, which is appropriate, the sequence_id data does not match, now specific index is used, but it will not work for global search
-
-  Map<String, dynamic> decodedResults;
-  try {
-    decodedResults = jsonDecode(resultsContext) as Map<String, dynamic>;
-    print("  OpenSearch response hits: ${decodedResults['hits']?['total']}");
-    print(
-      "  Number of hits returned: ${(decodedResults['hits']?['hits'] as List?)?.length ?? 0}",
-    );
-    if (decodedResults['error'] != null) {
-      print("  ERROR in response: ${decodedResults['error']}");
-    }
-  } on FormatException catch (_) {
-    // Likely offline or invalid response; return empty context safely
-    print('Context fetch failed: offline or invalid response.');
-    return [<String>[], <String>[], <String>[], <String>[]];
-  } catch (e) {
-    print('Context fetch unexpected parse error: $e');
+  // Add celex or filename
+  if (celex != null && celex.toString().isNotEmpty) {
+    contextRequest["celex"] = celex.toString();
+  } else if (filename != null && filename.isNotEmpty) {
+    contextRequest["filename"] = filename;
+  } else {
+    print("ERROR: No celex or filename provided");
     return [<String>[], <String>[], <String>[], <String>[]];
   }
 
-  var hits = decodedResults['hits']['hits'] as List;
-  print("  Processing ${hits.length} context hits");
+  // Call safe server endpoint
+  try {
+    final response = await http
+        .post(
+          Uri.parse('https://$osServer/context'),
+          headers: addDeviceIdHeader({
+            'Content-Type': 'application/json',
+            'x-api-key': jsonSettings['access_key'] ?? DEFAULT_ACCESS_KEY,
+            'x-email': '${jsonSettings['user_email']}',
+          }),
+          body: jsonEncode(contextRequest),
+        )
+        .timeout(const Duration(seconds: 20));
 
-  {
+    if (response.statusCode != 200) {
+      print("Context fetch error: ${response.statusCode} - ${response.body}");
+      return [<String>[], <String>[], <String>[], <String>[]];
+    }
+
+    Map<String, dynamic> decodedResults;
+    try {
+      decodedResults = jsonDecode(response.body) as Map<String, dynamic>;
+      print("  OpenSearch response hits: ${decodedResults['hits']?['total']}");
+      print(
+        "  Number of hits returned: ${(decodedResults['hits']?['hits'] as List?)?.length ?? 0}",
+      );
+      if (decodedResults['error'] != null) {
+        print("  ERROR in response: ${decodedResults['error']}");
+        return [<String>[], <String>[], <String>[], <String>[]];
+      }
+    } on FormatException catch (_) {
+      print('Context fetch failed: invalid response.');
+      return [<String>[], <String>[], <String>[], <String>[]];
+    }
+
+    var hits = decodedResults['hits']['hits'] as List;
+    print("  Processing ${hits.length} context hits");
+
     var contextLang1 =
         hits
             .map(
@@ -205,6 +184,12 @@ Future getContext(
     print("Get context: $contextLang1, $contextLang2, $contextLang3");
 
     return [contextLang1, contextLang2, contextLang3, sequenceID];
+  } on TimeoutException catch (e) {
+    print("Context timeout: $e");
+    return [<String>[], <String>[], <String>[], <String>[]];
+  } catch (e) {
+    print("Context fetch unexpected error: $e");
+    return [<String>[], <String>[], <String>[], <String>[]];
   }
 }
 

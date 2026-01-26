@@ -1,19 +1,38 @@
 import 'package:LegisTracerEU/preparehtml.dart';
 import 'package:LegisTracerEU/setup.dart';
+import 'package:LegisTracerEU/main.dart';
 import 'package:http/http.dart' as http;
 
-Future deleteOpenSearchIndex(index) async {
-  String indicesBefore = await getListIndices(server);
-  print('Remaining indices before delete: $indicesBefore');
-  final resp = await http.delete(
-    Uri.parse('https://search.pts-translation.sk/$index'),
-    headers: {'x-api-key': userPasskey},
-  );
+Future<bool> deleteOpenSearchIndex(index) async {
+  try {
+    var indicesBefore = await getListIndicesFull(server, isAdmin);
+    print(
+      'Remaining indices before delete: ${indicesBefore.map((i) => i[0]).join(', ')}',
+    );
 
-  print('DELETE: ${resp.statusCode}');
-  if (resp.statusCode != 200) {
-    throw Exception('Delete failed ${resp.statusCode}: ${resp.body}');
+    // SECURE: Use server endpoint which validates admin status
+    final resp = await http.delete(
+      Uri.parse('$server/$index'),
+      headers: {
+        'x-api-key': userPasskey,
+        'x-email': jsonSettings['user_email'],
+      },
+    );
+
+    print('DELETE: ${resp.statusCode}');
+
+    if (resp.statusCode == 200) {
+      var indicesAfter = await getListIndicesFull(server, isAdmin);
+      print(
+        'Remaining indices after delete: ${indicesAfter.map((i) => i[0]).join(', ')}',
+      );
+      return true;
+    } else {
+      print('Delete failed ${resp.statusCode}: ${resp.body}');
+      return false;
+    }
+  } catch (e) {
+    print('Error deleting index: $e');
+    return false;
   }
-  String indicesAfter = await getListIndices(server);
-  print('Remaining indices after delete: $indicesAfter');
 }

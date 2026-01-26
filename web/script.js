@@ -171,12 +171,12 @@ function setupDemoSearch() {
   // Search button event listeners
   const searchBtn1 = document.getElementById('searchBtn1');
   const searchBtn2 = document.getElementById('searchBtn2');
-  const searchBtn3 = document.getElementById('searchBtn3');
+  const iateBtn = document.getElementById('iateBtn');
   const clearBtn = document.getElementById('clearBtn');
 
-  if (searchBtn1) searchBtn1.addEventListener('click', () => doSearch("phraseBoost"));
-  if (searchBtn2) searchBtn2.addEventListener('click', () => doSearch("multiFuzzy"));
-  if (searchBtn3) searchBtn3.addEventListener('click', () => doSearch("combined"));
+  if (searchBtn1) searchBtn1.addEventListener('click', () => doSearch("phrase"));
+  if (searchBtn2) searchBtn2.addEventListener('click', () => doSearch("multi"));
+  if (iateBtn) iateBtn.addEventListener('click', () => doSearch("iate"));
   if (clearBtn) {
     clearBtn.addEventListener('click', () => {
       demoInput.value = '';
@@ -187,17 +187,23 @@ function setupDemoSearch() {
 
   // Enter key search
   demoInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') doSearch("phraseBoost");
+    if (e.key === 'Enter') doSearch("phrase");
   });
 
   updateQuotaDisplay();
 }
 
 async function doSearch(mode) {
+
   const demoInput = document.getElementById('demoSearch');
   const resultsDiv = document.getElementById('results');
-  
   if (!demoInput || !resultsDiv) return;
+
+  const q = demoInput.value.trim();
+  if (!q) {
+    resultsDiv.innerHTML = '<div class="search-error">Please enter a search term.</div>';
+    return;
+  }
 
   // Check if email is set, if not prompt user for trial access
   let localEmail = localStorage.getItem('lt_email');
@@ -213,83 +219,35 @@ async function doSearch(mode) {
     updateAccountStatusBar();
   }
 
-  const q = demoInput.value.trim();
-
-  // Prepare client context
-  const clientContext = {
-    ip: userIP,
-    fingerprint: userFingerprint,
-    timestamp: new Date().toISOString(),
-  };
-
-  if (q) {
-    searchCount++;
-    updateQuotaDisplay();
-  }
+  searchCount++;
+  updateQuotaDisplay();
 
   // Get selected source and target languages from dropdowns
   const sourceLang = document.getElementById('sourceLang')?.value || 'en';
   const targetLang = document.getElementById('targetLang')?.value || 'sk';
+  const thirdLang = document.getElementById('thirdLang')?.value; // Optional third language
 
-  // Compose field names
-  const sourceField = sourceLang + '_text';
-  const targetField = targetLang + '_text';
-
-  let body;
-  if (!q) {
-    body = { size: 50, query: { match_all: {} } };
-  } else if (mode === "phraseBoost") {
-    body = {
-      query: {
-        bool: {
-          must: [
-            { match_phrase: { [sourceField]: { query: q, slop: 2, boost: 1.5 } } },
-            { term: { paragraphsNotMatched: false } }
-          ]
-        }
-      },
-      size: 50
-    };
-  } else if (mode === "multiFuzzy") {
-    body = {
-      query: {
-        bool: {
-          must: [
-            {
-              multi_match: {
-                query: q,
-                fields: [sourceField, targetField],
-                fuzziness: 1,
-                minimum_should_match: "80%"
-              }
-            },
-            { term: { paragraphsNotMatched: false } }
-          ]
-        }
-      },
-      size: 50
-    };
-  } else if (mode === "combined") {
-    body = {
-      query: {
-        bool: {
-          should: [
-            { match_phrase: { [sourceField]: { query: q, slop: 2, boost: 3.0 } } },
-            { match: { [sourceField]: { query: q, fuzziness: 1, operator: "and", boost: 1.0 } } },
-            { match_phrase: { [targetField]: { query: q, slop: 2, boost: 3.0 } } },
-            { match: { [targetField]: { query: q, fuzziness: 1, operator: "and", boost: 1.0 } } }
-          ],
-          minimum_should_match: 1
-        }
-      },
-      size: 25
-    };
+  // Build langs array for server
+  const langs = [sourceLang, targetLang];
+  if (thirdLang && thirdLang !== sourceLang && thirdLang !== targetLang) {
+    langs.push(thirdLang);
   }
 
-  // Add deduplication if checked
-  const deduplicate = document.getElementById('deduplicateToggle')?.checked;
-  if (deduplicate && q) {
-    body.collapse = { "field": "dir_id.keyword" };
+  // Determine pattern based on mode
+  let pattern;
+  let indexPattern;
+  if (mode === "phrase") {
+    pattern = 1; // Pattern 1: Phrase search on lang1 (slop: 2, boost: 1.5)
+    indexPattern = '*';
+  } else if (mode === "multi") {
+    pattern = 3; // Pattern 3: Phrase+fuzzy (multi-match with phrase boost)
+    indexPattern = '*';
+  } else if (mode === "iate") {
+    pattern = 7; // Pattern 7: IATE terminology search
+    indexPattern = 'iate_7239_iate_terminology';
+  } else {
+    pattern = 1; // Default to phrase
+    indexPattern = '*';
   }
 
   resultsDiv.innerHTML = '<p class="search-loading">Searching EU legislation...</p>';
@@ -299,15 +257,23 @@ async function doSearch(mode) {
     let localPasskey = localStorage.getItem('lt_passkey');
     if (!localPasskey || !localPasskey.trim()) localPasskey = 'trial';
     const localEmail = localStorage.getItem('lt_email');
-    // Use wildcard for all indices
-    const indexPattern = '*';
-    const url = `${OPENSEARCH_URL}/${indexPattern}/_search`;
+    
+    // SECURE: Use /search endpoint with only parameters
+    const url = `${OPENSEARCH_URL}/search`;
+    const body = {
+      index: indexPattern,  // Search pattern (iate_7239_iate_terminology for IATE, * for all)
+      term: q,              // Search term
+      langs: langs,         // Languages to search
+      pattern: pattern,     // Server-side pattern
+      size: 50             // Max results
+    };
+    
     const headers = {
       'Content-Type': 'application/json',
-      'x-client-context': JSON.stringify(clientContext),
       'x-api-key': localPasskey,
       'x-email': localEmail || ''
     };
+    
     const resp = await fetch(url, { 
       method: 'POST', 
       headers, 
@@ -335,12 +301,18 @@ function renderResults(data, query) {
   const resultsDiv = document.getElementById('results');
   if (!resultsDiv) return;
 
-  const hits = (data.hits?.hits || []).filter(h => {
-    const src = h._source || {};
-    if (src.class === "NotMatch") return false;
-    if (src.paragraphsNotMatched !== false) return false;
-    return true;
-  });
+
+  // Detect if this is an IATE search (pattern 7 or iate index)
+  const isIate = (data?._pattern === 7) || (data?._index === 'iate_7239_iate_terminology') || (Array.isArray(data.hits?.hits) && data.hits.hits.some(h => h._index && h._index.startsWith('iate_7239_iate_terminology')));
+  let hits = data.hits?.hits || [];
+  if (!isIate) {
+    hits = hits.filter(h => {
+      const src = h._source || {};
+      if (src.class === "NotMatch") return false;
+      if (src.paragraphsNotMatched !== false) return false;
+      return true;
+    });
+  }
 
   if (hits.length === 0) {
     resultsDiv.innerHTML = '<p class="no-results">No results found</p>';
@@ -368,9 +340,11 @@ function renderResults(data, query) {
     }).join('') + 
     '</tr></thead><tbody>';
 
+
   for (const h of hits) {
     const src = h._source || {};
     html += '<tr>' + fields.map(f => {
+      // EUR-Lex link for celex
       if (f === "celex") {
         const val = String(src[f] || '').trim();
         if (!val) return '<td></td>';
@@ -379,6 +353,22 @@ function renderResults(data, query) {
           encodeURIComponent(uriParam);
         const display = val.replace(/^CELEX:/i, '');
         return `<td><a href="${url}" target="_blank" rel="noopener noreferrer">${escapeHtml(display)}</a></td>`;
+      }
+
+      // IATE link for IATE search results (when concept_id is present)
+      if (f === fields[0] && (src.concept_id || src.conceptId)) {
+        // Only add IATE link for IATE search (pattern 7 or iate index)
+        const isIate = (data?._pattern === 7) || (data?._index === 'iate_7239_iate_terminology') || (Array.isArray(data.hits?.hits) && data.hits.hits.some(h => h._index && h._index.startsWith('iate_7239_iate_terminology')));
+        if (isIate) {
+          // Use lang1-lang2 (both lowercase) at the end of the link
+          const lang1 = (document.getElementById('sourceLang')?.value || 'en').toLowerCase();
+          const lang2 = (document.getElementById('targetLang')?.value || 'sk').toLowerCase();
+          const langPart = `${lang1}-${lang2}`;
+          const conceptId = src.concept_id || src.conceptId;
+          const iateUrl = `https://iate.europa.eu/entry/result/${encodeURIComponent(conceptId)}/${encodeURIComponent(langPart)}`;
+          const cellText = pretty(src[f]);
+          return `<td>${escapeHtml(cellText)}<br><a href="${iateUrl}" target="_blank" rel="noopener noreferrer" style="font-size:0.95em;color:#0E5895;">🔗 IATE</a></td>`;
+        }
       }
 
       const cellText = pretty(src[f]);
@@ -491,7 +481,7 @@ function handleURLSearchParam() {
     if (demoInput) {
       demoInput.value = searchQuery;
       // Auto-run search after a brief delay
-      setTimeout(() => doSearch("phraseBoost"), 500);
+      setTimeout(() => doSearch("phrase"), 500);
     }
   }
 }

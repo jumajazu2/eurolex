@@ -4,6 +4,7 @@ import 'package:LegisTracerEU/search.dart';
 import 'package:flutter/material.dart';
 
 import 'package:LegisTracerEU/processDOM.dart';
+import 'package:LegisTracerEU/preparehtml.dart';
 import 'dart:math';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -107,75 +108,55 @@ Future<Map<String, String>> searchNGrams(
 ]) async {
   // If not provided, fallback to all _text fields
   final langs = workingLangs ?? ['en', 'sk', 'cz'];
-  final fields = langs.map((l) => l.toLowerCase() + '_text').toList();
-  final opensearchUrl = Uri.parse(
-    'https://search.pts-translation.sk/iate_7239_iate_terminology/_msearch',
-  );
-  final headers = {'Content-Type': 'application/x-ndjson'};
-  final buffer = StringBuffer();
-  for (final ngram in ngrams) {
-    final mustExists =
-        fields
-            .map(
-              (f) => {
-                "exists": {"field": f},
-              },
-            )
-            .toList();
-    buffer.writeln('{}');
-    buffer.writeln(
-      jsonEncode({
-        "query": {
-          "bool": {
-            "must": [
-              {
-                "multi_match": {
-                  "query": ngram,
-                  "fields": fields,
-                  "fuzziness": "AUTO",
-                },
-              },
-              ...mustExists,
-            ],
-          },
-        },
-        "size": 1,
-      }),
-    );
-    print("Prepared IATE ngram query for: $ngram\n${buffer.toString()}");
-  }
-  if (buffer.isEmpty) {
-    return {};
-  }
-  final response = await http.post(
-    opensearchUrl,
-    headers: headers,
-    body: buffer.toString(),
-  );
 
-  print("OpenSearch ngram IATE search response: ${response.body}");
-  if (response.statusCode != 200) {
-    print('Error from OpenSearch: ${response.statusCode}');
-    print(response.body);
-    return {"error": "Error: ${response.statusCode}"};
-  }
-  final jsonResponse = jsonDecode(response.body);
+  // SECURE: Use /search endpoint with Pattern 7 for IATE terminology
+  // Note: Making individual requests instead of batch _msearch for security
   final results = <String, String>{};
-  final responses = jsonResponse['responses'] as List;
-  for (int i = 0; i < responses.length; i++) {
-    final ngram = ngrams[i];
-    final hits = responses[i]['hits']['hits'] as List;
-    if (hits.isNotEmpty) {
-      final doc = hits[0]['_source'];
-      final textFields = fields
-          .map((f) => doc[f])
-          .where((v) => v != null)
-          .join(' | ');
-      results[ngram] = textFields.isNotEmpty ? textFields : '<no match>';
-    } else {
+
+  for (final ngram in ngrams) {
+    final url = Uri.parse('$server/search');
+    final body = jsonEncode({
+      "index": "iate_7239_iate_terminology",
+      "term": ngram,
+      "langs": langs,
+      "pattern": 7,
+      "size": 1,
+    });
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          'x-api-key': '${jsonSettings['access_key']}',
+          'x-email': '${jsonSettings['user_email']}',
+        },
+        body: body,
+      );
+
+      if (response.statusCode == 200) {
+        final jsonResponse = jsonDecode(response.body);
+        final hits = jsonResponse['hits']?['hits'] as List?;
+        if (hits != null && hits.isNotEmpty) {
+          final doc = hits[0]['_source'];
+          final fields = langs.map((l) => l.toLowerCase() + '_text').toList();
+          final textFields = fields
+              .map((f) => doc[f])
+              .where((v) => v != null)
+              .join(' | ');
+          results[ngram] = textFields.isNotEmpty ? textFields : '<no match>';
+        } else {
+          results[ngram] = '<no match>';
+        }
+      } else {
+        results[ngram] = '<no match>';
+      }
+    } catch (e) {
+      print('Error searching ngram "$ngram": $e');
       results[ngram] = '<no match>';
     }
   }
+
   return results;
 }
 
@@ -208,35 +189,17 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
           if (lang3 != null) lang3,
         ].where((l) => l != null && l != '').cast<String>().toList();
     if (workingLangs.isEmpty) workingLangs = ['en', 'sk', 'cz'];
-    final fields = workingLangs.map((l) => l.toLowerCase() + '_text').toList();
-    final mustExists =
-        fields
-            .map(
-              (f) => {
-                "exists": {"field": f},
-              },
-            )
-            .toList();
-    final url = Uri.parse(
-      'https://search.pts-translation.sk/iate_7239_iate_terminology/_search',
-    );
+
+    // SECURE: Use /search endpoint with Pattern 7 for IATE
+    final url = Uri.parse('$server/search');
     final body = jsonEncode({
-      "query": {
-        "bool": {
-          "must": [
-            {
-              "multi_match": {
-                "query": queryText,
-                "fields": fields,
-                "fuzziness": "AUTO",
-              },
-            },
-            ...mustExists,
-          ],
-        },
-      },
+      "index": "iate_7239_iate_terminology",
+      "term": queryText,
+      "langs": workingLangs,
+      "pattern": 7,
       "size": 20,
     });
+
     try {
       final response = await http.post(
         url,
@@ -250,6 +213,8 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final hits = data['hits']?['hits'] as List?;
+        final fields =
+            workingLangs.map((l) => l.toLowerCase() + '_text').toList();
         setState(() {
           _searchResults =
               (hits ?? [])
@@ -551,7 +516,7 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
                                                 'https://iate.europa.eu/entry/result/${doc['concept_id']}/$langPart';
                                             launchUrl(Uri.parse(url));
                                           },
-                                          child: Text(
+                                          child: SelectableText(
                                             'ID: ${doc['concept_id']}',
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
@@ -567,7 +532,7 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
                                         padding: const EdgeInsets.only(
                                           top: 4.0,
                                         ),
-                                        child: Text(
+                                        child: SelectableText(
                                           'Subject: ${doc['subject_field']}',
                                         ),
                                       ),
@@ -605,7 +570,7 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
                                                 ),
                                               ),
                                               Expanded(
-                                                child: Text(
+                                                child: SelectableText(
                                                   doc[displayedLangs[i]
                                                           .toLowerCase() +
                                                       '_text'],
@@ -632,7 +597,7 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
                                           right: 8.0,
                                           top: 4.0,
                                         ),
-                                        child: Text(
+                                        child: SelectableText(
                                           'Types: ${doc['term_types']}',
                                           style: TextStyle(
                                             fontSize: 12,
@@ -645,7 +610,7 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
                                         padding: const EdgeInsets.only(
                                           top: 4.0,
                                         ),
-                                        child: Text(
+                                        child: SelectableText(
                                           'Reliability: ${doc['reliability_codes']}',
                                           style: TextStyle(
                                             fontSize: 12,

@@ -495,7 +495,12 @@ class _MainTabbedAppState extends State<MainTabbedApp>
             body: TabBarView(children: _buildTabViews(isAdmin)),
             floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
             floatingActionButton: FloatingActionButton.small(
-              onPressed: reportProblem,
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SupportForm()),
+                );
+              },
               child: const Icon(Icons.help_outline),
               tooltip: 'Report a problem',
             ),

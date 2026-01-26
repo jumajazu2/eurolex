@@ -1176,7 +1176,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
       "term": _httpSource,
       "langs": displayedLangs,
       "pattern":
-          2, // Multi-match with fuzziness (similar to old queryAnalyserMulti)
+          6, // Dedicated pattern for Trados auto-lookup (can be customized server-side)
       "size": 10,
       "existsLangs": displayedLangs,
     };
@@ -3185,29 +3185,58 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                                   jsonSettings['display_lang1'] ==
                                                           true
                                                       ? Expanded(
-                                                        child: SelectableText(
-                                                          style: TextStyle(
-                                                            fontSize: 18.0,
-                                                          ),
-                                                          (jsonSettings['display_lang1'] ==
-                                                                      true &&
-                                                                  index >= 0 &&
-                                                                  contextEnSkCz[3]
-                                                                          .length >
-                                                                      index &&
-                                                                  index +
-                                                                          offsetlang1 >=
-                                                                      0 &&
-                                                                  contextEnSkCz[0]
-                                                                          .length >
-                                                                      index +
-                                                                          offsetlang1)
-                                                              ? contextEnSkCz[3][index] +
-                                                                  " : " +
-                                                                  contextEnSkCz[0][index +
-                                                                      offsetlang1]
-                                                              : '',
-                                                        ),
+                                                        child:
+                                                            (jsonSettings['display_lang1'] ==
+                                                                        true &&
+                                                                    index >=
+                                                                        0 &&
+                                                                    contextEnSkCz[3]
+                                                                            .length >
+                                                                        index &&
+                                                                    index +
+                                                                            offsetlang1 >=
+                                                                        0 &&
+                                                                    contextEnSkCz[0]
+                                                                            .length >
+                                                                        index +
+                                                                            offsetlang1)
+                                                                ? SelectableText.rich(
+                                                                  TextSpan(
+                                                                    children: [
+                                                                      TextSpan(
+                                                                        text:
+                                                                            contextEnSkCz[3][index],
+                                                                        style: TextStyle(
+                                                                          fontSize:
+                                                                              12.0,
+                                                                          fontFeatures: [
+                                                                            FontFeature.superscripts(),
+                                                                          ],
+                                                                        ),
+                                                                      ),
+                                                                      TextSpan(
+                                                                        text:
+                                                                            " ",
+                                                                        style: TextStyle(
+                                                                          fontSize:
+                                                                              18.0,
+                                                                        ),
+                                                                      ),
+                                                                      TextSpan(
+                                                                        text:
+                                                                            contextEnSkCz[0][index +
+                                                                                offsetlang1],
+                                                                        style: TextStyle(
+                                                                          fontSize:
+                                                                              18.0,
+                                                                        ),
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                                )
+                                                                : SelectableText(
+                                                                  '',
+                                                                ),
                                                       )
                                                       : SizedBox.shrink(),
                                                   jsonSettings['display_lang2'] ==

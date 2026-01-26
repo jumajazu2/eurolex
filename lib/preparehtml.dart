@@ -866,17 +866,13 @@ class parseHtml {
 
 //id = passkey, custom indices name format: passkey_user-supplier-name in lowercase
 Future getCustomIndices(server, isAdmin, id) async {
-  // Function to get the list of indices from the server
+  // SECURE: Uses server endpoint which validates API key and filters server-side
   await loadSettingsFromFile();
-  final username = 'admin';
-  final password = 'admin';
-  final basicAuth = 'Basic ${base64Encode(utf8.encode('$username:$password'))}';
 
   try {
     final response = await http.get(
       Uri.parse('$server/_cat/indices?h=index'),
       headers: {
-        'Authorization': basicAuth,
         'x-api-key': jsonSettings['access_key'],
         'x-email': jsonSettings['user_email'],
       },
@@ -887,40 +883,30 @@ Future getCustomIndices(server, isAdmin, id) async {
         allowMalformed: true,
       );
 
+      // Server returns all indices for admin, but client can choose to filter
       if (adminUIEnabled && isAdmin) {
-        print('Admin user detected, loading all indices.');
+        // Admin with UI enabled: show all indices from server
         indices =
             responseBody
-                .split('\n') // Split the response into lines
+                .split('\n')
+                .where((line) => line.trim().isNotEmpty)
                 .toList();
-        print('Indices loaded: $indices for server: $server');
-
-        print('Indices for server $server loaded successfully: $responseBody');
-
-        return responseBody; // Return the indices as a string
-      }
-      if (!adminUIEnabled) {
-        if (jsonSettings['access_key'] == "trial") {
-          // In trial mode, show only the global index "*"
-          indices = ["*"];
-          print('Trial mode detected, showing only global index: $indices');
-          return "Trial mode - limited indices";
-        }
-
-        print('Non-admin user detected, loading custom indices for id: $id');
-
+        print('Admin UI enabled, loading all indices: $indices');
+        return responseBody;
+      } else if (jsonSettings['access_key'] == "trial") {
+        // Trial mode: show only global wildcard
+        indices = ["*"];
+        print('Trial mode detected, showing only global index: $indices');
+        return "Trial mode - limited indices";
+      } else {
+        // Non-admin OR admin with UI disabled: filter to user's own indices
         indices =
             responseBody
-                .split('\n') // Split the response into lines
-                .where(
-                  (item) => item.contains(id),
-                ) // Keep only items containing "eurolex"
+                .split('\n')
+                .where((line) => line.trim().isNotEmpty && line.contains(id))
                 .toList();
-        print('Indices loaded: $indices for server: $server');
-
-        print('Indices for server $server loaded successfully: $responseBody');
-
-        return responseBody; // Return the indices as a string
+        print('Loading custom indices for id: $id, indices: $indices');
+        return responseBody;
       }
     } else {
       print('Failed to load indices. Status code: ${response.statusCode}');
@@ -979,16 +965,13 @@ Future getListIndices(server) async {
 }
 
 Future<List<List<String>>> getListIndicesFull(server, isAdmin) async {
-  final username = 'admin';
-  final password = 'admin';
-  final basicAuth = 'Basic ${base64Encode(utf8.encode('$username:$password'))}';
+  // SECURE: Uses server endpoint which validates API key and filters server-side
   print("userPasskey for getListIndicesFull: $userPasskey");
   List<List<String>> indicesList = [];
   try {
     final response = await http.get(
       Uri.parse('$server/_cat/indices?h=index,store.size,docs.count'),
       headers: {
-        'Authorization': basicAuth,
         'x-api-key': jsonSettings['access_key'],
         'x-email': jsonSettings['user_email'],
       },
@@ -999,59 +982,42 @@ Future<List<List<String>>> getListIndicesFull(server, isAdmin) async {
         allowMalformed: true,
       );
 
-      // Each line: indexName store.size docs.count
-      if (isAdmin) {
-        final lines = responseBody
-            .split('\n')
-            .where(
-              (line) =>
-                  line.trim().isNotEmpty &&
-                  !line.startsWith('.') &&
-                  !line.startsWith('top_queries'),
-            );
-        final _indicesList =
-            lines
-                .map((line) {
-                  final parts = line.split(RegExp(r'\s+'));
-                  if (parts.length >= 3) {
-                    // Cast to List<String>
-                    return <String>[parts[0], parts[1], parts[2]];
-                  } else {
-                    return <String>[];
-                  }
-                })
-                .where((sublist) => sublist.isNotEmpty)
-                .toList();
-        indicesList = _indicesList;
-      } else {
-        print(
-          'Non-admin user detected, filtering indices for userPasskey: $userPasskey',
-        );
-        final lines = responseBody
-            .split('\n')
-            .where(
-              (line) =>
-                  line.trim().isNotEmpty &&
-                  !line.startsWith('.') &&
-                  !line.startsWith('top_queries') &&
-                  line.contains(userPasskey),
-            );
-        final _indicesList =
-            lines
-                .map((line) {
-                  final parts = line.split(RegExp(r'\s+'));
-                  if (parts.length >= 3) {
-                    // Cast to List<String>
-                    return <String>[parts[0], parts[1], parts[2]];
-                  } else {
-                    return <String>[];
-                  }
-                })
-                .where((sublist) => sublist.isNotEmpty)
-                .toList();
+      // Server returns all indices for admin, but client can choose to filter
+      List<String> lines;
 
-        indicesList = _indicesList;
+      if (adminUIEnabled && isAdmin) {
+        // Admin with UI enabled: show all indices from server
+        print('Admin UI enabled, showing all indices');
+        lines =
+            responseBody
+                .split('\n')
+                .where((line) => line.trim().isNotEmpty)
+                .toList();
+      } else {
+        // Non-admin OR admin with UI disabled: filter to user's own indices
+        print('Filtering indices for userPasskey: $userPasskey');
+        lines =
+            responseBody
+                .split('\n')
+                .where(
+                  (line) =>
+                      line.trim().isNotEmpty && line.contains(userPasskey),
+                )
+                .toList();
       }
+
+      indicesList =
+          lines
+              .map((line) {
+                final parts = line.split(RegExp(r'\s+'));
+                if (parts.length >= 3) {
+                  return <String>[parts[0], parts[1], parts[2]];
+                } else {
+                  return <String>[];
+                }
+              })
+              .where((sublist) => sublist.isNotEmpty)
+              .toList();
 
       // Parse each line into [name, size, docs]
 

@@ -161,8 +161,9 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
       _updateError = null;
     });
     try {
+      // Use secure server endpoint instead of direct website call
       final resp = await http
-          .get(Uri.parse(updateInfoUrl))
+          .get(Uri.parse('$server/version'))
           .timeout(const Duration(seconds: 8));
       if (resp.statusCode != 200) {
         setState(() {
@@ -174,7 +175,8 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
       final data = jsonDecode(resp.body) as Map<String, dynamic>;
       final latest = (data['version'] ?? '').toString();
       final storeUrl =
-          (data['storeUrl'] ?? 'https://apps.microsoft.com/detail/9NKNVGXJFSW5')
+          (data['updateUrl'] ??
+                  'https://apps.microsoft.com/detail/9NKNVGXJFSW5')
               .toString();
 
       final info = await PackageInfo.fromPlatform();
@@ -215,7 +217,8 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
         _emailCtrl.text.trim().toLowerCase() == 'juraj.kuban.sk@gmail.com';
     jsonSettings['admin_ui_enabled'] = _adminUIEnabled;
     adminUIEnabled = _adminUIEnabled;
-    isAdminNotifier.value = nowAdmin && _adminUIEnabled; // triggers tabs rebuild
+    isAdminNotifier.value =
+        nowAdmin && _adminUIEnabled; // triggers tabs rebuild
     isAdmin = nowAdmin;
 
     if (!userPasskey.contains('trial') && userPasskey.isNotEmpty) {
@@ -619,7 +622,8 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
               },
             ),
 
-            if (_emailCtrl.text.trim().toLowerCase() == 'juraj.kuban.sk@gmail.com')
+            if (_emailCtrl.text.trim().toLowerCase() ==
+                'juraj.kuban.sk@gmail.com')
               SwitchListTile(
                 title: const Text('Enable Admin UI'),
                 contentPadding: EdgeInsets.zero,
