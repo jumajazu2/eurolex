@@ -56,12 +56,14 @@ class _DataUploadTabState extends State<DataUploadTab> {
   String _selectedIndex = '';
   bool simulateUpload = false;
   String? _indexError;
+  bool _loadingIndices = true;
   // checkbox state
 
   @override
   void initState() {
     super.initState();
     _selectedIndex = widget.initialSelectedIndex;
+    _loadingIndices = true;
     getCustomIndices(
       server,
       isAdmin,
@@ -69,7 +71,7 @@ class _DataUploadTabState extends State<DataUploadTab> {
     ).then((_) {
       if (mounted) {
         setState(() {
-          // Refresh the UI after indices are loaded
+          _loadingIndices = false;
         });
       }
     });
@@ -117,50 +119,51 @@ class _DataUploadTabState extends State<DataUploadTab> {
               ),
             ],
           ),
-
           const SizedBox(height: 20),
-          InputDecorator(
-            decoration: InputDecoration(
-              labelText: 'Search Index',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+          if (_loadingIndices)
+            Row(
+              children: const [
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(),
+                ),
+                SizedBox(width: 12),
+                Text('Loading indices...'),
+              ],
+            )
+          else ...[
+            InputDecorator(
+              decoration: InputDecoration(
+                labelText: 'Search Index',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
               ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 8,
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  isExpanded: true,
+                  value:
+                      widget.indices.contains(_selectedIndex)
+                          ? _selectedIndex
+                          : null,
+                  items: idxItems,
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      newIndexName = newValue ?? '';
+                      _selectedIndex = newValue ?? '';
+                    });
+                    print('Selected index for bulk upload: $newValue');
+                  },
+                  hint: const Text('Choose existing index'),
+                ),
               ),
             ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                isExpanded: true,
-                value:
-                    indices.contains(_selectedIndex)
-                        ? _selectedIndex
-                        : indices.first,
-                items:
-                    indices
-                        .map(
-                          (value) => DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(value),
-                          ),
-                        )
-                        .toList(),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    newIndexName = newValue ?? '';
-                    _selectedIndex = newValue ?? '';
-                  });
-                  // Handle dropdown selection
-
-                  // ignore: avoid_print
-                  print('Selected index for bulk upload: $newValue');
-                },
-                hint: const Text('Choose existing index'),
-              ),
-            ),
-          ),
-
+          ],
           const SizedBox(height: 10),
           TextField(
             controller: _manualIndexController,
@@ -171,33 +174,18 @@ class _DataUploadTabState extends State<DataUploadTab> {
               errorText: _indexError,
             ),
             inputFormatters: <TextInputFormatter>[
-              // Allow only letters, digits, dot, underscore, hyphen (we will lowercase)
               FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9._-]')),
               TextInputFormatter.withFunction((oldValue, newValue) {
                 return newValue.copyWith(text: newValue.text.toLowerCase());
               }),
             ],
             onChanged: (value) {
-              if (_indexError != null) setState(() => _indexError = null);
-            },
-            onSubmitted: (value) {
               setState(() {
-                final err = _validateIndexName(value, userPasskey);
-                if (err != null) {
-                  _indexError = err;
-                  return;
-                }
-                final composed = 'eu_${userPasskey}_${value.trim()}';
-                _manualIndexController.text = composed;
-                newIndexName = composed;
-                _selectedIndex = newIndexName;
                 _indexError = null;
-                print('Entered manual index name for bulk upload: $composed');
               });
             },
           ),
-
-          const SizedBox(height: 8),
+          // ...existing code...
           (_selectedIndex.isEmpty || _selectedIndex == 'eurolex_')
               ? const Text('Enter Index Name First!')
               : Row(
