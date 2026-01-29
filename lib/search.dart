@@ -957,13 +957,11 @@ class SearchTabWidget extends StatefulWidget {
 class _SearchTabWidgetState extends State<SearchTabWidget>
     with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
-  final TextEditingController _controller2 = TextEditingController();
   final TextEditingController _controller3 = TextEditingController();
   //final List<bool> _quickSettings = List.generate(6, (_) => true);
   final List<String> _results = [];
 
   Color _fillColor = Colors.white30;
-  Color _fillColor2 = Colors.white30;
 
   //the following code is to periodically check if a file has changed and reload its content if it has, for auto lookup of new Studio segments on Search tab
   String _fileContent = "Loading...";
@@ -2132,6 +2130,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                         Theme.of(context).colorScheme.onPrimaryContainer,
                   ),
                   onPressed: () {
+                    if (_searchController.text.trim().isEmpty) return;
                     setState(() => _progressColor = Colors.blue);
                     _startSearch();
                   },
@@ -2157,6 +2156,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                         Theme.of(context).colorScheme.onPrimaryContainer,
                   ),
                   onPressed: () {
+                    if (_searchController.text.trim().isEmpty) return;
                     setState(() => _progressColor = Colors.green);
                     _startSearch2();
                   },
@@ -2182,6 +2182,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                         Theme.of(context).colorScheme.onPrimaryContainer,
                   ),
                   onPressed: () {
+                    if (_searchController.text.trim().isEmpty) return;
                     setState(() => _progressColor = Colors.purple);
                     _startSearch3();
                   },
@@ -2207,6 +2208,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                         Theme.of(context).colorScheme.onTertiaryContainer,
                   ),
                   onPressed: () {
+                    if (_searchController.text.trim().isEmpty) return;
                     setState(() => _progressColor = Colors.orange);
                     _startSearchPhraseAll();
                   },
@@ -2234,6 +2236,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                             Theme.of(context).colorScheme.onPrimaryContainer,
                       ),
                       onPressed: () {
+                        if (_searchController.text.trim().isEmpty) return;
                         setState(() => _progressColor = Colors.teal);
                         _startIntervalsTest();
                       },
@@ -2250,55 +2253,42 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                   : SizedBox.shrink(),
 
               SizedBox(
-                width: 150,
-                child: TextFormField(
-                  controller: _controller2,
-                  //key: ValueKey(_searchController.text),
-                  decoration: InputDecoration(
-                    labelText: 'Filter by Celex',
-                    border: OutlineInputBorder(),
-                    filled: true,
-                    fillColor: _fillColor2,
-                    suffixIcon: Tooltip(
-                      message:
-                          'Enter CELEX ID (e.g., 32015R0459) or any part of it to filter results.  Press Enter to activate the filter (the field will turn orange).',
-                      child: Icon(Icons.info_outline, size: 13),
-                    ),
-                  ),
-                  onFieldSubmitted: (value) {
-                    _controller2.text = value;
-                    setState(() {
-                      celexFilter = value.trim();
-                      _fillColor2 =
-                          value.isNotEmpty
-                              ? Colors.orangeAccent
-                              : Theme.of(context).canvasColor;
-                    });
-
-                    print(" Celex Filter: $celexFilter");
-                  },
-                ),
-              ),
-              SizedBox(
-                width: 150,
+                width: 170,
                 child: TextFormField(
                   controller: _controller3,
                   //key: ValueKey(_searchController.text),
                   decoration: InputDecoration(
-                    labelText: 'Contains',
+                    labelText: 'Filter Results',
                     border: OutlineInputBorder(),
                     filled: true,
                     fillColor: _fillColor,
-                    suffixIcon: Tooltip(
-                      message:
-                          'Enter any text to filter results. Press Enter to activate the filter (the field will turn orange).',
-                      child: Icon(Icons.info_outline, size: 13),
-                    ),
+                    suffixIcon:
+                        containsFilter.isNotEmpty
+                            ? IconButton(
+                              icon: Icon(Icons.clear),
+                              tooltip: 'Clear filter',
+                              onPressed: () {
+                                setState(() {
+                                  containsFilter = "";
+                                  celexFilter = "";
+                                  _fillColor = Theme.of(context).canvasColor;
+                                  _controller3.clear();
+                                });
+                              },
+                            )
+                            : Tooltip(
+                              message:
+                                  'Enter text to filter results by content or CELEX ID. Press Enter to activate the filter (the field will turn orange).',
+                              child: Icon(Icons.info_outline, size: 13),
+                            ),
                   ),
                   onFieldSubmitted: (value) {
                     _controller3.text = value;
                     setState(() {
                       containsFilter = value.trim();
+                      celexFilter =
+                          value
+                              .trim(); // Also set celexFilter for combined filtering
 
                       _fillColor =
                           value.isNotEmpty
@@ -2306,7 +2296,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                               : Theme.of(context).canvasColor;
                     });
 
-                    print(" Contains Filter: $containsFilter");
+                    print(" Filter: $containsFilter");
                   },
                 ),
               ),
@@ -2514,8 +2504,6 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                   celexFilter = "";
                                   containsFilter = "";
                                   _fillColor = Theme.of(context).canvasColor;
-                                  _fillColor2 = Theme.of(context).canvasColor;
-                                  _controller2.clear();
                                   _controller3.clear();
                                   //  _searchController.text =
                                   ""; // <--- Set the text to an empty string
@@ -2664,7 +2652,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                       index < parNotMatched.length &&
                       parNotMatched[index] == 'false');
 
-              return (_matchesContains && _matchesCelex && _matchesAlignment)
+              return ((_matchesContains || _matchesCelex) && _matchesAlignment)
                   ? Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10.0,

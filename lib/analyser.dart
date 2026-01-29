@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 
 import 'package:LegisTracerEU/processDOM.dart';
 import 'package:LegisTracerEU/preparehtml.dart';
-import 'dart:math';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:LegisTracerEU/ui_notices.dart';
@@ -515,8 +514,9 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
                                             final url =
                                                 'https://iate.europa.eu/entry/result/${doc['concept_id']}/$langPart';
                                             launchUrl(Uri.parse(url));
+                                            print('Launching IATE URL: $url');
                                           },
-                                          child: SelectableText(
+                                          child: Text(
                                             'ID: ${doc['concept_id']}',
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,

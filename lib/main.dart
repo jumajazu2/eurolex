@@ -22,6 +22,63 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:LegisTracerEU/support.dart';
 import 'dart:io';
 
+enum AppTheme { light, vivid, blue, dark }
+
+final themeNames = {
+  AppTheme.light: 'Light',
+  AppTheme.vivid: 'Vivid',
+  AppTheme.blue: 'Blue',
+  AppTheme.dark: 'Dark',
+};
+
+final appThemes = {
+  AppTheme.light: ThemeData(
+    brightness: Brightness.light,
+    primaryColor: Color(0xFF2b6cb0),
+    colorScheme: ColorScheme.light(
+      primary: Color(0xFF2b6cb0),
+      secondary: Color(0xFF68d391),
+    ),
+    scaffoldBackgroundColor: Color(0xFFF8FAFC),
+    appBarTheme: AppBarTheme(backgroundColor: Color(0xFF2b6cb0)),
+  ),
+  AppTheme.vivid: ThemeData(
+    brightness: Brightness.light,
+    primaryColor: Color(0xFFFF6F61),
+    colorScheme: ColorScheme.light(
+      primary: Color(0xFFFF6F61),
+      secondary: Color(0xFFFFB347),
+    ),
+    scaffoldBackgroundColor: Color(0xFFFFF4E6),
+    appBarTheme: AppBarTheme(backgroundColor: Color(0xFFFF6F61)),
+  ),
+  AppTheme.blue: ThemeData(
+    brightness: Brightness.light,
+    primaryColor: Color(0xFF1976D2),
+    colorScheme: ColorScheme.light(
+      primary: Color(0xFF1976D2),
+      secondary: Color(0xFF64B5F6),
+    ),
+    scaffoldBackgroundColor: Color(0xFFE3F2FD),
+    appBarTheme: AppBarTheme(backgroundColor: Color(0xFF1976D2)),
+  ),
+  AppTheme.dark: ThemeData(
+    brightness: Brightness.dark,
+    primaryColor: Color(0xFF22223B),
+    colorScheme: ColorScheme.dark(
+      primary: Color(0xFF22223B),
+      secondary: Color(0xFF4A4E69),
+    ),
+    scaffoldBackgroundColor: Color(0xFF232946),
+    appBarTheme: AppBarTheme(backgroundColor: Color(0xFF22223B)),
+  ),
+};
+
+final ValueNotifier<AppTheme> appThemeNotifier = ValueNotifier<AppTheme>(
+  AppTheme.light,
+);
+
+
 //String osServer = 'localhost:9200'; // add to Settings or Autolookup
 String osServer = 'search.pts-translation.sk';
 
