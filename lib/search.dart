@@ -26,6 +26,8 @@ var decodedResults = [];
 var lang2Results = [];
 var lang1Results = ["N/A"];
 var lang3Results = [];
+var iateSource;
+var iateTarget;
 List<String> metaCelex = [];
 List<String> metaFilename = [];
 List<String> metaSource = [];
@@ -975,7 +977,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
 
   Widget _buildIndexArrowHint() {
     return Tooltip(
-      message: 'Make sure that the correct custom index is selected',
+      message: 'Make sure that the correct custom collection is selected',
       waitDuration: const Duration(milliseconds: 600),
       child: FadeTransition(
         opacity: _indexArrowOpacity,
@@ -1080,8 +1082,12 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
       final results = List<Map<String, String>>.generate(count, (i) {
         return {
           'lang1_result': lang1Results[i],
-          'lang2_result': "<b>${lang2Results[i]}</b>",
+          'lang2_result': lang2Results[i],
           'celex': metaCelex[i],
+          'lang1': lang1 ?? 'N/A',
+          'lang2': lang2 ?? 'N/A',
+          'iatesource': iateSource ?? 'N/A',
+          'iatetarget': iateTarget ?? 'N/A',
         };
       });
       print("HTTP response Returning results to Trados: $results");
@@ -2042,7 +2048,9 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                     hintText: 'Search...',
                     prefixIcon: Icon(Icons.search),
                     filled: true,
-                    fillColor: Colors.grey[200],
+                    fillColor: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.1),
                     contentPadding: EdgeInsets.symmetric(
                       vertical: 20,
                       horizontal: 16,
@@ -2052,7 +2060,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                       borderSide: BorderSide.none,
                     ),
                   ),
-                  onSubmitted: (value) => _startSearch2(),
+                  onSubmitted: (value) => _startSearch3(),
                 ),
               ),
               SizedBox(
@@ -2064,7 +2072,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                 child: InputDecorator(
                   decoration: InputDecoration(
                     labelText:
-                        'Search Index ($activeIndex)', // Label embedded in the frame
+                        'Search Collection ($activeIndex)', // Label embedded in the frame
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -2118,35 +2126,40 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
             runSpacing: 8,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
+              // Most prominent: Combine match and phrase search for better recall in your custom index
               Tooltip(
                 message:
-                    'Phrase search in English with tight matching in your custom index',
+                    'Combine match and phrase search in your custom collection in all working languages: $lang1, $lang2, $lang3',
                 waitDuration: Duration(seconds: 1),
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        Theme.of(context).colorScheme.primaryContainer,
-                    foregroundColor:
-                        Theme.of(context).colorScheme.onPrimaryContainer,
+                    backgroundColor: Color(0xFF0F2A44),
+                    foregroundColor: Color(0xFFF5F7FA),
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    textStyle: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   onPressed: () {
                     if (_searchController.text.trim().isEmpty) return;
-                    setState(() => _progressColor = Colors.blue);
-                    _startSearch();
+                    setState(() => _progressColor = Colors.purple);
+                    _startSearch3();
                   },
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.search),
-                      SizedBox(width: 6),
-                      Text('Phrase $lang1'),
+                      Icon(Icons.search, size: 20),
+                      SizedBox(width: 8),
+                      Text('Smart Search'),
                     ],
                   ),
                 ),
               ),
+              // Secondary: Multi-language flexible search in custom index
               Tooltip(
                 message:
-                    'Search across languages with flexible matching in your custom index',
+                    'Search across working languages ($lang1, $lang2, $lang3) with flexible matching in your custom collection',
                 waitDuration: Duration(seconds: 1),
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
@@ -2154,6 +2167,8 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                         Theme.of(context).colorScheme.primaryContainer,
                     foregroundColor:
                         Theme.of(context).colorScheme.onPrimaryContainer,
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    textStyle: TextStyle(fontSize: 14),
                   ),
                   onPressed: () {
                     if (_searchController.text.trim().isEmpty) return;
@@ -2165,14 +2180,15 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                     children: [
                       Icon(Icons.search),
                       SizedBox(width: 6),
-                      Text('Multi $lang1, $lang2, $lang3'),
+                      Text('Flexible Search'),
                     ],
                   ),
                 ),
               ),
+              // Secondary options
               Tooltip(
                 message:
-                    'Combine match and phrase search for better recall in your custom index',
+                    'Phrase search in $lang1 with tight matching in your custom collection',
                 waitDuration: Duration(seconds: 1),
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
@@ -2180,25 +2196,28 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                         Theme.of(context).colorScheme.primaryContainer,
                     foregroundColor:
                         Theme.of(context).colorScheme.onPrimaryContainer,
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    textStyle: TextStyle(fontSize: 14),
                   ),
                   onPressed: () {
                     if (_searchController.text.trim().isEmpty) return;
-                    setState(() => _progressColor = Colors.purple);
-                    _startSearch3();
+                    setState(() => _progressColor = Colors.blue);
+                    _startSearch();
                   },
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.search),
                       SizedBox(width: 6),
-                      Text('Combined $lang1, $lang2, $lang3'),
+                      Text('Phrase Search'),
                     ],
                   ),
                 ),
               ),
+              // Global EU Search moved to the right
               Tooltip(
                 message:
-                    'Phrase search across all language fields in Global Index (All EU law available)',
+                    'Phrase search across all language fields in Global Collection (All EU law available) - Most comprehensive but slower',
                 waitDuration: Duration(seconds: 1),
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
@@ -2206,6 +2225,11 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                         Theme.of(context).colorScheme.tertiaryContainer,
                     foregroundColor:
                         Theme.of(context).colorScheme.onTertiaryContainer,
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    textStyle: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   onPressed: () {
                     if (_searchController.text.trim().isEmpty) return;
@@ -2215,9 +2239,9 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.search),
+                      Icon(Icons.public),
                       SizedBox(width: 6),
-                      Text('All'),
+                      Text('Global EU Law Search'),
                     ],
                   ),
                 ),
@@ -2234,6 +2258,11 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                             Theme.of(context).colorScheme.primaryContainer,
                         foregroundColor:
                             Theme.of(context).colorScheme.onPrimaryContainer,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        textStyle: TextStyle(fontSize: 14),
                       ),
                       onPressed: () {
                         if (_searchController.text.trim().isEmpty) return;
@@ -2483,7 +2512,9 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
         // Quick settings checkboxes
         isAdmin
             ? Container(
-              color: const Color.fromARGB(200, 210, 238, 241),
+              color: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: 0.1),
               child: ExpansionTile(
                 title:
                     (celexFilter.isNotEmpty || containsFilter.isNotEmpty)
@@ -2889,7 +2920,9 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                         ),
 
                         Container(
-                          color: const Color.fromARGB(200, 210, 238, 241),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.1),
 
                           child: Theme(
                             data: Theme.of(context).copyWith(

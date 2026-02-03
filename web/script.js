@@ -367,7 +367,7 @@ function renderResults(data, query) {
           const conceptId = src.concept_id || src.conceptId;
           const iateUrl = `https://iate.europa.eu/entry/result/${encodeURIComponent(conceptId)}/${encodeURIComponent(langPart)}`;
           const cellText = pretty(src[f]);
-          return `<td>${escapeHtml(cellText)}<br><a href="${iateUrl}" target="_blank" rel="noopener noreferrer" style="font-size:0.95em;color:#0E5895;">🔗 IATE</a></td>`;
+          return `<td>${escapeHtml(cellText)}<br><a href="${iateUrl}" target="_blank" rel="noopener noreferrer" style="font-size:0.95em;color:#277BBB;">🔗 IATE</a></td>`;
         }
       }
 

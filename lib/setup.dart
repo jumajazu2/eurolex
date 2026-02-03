@@ -678,7 +678,7 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
 
             // Maintenance (admin only)
             const Text(
-              'List of Indices for Maintenance',
+              'List of Collections for Maintenance',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
@@ -730,7 +730,7 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                                     Icons.info_outline,
                                     size: 18,
                                   ),
-                                  tooltip: 'Index details',
+                                  tooltip: 'Collection details',
                                   onPressed: () {
                                     final name = indicesFull[index][0];
                                     final shardCount = indicesFull[index][1];
@@ -742,7 +742,7 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                                         String _filter = '';
                                         return AlertDialog(
                                           title: SelectableText(
-                                            'Your Custom Index: $name',
+                                            'Your Custom Collection: $name',
                                           ),
                                           content: FutureBuilder<List<String>>(
                                             future: getDistinctCelexForIndex(
@@ -903,7 +903,7 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                                       size: 18,
                                       color: Colors.redAccent,
                                     ),
-                                    tooltip: 'Delete index',
+                                    tooltip: 'Delete collection',
                                     onPressed: () {
                                       setState(() {
                                         confirmAndDeleteOpenSearchIndex(

@@ -34,13 +34,14 @@ final themeNames = {
 final appThemes = {
   AppTheme.light: ThemeData(
     brightness: Brightness.light,
-    primaryColor: Color(0xFF2b6cb0),
+    primaryColor: Color(0xFF277BBB),
     colorScheme: ColorScheme.light(
-      primary: Color(0xFF2b6cb0),
-      secondary: Color(0xFF68d391),
+      primary: Color(0xFF277BBB),
+      secondary: Color(0xFF0E5895),
+      tertiary: Color(0xFFF28C28),
     ),
-    scaffoldBackgroundColor: Color(0xFFF8FAFC),
-    appBarTheme: AppBarTheme(backgroundColor: Color(0xFF2b6cb0)),
+    scaffoldBackgroundColor: Color(0xFFFFFFFF),
+    appBarTheme: AppBarTheme(backgroundColor: Color(0xFF277BBB)),
   ),
   AppTheme.vivid: ThemeData(
     brightness: Brightness.light,
@@ -77,7 +78,6 @@ final appThemes = {
 final ValueNotifier<AppTheme> appThemeNotifier = ValueNotifier<AppTheme>(
   AppTheme.light,
 );
-
 
 //String osServer = 'localhost:9200'; // add to Settings or Autolookup
 String osServer = 'search.pts-translation.sk';
@@ -520,6 +520,8 @@ class _MainTabbedAppState extends State<MainTabbedApp>
             appBar: AppBar(
               toolbarHeight: 1,
               bottom: TabBar(
+                labelStyle: TextStyle(fontWeight: FontWeight.bold),
+                unselectedLabelStyle: TextStyle(fontWeight: FontWeight.normal),
                 onTap: (index) {
                   // Refresh indices when switching tabs to ensure correct filtering
                   getCustomIndices(
@@ -649,9 +651,9 @@ Future<void> confirmAndDeleteOpenSearchIndex(
     context: context,
     builder:
         (context) => AlertDialog(
-          title: Text('Delete Index'),
+          title: Text('Delete Collection'),
           content: Text(
-            'Do you really want to delete Index "$index"? This is irreversible and the index will be permanently deleted and all data in it lost.',
+            'Do you really want to delete Collection "$index"? This is irreversible and the collection will be permanently deleted and all data in it lost.',
           ),
           actions: [
             TextButton(

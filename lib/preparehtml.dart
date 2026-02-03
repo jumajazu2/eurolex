@@ -468,7 +468,7 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
           (newIndexName == '' ||
                   newIndexName == "eurolex_" ||
                   _indexError2 != null)
-              ? Text('Enter Index Name First!')
+              ? Text('Enter Collection Name First!')
               : ElevatedButton(
                 onPressed: pickAndLoadFile2,
                 child: Text(
@@ -559,7 +559,7 @@ class _manualCelexListState extends State<manualCelexList> {
       return 'Allowed: a-z, 0-9, dot, underscore, hyphen.';
     }
     final full = 'eu_${userPrefix}_$value';
-    if (full.length > 255) return 'Full index name too long (max 255 chars).';
+    if (full.length > 255) return 'Full collection name too long (max 255 chars).';
     return null;
   }
 
@@ -696,7 +696,7 @@ class _manualCelexListState extends State<manualCelexList> {
 
           SizedBox(height: 10),
           (newIndexName == '' || newIndexName == "eurolex_")
-              ? Text('Enter Index Name First!')
+              ? Text('Enter Collection Name First!')
               : ElevatedButton(
                 onPressed:
                     (_indexErrorManual != null)
@@ -706,7 +706,7 @@ class _manualCelexListState extends State<manualCelexList> {
                               newIndexName != "eurolex_") {
                             manualCelexListUpload(manualCelex, newIndexName);
                           } else {
-                            print('Please enter an index name first.');
+                            print('Please enter a collection name first.');
                           }
                         },
                 child: Text('Process Celex Numbers (Upload to $newIndexName)'),

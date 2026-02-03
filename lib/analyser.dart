@@ -16,6 +16,25 @@ Map nGramsResults = {"N/A": "N/A"};
 var nGramResultList = [];
 String httpPassAnalyzer = "";
 
+/// Generates a list of n-grams from a given text.
+///
+/// An n-gram is a sequence of n consecutive words from the input text.
+/// The function splits the input text into words, then iterates over the
+/// list of words to generate sequences of n words. The resulting list of
+/// n-grams is returned.
+///
+/// [text]: The input text from which n-grams are generated.
+/// [n]: The size of the n-grams to generate.
+/// Returns: A list of n-grams extracted from the input string.
+List<String> generateNGrams(String text, int n) {
+  final words = text.split(' ');
+  List<String> ngrams = [];
+  for (int i = 0; i <= words.length - n; i++) {
+    ngrams.add(words.sublist(i, i + n).join(' '));
+  }
+  return ngrams;
+}
+
 Future<List> searchQuery(query, queryString) async {
   queryPattern = query;
   print("In ANALYSER searchQuery, query: $query, queryString: $queryString");
@@ -372,25 +391,6 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
     }
     print("Subsegments: $subsegments");
     return subsegments;
-  }
-
-  /// Generates a list of n-grams from a given text.
-  ///
-  /// An n-gram is a sequence of n consecutive words from the input text.
-  /// The function splits the input text into words, then iterates over the
-  /// list of words to generate sequences of n words. The resulting list of
-  /// n-grams is returned.
-  ///
-  /// [text]: The input text from which n-grams are generated.
-  /// [n]: The size of the n-grams to generate.
-  /// Returns: A list of n-grams extracted from the input string.
-  List<String> generateNGrams(String text, int n) {
-    final words = text.split(' ');
-    List<String> ngrams = [];
-    for (int i = 0; i <= words.length - n; i++) {
-      ngrams.add(words.sublist(i, i + n).join(' '));
-    }
-    return ngrams;
   }
 
   /* Future<String> _readFile() async {

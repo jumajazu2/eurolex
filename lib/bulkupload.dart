@@ -98,12 +98,12 @@ class _DataUploadTabState extends State<DataUploadTab> {
         children: [
           // Tool header and index selection UI
           Text(
-            'Use Alignment in Trados Studio to prepare a bilingual pair of documents and upload them to your index',
+            'Use Alignment in Trados Studio to prepare a bilingual pair of documents and upload them to your collection',
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: 12),
           const Text(
-            'If you have two language versions of a reference document, it is impractical to search each version individually. \nThanks to this feature combined with Trados Studio Alignment you can have the documents uploaded to your index very quickly and search in them efficiently.',
+            'If you have two language versions of a reference document, it is impractical to search each version individually. \nThanks to this feature combined with Trados Studio Alignment you can have the documents uploaded to your collection very quickly and search in them efficiently.',
             style: TextStyle(fontSize: 16),
           ),
           const SizedBox(height: 20),
@@ -113,7 +113,7 @@ class _DataUploadTabState extends State<DataUploadTab> {
               const SizedBox(width: 16),
               const Expanded(
                 child: Text(
-                  'First Choose Index In Dropdown List or Enter Index Name below.\nThen select TMX files created via Alignment in Trados Studio.\n\nTo make an alignment in Trados Studio:\n1. Use Align Documents to choose two documents to align.\n2. Check the alignment and correct mismatched rows. (For details about Alignment, see Trados Studio Documentation)\n3. Export the alignment as TMX Translation Memory.\n4. Use the export TMX file here to upload the aligned documents to your index for searching.',
+                  'First Choose Collection In Dropdown List or Enter Collection Name below.\nThen select TMX files created via Alignment in Trados Studio.\n\nTo make an alignment in Trados Studio:\n1. Use Align Documents to choose two documents to align.\n2. Check the alignment and correct mismatched rows. (For details about Alignment, see Trados Studio Documentation)\n3. Export the alignment as TMX Translation Memory.\n4. Use the export TMX file here to upload the aligned documents to your collection for searching.',
                   style: TextStyle(fontSize: 16),
                 ),
               ),
@@ -129,13 +129,13 @@ class _DataUploadTabState extends State<DataUploadTab> {
                   child: CircularProgressIndicator(),
                 ),
                 SizedBox(width: 12),
-                Text('Loading indices...'),
+                Text('Loading collections...'),
               ],
             )
           else ...[
             InputDecorator(
               decoration: InputDecoration(
-                labelText: 'Search Index',
+                labelText: 'Search Collection',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -159,7 +159,7 @@ class _DataUploadTabState extends State<DataUploadTab> {
                     });
                     print('Selected index for bulk upload: $newValue');
                   },
-                  hint: const Text('Choose existing index'),
+                  hint: const Text('Choose existing collection'),
                 ),
               ),
             ),
@@ -169,7 +169,7 @@ class _DataUploadTabState extends State<DataUploadTab> {
             controller: _manualIndexController,
             decoration: InputDecoration(
               labelText:
-                  'Index Name (Press Enter to Confirm - Allowed: a-z, 0-9, dot, underscore, hyphen. Cannot start with _ , - , +)',
+                  'Collection Name (Press Enter to Confirm - Allowed: a-z, 0-9, dot, underscore, hyphen. Cannot start with _ , - , +)',
               border: const OutlineInputBorder(),
               errorText: _indexError,
             ),
@@ -187,7 +187,7 @@ class _DataUploadTabState extends State<DataUploadTab> {
           ),
           // ...existing code...
           (_selectedIndex.isEmpty || _selectedIndex == 'eurolex_')
-              ? const Text('Enter Index Name First!')
+              ? const Text('Enter Collection Name First!')
               : Row(
                 children: [
                   ElevatedButton(
@@ -273,7 +273,7 @@ class _DataUploadTabState extends State<DataUploadTab> {
   }
 
   String? _validateIndexName(String base, String userPrefix) {
-    if (base.isEmpty) return 'Index name is required.';
+    if (base.isEmpty) return 'Collection name is required.';
     final value = base.trim();
     if (value == '.' || value == '..') return 'Cannot be \'.\' or \'..\'.';
     if (RegExp(r'[A-Z]').hasMatch(value)) return 'Use lowercase letters only.';
@@ -284,7 +284,8 @@ class _DataUploadTabState extends State<DataUploadTab> {
       return 'Allowed: a-z, 0-9, dot, underscore, hyphen.';
     }
     final full = 'eu_${userPrefix}_$value';
-    if (full.length > 255) return 'Full index name too long (max 255 chars).';
+    if (full.length > 255)
+      return 'Full collection name too long (max 255 chars).';
     return null;
   }
 
@@ -451,7 +452,7 @@ class _DataUploadTabState extends State<DataUploadTab> {
                   const SizedBox(height: 8),
                   Text('Languages: ${(stats['languages'] as List).join(", ")}'),
                   const SizedBox(height: 8),
-                  Text('Index: $_selectedIndex'),
+                  Text('Collection: $_selectedIndex'),
                   if (debugMode) ...[
                     const SizedBox(height: 8),
                     const Text('Debug file saved to debug_output/'),
