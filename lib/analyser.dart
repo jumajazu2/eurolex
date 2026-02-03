@@ -16,25 +16,6 @@ Map nGramsResults = {"N/A": "N/A"};
 var nGramResultList = [];
 String httpPassAnalyzer = "";
 
-/// Generates a list of n-grams from a given text.
-///
-/// An n-gram is a sequence of n consecutive words from the input text.
-/// The function splits the input text into words, then iterates over the
-/// list of words to generate sequences of n words. The resulting list of
-/// n-grams is returned.
-///
-/// [text]: The input text from which n-grams are generated.
-/// [n]: The size of the n-grams to generate.
-/// Returns: A list of n-grams extracted from the input string.
-List<String> generateNGrams(String text, int n) {
-  final words = text.split(' ');
-  List<String> ngrams = [];
-  for (int i = 0; i <= words.length - n; i++) {
-    ngrams.add(words.sublist(i, i + n).join(' '));
-  }
-  return ngrams;
-}
-
 Future<List> searchQuery(query, queryString) async {
   queryPattern = query;
   print("In ANALYSER searchQuery, query: $query, queryString: $queryString");
@@ -176,6 +157,85 @@ Future<Map<String, String>> searchNGrams(
   }
 
   return results;
+}
+
+/// Search IATE terminology with custom source and target languages.
+/// Returns a map containing results that can be sent as HTTP payload to Trados.
+/// Does not affect global state variables.
+Future<Map<String, dynamic>> searchIateCustom(
+  String searchTerm,
+  String sourceLang,
+  String targetLang,
+) async {
+  if (searchTerm.trim().isEmpty) {
+    return {'success': false, 'error': 'Empty search term', 'results': []};
+  }
+
+  List<String> workingLangs = [sourceLang, targetLang];
+
+  // SECURE: Use /search endpoint with Pattern 7 for IATE
+  final url = Uri.parse('$server/search');
+  final body = jsonEncode({
+    "index": "iate_7239_iate_terminology",
+    "term": searchTerm.trim(),
+    "langs": workingLangs,
+    "pattern": 7,
+    "size": 15,
+  });
+
+  try {
+    final response = await http.post(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        'x-api-key': '${jsonSettings['access_key']}',
+        'x-email': '${jsonSettings['user_email']}',
+      },
+      body: body,
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final hits = data['hits']?['hits'] as List?;
+      final fields =
+          workingLangs.map((l) => l.toLowerCase() + '_text').toList();
+
+      final results =
+          (hits ?? [])
+              .map((e) => Map<String, dynamic>.from(e['_source'] ?? {}))
+              .map(
+                (doc) => Map.fromEntries(
+                  doc.entries.where(
+                    (entry) =>
+                        fields.contains(entry.key) ||
+                        [
+                          'concept_id',
+                          'subject_field',
+                          'term_types',
+                          'reliability_codes',
+                        ].contains(entry.key),
+                  ),
+                ),
+              )
+              .toList();
+
+      return {
+        'success': true,
+        'results': results,
+        'searchTerm': searchTerm,
+        'sourceLang': sourceLang,
+        'targetLang': targetLang,
+      };
+    } else {
+      return {
+        'success': false,
+        'error': 'HTTP ${response.statusCode}',
+        'results': [],
+      };
+    }
+  } catch (e) {
+    return {'success': false, 'error': e.toString(), 'results': []};
+  }
 }
 
 class AnalyserWidget extends StatefulWidget {
@@ -391,6 +451,25 @@ class _FileDisplayWidgetState extends State<AnalyserWidget>
     }
     print("Subsegments: $subsegments");
     return subsegments;
+  }
+
+  /// Generates a list of n-grams from a given text.
+  ///
+  /// An n-gram is a sequence of n consecutive words from the input text.
+  /// The function splits the input text into words, then iterates over the
+  /// list of words to generate sequences of n words. The resulting list of
+  /// n-grams is returned.
+  ///
+  /// [text]: The input text from which n-grams are generated.
+  /// [n]: The size of the n-grams to generate.
+  /// Returns: A list of n-grams extracted from the input string.
+  List<String> generateNGrams(String text, int n) {
+    final words = text.split(' ');
+    List<String> ngrams = [];
+    for (int i = 0; i <= words.length - n; i++) {
+      ngrams.add(words.sublist(i, i + n).join(' '));
+    }
+    return ngrams;
   }
 
   /* Future<String> _readFile() async {

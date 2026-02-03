@@ -26,6 +26,7 @@ var decodedResults = [];
 var lang2Results = [];
 var lang1Results = ["N/A"];
 var lang3Results = [];
+Map<String, dynamic>? iateResults;
 var iateSource;
 var iateTarget;
 List<String> metaCelex = [];
@@ -1086,11 +1087,10 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
           'celex': metaCelex[i],
           'lang1': lang1 ?? 'N/A',
           'lang2': lang2 ?? 'N/A',
-          'iatesource': iateSource ?? 'N/A',
-          'iatetarget': iateTarget ?? 'N/A',
         };
       });
       print("HTTP response Returning results to Trados: $results");
+      print("IATE results to return: ${iateResults?['results']}");
 
       // Check for serialization issues
       try {
@@ -1100,6 +1100,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
           'lang2': lang2,
           'count': results.length,
           'results': results,
+          'iateResults': iateResults?['results'] ?? [],
         });
         print("Test JSON serialization succeeded: $testJson");
       } catch (e) {
@@ -1107,13 +1108,16 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
       }
 
       // return {'results': results};
-      return {
+      final response = {
         'status': 'success',
         'lang1': lang1,
         'lang2': lang2,
         'count': results.length,
         'results': results,
+        'iateResults': iateResults?['results'] ?? [],
       };
+      print("Final response being returned: ${jsonEncode(response)}");
+      return response;
     };
   }
 
@@ -1144,6 +1148,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
   */
   }
 
+  //TODO this is entry point for http payload from Studio
   Future _httpUpdate(payload) async {
     if (jsonSettings["auto_lookup"] == false) return;
 
@@ -1159,6 +1164,10 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     String _httpTarget = payload['target'] ?? '';
     String _httpSegmentID = payload['segmentId'] ?? '';
     String _httpTimestamp = payload['timestamp'] ?? '';
+    String _httpSearchScope = payload['searchScope'] ?? 'all';
+    bool _httpIateEnabled = payload['iateEnabled'] ?? true;
+    bool _httpEurlexEnabled = payload['eurlexEnabled'] ?? true;
+    bool _httpIsManualSearch = payload['isManualSearch'] ?? false;
 
     _httpSource = sanitizeInput(_httpSource);
 
@@ -1176,7 +1185,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     // NEW METHOD: Safe parameter-based API via server.js
     final displayedLangs = _getDisplayedLangs();
     Map<String, dynamic> queryFormed = {
-      "index": "$activeIndex",
+      "index": _httpSearchScope == 'all' ? "*" : activeIndex,
       "term": _httpSource,
       "langs": displayedLangs,
       "pattern":
@@ -1188,8 +1197,22 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     await processQueryNew(
       queryFormed,
       _httpSource,
-      activeIndex,
-    ); // Now using safe parameterized API via server.js
+      queryFormed["index"] as String,
+    );
+
+    if (_httpIateEnabled == true) {
+      iateResults = await searchIateCustom(
+        _httpSource,
+        lang1 ?? 'en',
+        lang2 ?? 'sk',
+      );
+      print("IATE search completed, results: $iateResults");
+    } else {
+      iateResults = null;
+      print("IATE search disabled");
+    }
+
+    // Now using safe parameterized API via server.js
     if (!mounted) return;
     setState(() {
       queryText = "Auto-analyse: $_httpSource";
