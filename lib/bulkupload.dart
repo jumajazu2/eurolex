@@ -86,6 +86,11 @@ class _DataUploadTabState extends State<DataUploadTab> {
 
   @override
   Widget build(BuildContext context) {
+    // Step completion states
+    final bool step1Complete =
+        (_selectedIndex.isNotEmpty && _selectedIndex != 'eurolex_') ||
+        (_manualIndexController.text.isNotEmpty && _indexError == null);
+
     final idxItems =
         widget.indices
             .map((e) => DropdownMenuItem<String>(value: e, child: Text(e)))
@@ -113,128 +118,235 @@ class _DataUploadTabState extends State<DataUploadTab> {
               const SizedBox(width: 16),
               const Expanded(
                 child: Text(
-                  'First Choose Collection In Dropdown List or Enter Collection Name below.\nThen select TMX files created via Alignment in Trados Studio.\n\nTo make an alignment in Trados Studio:\n1. Use Align Documents to choose two documents to align.\n2. Check the alignment and correct mismatched rows. (For details about Alignment, see Trados Studio Documentation)\n3. Export the alignment as TMX Translation Memory.\n4. Use the export TMX file here to upload the aligned documents to your collection for searching.',
+                  'To make an alignment in Trados Studio:\n1. Use Align Documents to choose two documents to align.\n2. Check the alignment and correct mismatched rows. (For details about Alignment, see Trados Studio Documentation)\n3. Export the alignment as TMX Translation Memory.\n4. Use the export TMX file here to upload the aligned documents to your collection for searching.',
                   style: TextStyle(fontSize: 16),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          if (_loadingIndices)
-            Row(
-              children: const [
-                SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(),
-                ),
-                SizedBox(width: 12),
-                Text('Loading collections...'),
-              ],
-            )
-          else ...[
-            InputDecorator(
-              decoration: InputDecoration(
-                labelText: 'Search Collection',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  isExpanded: true,
-                  value:
-                      widget.indices.contains(_selectedIndex)
-                          ? _selectedIndex
-                          : null,
-                  items: idxItems,
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      newIndexName = newValue ?? '';
-                      _selectedIndex = newValue ?? '';
-                    });
-                    print('Selected index for bulk upload: $newValue');
-                  },
-                  hint: const Text('Choose existing collection'),
-                ),
-              ),
-            ),
-          ],
-          const SizedBox(height: 10),
-          TextField(
-            controller: _manualIndexController,
-            decoration: InputDecoration(
-              labelText:
-                  'Collection Name (Press Enter to Confirm - Allowed: a-z, 0-9, dot, underscore, hyphen. Cannot start with _ , - , +)',
-              border: const OutlineInputBorder(),
-              errorText: _indexError,
-            ),
-            inputFormatters: <TextInputFormatter>[
-              FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9._-]')),
-              TextInputFormatter.withFunction((oldValue, newValue) {
-                return newValue.copyWith(text: newValue.text.toLowerCase());
-              }),
-            ],
-            onChanged: (value) {
-              setState(() {
-                _indexError = null;
-              });
-            },
-          ),
-          // ...existing code...
-          (_selectedIndex.isEmpty || _selectedIndex == 'eurolex_')
-              ? const Text('Enter Collection Name First!')
-              : Row(
-                children: [
-                  ElevatedButton(
-                    onPressed: processBulk,
-                    child: Text('Pick TMX file and upload to $_selectedIndex'),
-                  ),
-                  const SizedBox(width: 12),
-                  Tooltip(
-                    message:
-                        'Simulate (all processing except uploading data to the OpenSearch server)',
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Checkbox(
-                          value: simulateUpload,
-                          onChanged: (v) {
-                            setState(() {
-                              simulateUpload = v ?? false;
-                            });
-                          },
-                        ),
-                        const Text('Simulate'),
-                      ],
-                    ),
-                  ),
+          const SizedBox(height: 30),
 
-                  const SizedBox(width: 12),
-                  Tooltip(
-                    message:
-                        'Debug Mode: for each uploaded files, a JSON file with multilingual pairs will be created in the local "debug_output" folder, to troubleshoot mismatched paragraphs and other issues.',
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Checkbox(
-                          value: debugMode,
-                          onChanged: (v) {
-                            setState(() {
-                              debugMode = v ?? false;
-                            });
-                          },
-                        ),
-                        const Text('Debug Mode'),
-                      ],
-                    ),
-                  ),
-                ],
+          // Step 1: Choose Collection
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '1.',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
+              SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Choose Collection',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    if (_loadingIndices)
+                      Row(
+                        children: const [
+                          SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(),
+                          ),
+                          SizedBox(width: 12),
+                          Text('Loading collections...'),
+                        ],
+                      )
+                    else
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 5,
+                            child: InputDecorator(
+                              decoration: InputDecoration(
+                                labelText: 'Search Collection',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  isExpanded: true,
+                                  value:
+                                      widget.indices.contains(_selectedIndex)
+                                          ? _selectedIndex
+                                          : null,
+                                  items: idxItems,
+                                  onChanged: (String? newValue) {
+                                    setState(() {
+                                      newIndexName = newValue ?? '';
+                                      _selectedIndex = newValue ?? '';
+                                    });
+                                    print(
+                                      'Selected index for bulk upload: $newValue',
+                                    );
+                                  },
+                                  hint: const Text(
+                                    'Choose existing collection',
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              'OR',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 5,
+                            child: TextField(
+                              controller: _manualIndexController,
+                              decoration: InputDecoration(
+                                labelText: 'Enter New Collection Name',
+                                border: const OutlineInputBorder(),
+                                errorText: _indexError,
+                              ),
+                              inputFormatters: <TextInputFormatter>[
+                                FilteringTextInputFormatter.allow(
+                                  RegExp(r'[A-Za-z0-9._-]'),
+                                ),
+                                TextInputFormatter.withFunction((
+                                  oldValue,
+                                  newValue,
+                                ) {
+                                  return newValue.copyWith(
+                                    text: newValue.text.toLowerCase(),
+                                  );
+                                }),
+                              ],
+                              onChanged: (value) {
+                                final v = value.toLowerCase();
+                                setState(() {
+                                  _indexError = _validateIndexName(
+                                    v,
+                                    userPasskey,
+                                  );
+                                  if (_indexError == null && v.isNotEmpty) {
+                                    newIndexName = 'eu_${userPasskey}_$v';
+                                    _selectedIndex = 'eu_${userPasskey}_$v';
+                                  }
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          // Step 2: Select TMX file
+          Opacity(
+            opacity: step1Complete ? 1.0 : 0.4,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '2.',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Select TMX file created via Alignment in Trados Studio',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 10),
+                      !step1Complete
+                          ? Text('Complete Step 1 First!')
+                          : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ElevatedButton(
+                                onPressed: step1Complete ? processBulk : null,
+                                child: Text(
+                                  'Pick TMX file and upload to $_selectedIndex',
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Tooltip(
+                                    message:
+                                        'Simulate (all processing except uploading data to the OpenSearch server)',
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Checkbox(
+                                          value: simulateUpload,
+                                          onChanged:
+                                              step1Complete
+                                                  ? (v) {
+                                                    setState(() {
+                                                      simulateUpload =
+                                                          v ?? false;
+                                                    });
+                                                  }
+                                                  : null,
+                                        ),
+                                        const Text('Simulate'),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Tooltip(
+                                    message:
+                                        'Debug Mode: for each uploaded files, a JSON file with multilingual pairs will be created in the local "debug_output" folder, to troubleshoot mismatched paragraphs and other issues.',
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Checkbox(
+                                          value: debugMode,
+                                          onChanged:
+                                              step1Complete
+                                                  ? (v) {
+                                                    setState(() {
+                                                      debugMode = v ?? false;
+                                                    });
+                                                  }
+                                                  : null,
+                                        ),
+                                        const Text('Debug Mode'),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
 
           const SizedBox(height: 20),
 

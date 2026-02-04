@@ -40,7 +40,7 @@ final appThemes = {
       secondary: Color(0xFF0E5895),
       tertiary: Color(0xFFF28C28),
     ),
-    scaffoldBackgroundColor: Color(0xFFFFFFFF),
+    scaffoldBackgroundColor: Color(0xFFF5F7FA),
     appBarTheme: AppBarTheme(backgroundColor: Color(0xFF277BBB)),
   ),
   AppTheme.vivid: ThemeData(
@@ -50,7 +50,7 @@ final appThemes = {
       primary: Color(0xFFFF6F61),
       secondary: Color(0xFFFFB347),
     ),
-    scaffoldBackgroundColor: Color(0xFFFFF4E6),
+    scaffoldBackgroundColor: Color(0xFFF5F7FA),
     appBarTheme: AppBarTheme(backgroundColor: Color(0xFFFF6F61)),
   ),
   AppTheme.blue: ThemeData(
@@ -60,7 +60,7 @@ final appThemes = {
       primary: Color(0xFF1976D2),
       secondary: Color(0xFF64B5F6),
     ),
-    scaffoldBackgroundColor: Color(0xFFE3F2FD),
+    scaffoldBackgroundColor: Color(0xFFF5F7FA),
     appBarTheme: AppBarTheme(backgroundColor: Color(0xFF1976D2)),
   ),
   AppTheme.dark: ThemeData(
@@ -144,6 +144,7 @@ void main() {
     runApp(
       MaterialApp(
         navigatorKey: navigatorKey,
+        theme: appThemes[AppTheme.light],
         builder: (context, child) {
           return ValueListenableBuilder<double>(
             valueListenable: fontScaleNotifier,
@@ -520,6 +521,9 @@ class _MainTabbedAppState extends State<MainTabbedApp>
             appBar: AppBar(
               toolbarHeight: 1,
               bottom: TabBar(
+                indicatorColor: Color(0xFF277BBB),
+                labelColor: Color(0xFFF5F7FA),
+                unselectedLabelColor: Color(0xFFF5F7FA).withOpacity(0.7),
                 labelStyle: TextStyle(fontWeight: FontWeight.bold),
                 unselectedLabelStyle: TextStyle(fontWeight: FontWeight.normal),
                 onTap: (index) {
@@ -570,11 +574,11 @@ class _MainTabbedAppState extends State<MainTabbedApp>
   }
 
   List<Widget> _buildTabs(bool isAdmin) => [
-    const Tab(text: 'Search'),
-    const Tab(text: 'IATE Terminology'),
-    const Tab(text: 'Setup'),
-    if (isAdmin) const Tab(text: 'Data Process'),
-    const Tab(text: 'Upload References'),
+    Tab(child: Text('Search', style: TextStyle(fontSize: 16.8))),
+    Tab(child: Text('IATE Terminology', style: TextStyle(fontSize: 16.8))),
+    Tab(child: Text('Setup', style: TextStyle(fontSize: 16.8))),
+    if (isAdmin) Tab(child: Text('Data Process', style: TextStyle(fontSize: 16.8))),
+    Tab(child: Text('Upload References', style: TextStyle(fontSize: 16.8))),
   ];
 
   List<Widget> _buildTabViews(bool isAdmin) => [

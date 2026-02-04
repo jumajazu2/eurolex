@@ -93,6 +93,8 @@ flutter:
   assets:
     - assets/splash1.png
     - lib/data/align.png
+    - lib/data/Celexes2.png
+    - lib/data/List2.png
   #   - images/a_dot_burr.png
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg

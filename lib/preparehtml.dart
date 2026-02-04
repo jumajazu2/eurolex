@@ -161,7 +161,7 @@ class _FilePickerButtonState extends State<FilePickerButton> {
           const SizedBox(height: 20),
           // Box to display file content
           fileContent.isEmpty
-              ? const Text('No file loaded.')
+              ? const Text('No document uploaded to Collection yet.')
               : Container(
                 // ...existing code...
                 constraints: const BoxConstraints(
@@ -209,6 +209,8 @@ class FilePickerButton2 extends StatefulWidget {
 
 class _FilePickerButtonState2 extends State<FilePickerButton2> {
   double _progress = 0.01;
+  bool simulateUpload = false;
+  bool debugMode = false;
 
   // Unify progress logic with picker 1: phases -> file read, celex extraction, uploads.
   // We treat total phases as: 1 (file loaded) + 1 (celex list extracted) + N uploads.
@@ -358,6 +360,8 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
     if (failedCelex.isNotEmpty) {
       await retryFailedCelex(failedCelex, newIndexName);
     }
+
+    if (!mounted) return;
     setState(() {
       if (failedCelex.isNotEmpty) {
         extractedCelex.add(
@@ -381,100 +385,296 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
   // build: add progress bar similar to first picker
   @override
   Widget build(BuildContext context) {
+    // Step completion states
+    final bool step1Complete =
+        newIndexName.isNotEmpty &&
+        newIndexName != "eurolex_" &&
+        _indexError2 == null;
+    final bool step2Complete = fileContent2.isNotEmpty;
+
     return Padding(
       // ...existing code...
       padding: const EdgeInsets.all(12.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
-          SizedBox(height: 20),
+          SizedBox(height: 10),
           Text(
-            'Enter EC File with List of Celex References to Upload',
+            'Add a list of EU documents to your Collection',
             style: Theme.of(context).textTheme.headlineMedium,
           ),
-          SizedBox(height: 20),
+          SizedBox(height: 15),
+          Container(
+            color: Color(0xFFF5F7FA),
+            padding: EdgeInsets.all(8),
+            child: Image.asset('lib/data/List2.png', height: 100),
+          ),
+          SizedBox(height: 15),
           Text(
-            'First Choose Index In Dropdown List or Enter Index Name below!',
+            'You can upload a list of EU documents to your new or existing Collection to get the most relevant results.',
+            style: TextStyle(fontSize: 17.5),
           ),
+          SizedBox(height: 30),
 
-          // Button to open file picker
-          InputDecorator(
-            decoration: InputDecoration(
-              labelText: 'Search Index', // Label embedded in the frame
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+          // Step 1: Choose Collection
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '1.',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                isExpanded: true,
-                value:
-                    indices.contains(newIndexName)
-                        ? newIndexName
-                        : null, // Default selected value
-                items:
-                    indices.map((String value) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(value),
-                      );
-                    }).toList(),
-                onTap: () async {
-                  await getCustomIndices(server, isAdmin, userPasskey);
-                  if (!mounted) return;
-                  setState(() {});
-                },
-
-                onChanged: (String? newValue) {
-                  setState(() {
-                    newIndexName = newValue!;
-                  });
-                  // Handle dropdown selection
-                  print('Selected for Celex Refs upload: $newValue');
-                },
-              ),
-            ),
-          ),
-          SizedBox(height: 10),
-          TextField(
-            decoration: InputDecoration(
-              labelText:
-                  'Index Name (Press Enter to Confirm - Allowed: a-z, 0-9, dot, underscore, hyphen. Cannot start with _ , - , +)',
-              border: OutlineInputBorder(),
-              errorText: _indexError2,
-            ),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp('[a-z0-9._-]')),
-            ],
-            onChanged: (value) {
-              final v = value.toLowerCase();
-              setState(() {
-                _indexBase2 = v;
-                _indexError2 = _validateIndexName(v, userPasskey);
-              });
-            },
-            onSubmitted: (value) {
-              final v = value.toLowerCase();
-              final err = _validateIndexName(v, userPasskey);
-              setState(() {
-                _indexError2 = err;
-                if (err == null) {
-                  newIndexName = 'eu_${userPasskey}_$v';
-                }
-              });
-            },
-          ),
-          (newIndexName == '' ||
-                  newIndexName == "eurolex_" ||
-                  _indexError2 != null)
-              ? Text('Enter Collection Name First!')
-              : ElevatedButton(
-                onPressed: pickAndLoadFile2,
-                child: Text(
-                  'Pick File with References (Upload to $newIndexName)',
+              SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Choose Collection',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 5,
+                          child: InputDecorator(
+                            decoration: InputDecoration(
+                              labelText: 'Search Collection',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                isExpanded: true,
+                                hint: const Text('Choose existing collection'),
+                                value:
+                                    indices.contains(newIndexName)
+                                        ? newIndexName
+                                        : null,
+                                items:
+                                    indices.map((String value) {
+                                      return DropdownMenuItem<String>(
+                                        value: value,
+                                        child: Text(value),
+                                      );
+                                    }).toList(),
+                                onTap: () async {
+                                  await getCustomIndices(
+                                    server,
+                                    isAdmin,
+                                    userPasskey,
+                                  );
+                                  if (!mounted) return;
+                                  setState(() {});
+                                },
+                                onChanged: (String? newValue) {
+                                  setState(() {
+                                    newIndexName = newValue!;
+                                  });
+                                  print(
+                                    'Selected for Celex Refs upload: $newValue',
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            'OR',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 5,
+                          child: TextField(
+                            decoration: InputDecoration(
+                              labelText: 'Enter New Collection Name',
+                              border: OutlineInputBorder(),
+                              errorText: _indexError2,
+                            ),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                RegExp('[a-z0-9._-]'),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              final v = value.toLowerCase();
+                              setState(() {
+                                _indexBase2 = v;
+                                _indexError2 = _validateIndexName(
+                                  v,
+                                  userPasskey,
+                                );
+                              });
+                            },
+                            onSubmitted: (value) {
+                              final v = value.toLowerCase();
+                              final err = _validateIndexName(v, userPasskey);
+                              setState(() {
+                                _indexError2 = err;
+                                if (err == null) {
+                                  newIndexName = 'eu_${userPasskey}_$v';
+                                }
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
+            ],
+          ),
+
+          SizedBox(height: 20),
+
+          // Step 2: Pick file
+          Opacity(
+            opacity: step1Complete ? 1.0 : 0.4,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '2.',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Select a list of CELEX document references',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 10),
+                      (newIndexName == '' ||
+                              newIndexName == "eurolex_" ||
+                              _indexError2 != null)
+                          ? Text('Complete Step 1 First!')
+                          : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ElevatedButton(
+                                onPressed:
+                                    step1Complete ? pickAndLoadFile2 : null,
+                                child: Text(
+                                  'Click to Pick File with List of References',
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Tooltip(
+                                    message:
+                                        'Simulate (all processing except uploading data to the OpenSearch server)',
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Checkbox(
+                                          value: simulateUpload,
+                                          onChanged:
+                                              step1Complete
+                                                  ? (v) {
+                                                    setState(() {
+                                                      simulateUpload =
+                                                          v ?? false;
+                                                    });
+                                                  }
+                                                  : null,
+                                        ),
+                                        const Text('Simulate'),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Tooltip(
+                                    message:
+                                        'Debug Mode: save detailed logs to debug_output folder',
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Checkbox(
+                                          value: debugMode,
+                                          onChanged:
+                                              step1Complete
+                                                  ? (v) {
+                                                    setState(() {
+                                                      debugMode = v ?? false;
+                                                    });
+                                                  }
+                                                  : null,
+                                        ),
+                                        const Text('Debug Mode'),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          SizedBox(height: 20),
+
+          // Step 3: Upload
+          Opacity(
+            opacity: step2Complete ? 1.0 : 0.4,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '3.',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Upload the documents to the Collection',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 10),
+                      Text(
+                        step2Complete
+                            ? 'File loaded. Processing will start automatically.'
+                            : 'Select a file first.',
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
           SizedBox(height: 20),
 
           // Progress bar (added)
@@ -491,7 +691,7 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
           const SizedBox(height: 20),
 
           fileContent2.isEmpty
-              ? const Text('No file loaded.')
+              ? const Text('No document uploaded to Collection yet.')
               : Container(
                 width:
                     double.infinity, // Make container take full available width
@@ -542,6 +742,8 @@ class manualCelexList extends StatefulWidget {
 
 class _manualCelexListState extends State<manualCelexList> {
   double _progress = 0.01; // 0.0 - 1.0
+  bool simulateUpload = false;
+  bool debugMode = false;
 
   // Index name input state and validation
   String _indexBaseManual = '';
@@ -559,7 +761,8 @@ class _manualCelexListState extends State<manualCelexList> {
       return 'Allowed: a-z, 0-9, dot, underscore, hyphen.';
     }
     final full = 'eu_${userPrefix}_$value';
-    if (full.length > 255) return 'Full collection name too long (max 255 chars).';
+    if (full.length > 255)
+      return 'Full collection name too long (max 255 chars).';
     return null;
   }
 
@@ -598,119 +801,315 @@ class _manualCelexListState extends State<manualCelexList> {
 
   @override
   Widget build(BuildContext context) {
+    // Step completion states
+    final bool step1Complete =
+        newIndexName.isNotEmpty &&
+        newIndexName != "eurolex_" &&
+        _indexErrorManual == null;
+    final bool step2Complete =
+        manualCelex.isNotEmpty && manualCelex.any((c) => c.isNotEmpty);
+
     return Padding(
       padding: const EdgeInsets.all(12.0),
       child: Column(
         children: [
           SizedBox(height: 10),
           Text(
-            'Enter Comma-Separated Celex References to Upload',
-
+            'Add one or more EU documents to your Collection',
             style: Theme.of(context).textTheme.headlineMedium,
           ),
-          SizedBox(height: 20), // Space between the button and content box
+          SizedBox(height: 15),
+          Container(
+            color: Color(0xFFF5F7FA),
+            padding: EdgeInsets.all(8),
+            child: Image.asset('lib/data/Celexes2.png', height: 100),
+          ),
+          SizedBox(height: 15),
           Text(
-            'First Choose Index In Dropdown List or Enter Index Name below!',
+            'You can create or update your own Collection of EU documents and search in them to get the most relevant results.',
+            style: TextStyle(fontSize: 17.5),
           ),
+          SizedBox(height: 30),
 
-          InputDecorator(
-            decoration: InputDecoration(
-              labelText: 'Search Index', // Label embedded in the frame
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+          // Step 1: Choose Collection
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '1.',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                isExpanded: true,
-                value:
-                    indices.contains(newIndexName)
-                        ? newIndexName
-                        : indices.first, // Default selected value
-                items:
-                    indices.map((String value) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(value),
-                      );
-                    }).toList(),
-
-                onTap: () async {
-                  await getCustomIndices(server, isAdmin, userPasskey);
-                  if (!mounted) return;
-                  setState(() {});
-                },
-                onChanged: (String? newValue) {
-                  setState(() {
-                    newIndexName = newValue!;
-                  });
-                  // Handle dropdown selection
-                  print('Selected for manual Celex Refs upload: $newValue');
-                },
+              SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Choose Collection',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 5,
+                          child: InputDecorator(
+                            decoration: InputDecoration(
+                              labelText: 'Search Collection',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                isExpanded: true,
+                                hint: const Text('Choose existing collection'),
+                                value:
+                                    indices.contains(newIndexName)
+                                        ? newIndexName
+                                        : null,
+                                items:
+                                    indices.map((String value) {
+                                      return DropdownMenuItem<String>(
+                                        value: value,
+                                        child: Text(value),
+                                      );
+                                    }).toList(),
+                                onTap: () async {
+                                  await getCustomIndices(
+                                    server,
+                                    isAdmin,
+                                    userPasskey,
+                                  );
+                                  if (!mounted) return;
+                                  setState(() {});
+                                },
+                                onChanged: (String? newValue) {
+                                  setState(() {
+                                    newIndexName = newValue!;
+                                  });
+                                  print(
+                                    'Selected for manual Celex Refs upload: $newValue',
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            'OR',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 5,
+                          child: TextField(
+                            decoration: InputDecoration(
+                              labelText: 'Enter New Collection Name',
+                              border: OutlineInputBorder(),
+                              errorText: _indexErrorManual,
+                            ),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                RegExp('[a-z0-9._-]'),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              final v = value.toLowerCase();
+                              setState(() {
+                                _indexBaseManual = v;
+                                _indexErrorManual = _validateIndexName(
+                                  v,
+                                  userPasskey,
+                                );
+                              });
+                            },
+                            onSubmitted: (value) {
+                              final v = value.toLowerCase();
+                              final err = _validateIndexName(v, userPasskey);
+                              setState(() {
+                                _indexErrorManual = err;
+                                if (err == null) {
+                                  newIndexName = 'eu_${userPasskey}_$v';
+                                }
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ),
-          SizedBox(height: 10),
-          TextField(
-            decoration: InputDecoration(
-              labelText:
-                  'Index Name (Press Enter to Confirm - Allowed: a-z, 0-9, dot, underscore, hyphen. Cannot start with _ , - , +)',
-              border: OutlineInputBorder(),
-              errorText: _indexErrorManual,
-            ),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp('[a-z0-9._-]')),
             ],
-            onChanged: (value) {
-              final v = value.toLowerCase();
-              setState(() {
-                _indexBaseManual = v;
-                _indexErrorManual = _validateIndexName(v, userPasskey);
-              });
-            },
-            onSubmitted: (value) {
-              final v = value.toLowerCase();
-              final err = _validateIndexName(v, userPasskey);
-              setState(() {
-                _indexErrorManual = err;
-                if (err == null) {
-                  newIndexName = 'eu_${userPasskey}_$v';
-                }
-              });
-            },
           ),
 
-          SizedBox(height: 10),
-          TextField(
-            decoration: InputDecoration(
-              labelText: 'Enter Celex Numbers (comma separated):',
-              border: OutlineInputBorder(),
-            ),
-            onChanged: (value) {
-              setState(() {
-                manualCelex = value.split(',').map((e) => e.trim()).toList();
-              });
-            },
-          ),
+          SizedBox(height: 20),
 
-          SizedBox(height: 10),
-          (newIndexName == '' || newIndexName == "eurolex_")
-              ? Text('Enter Collection Name First!')
-              : ElevatedButton(
-                onPressed:
-                    (_indexErrorManual != null)
-                        ? null
-                        : () {
-                          if (newIndexName.isNotEmpty &&
-                              newIndexName != "eurolex_") {
-                            manualCelexListUpload(manualCelex, newIndexName);
-                          } else {
-                            print('Please enter a collection name first.');
-                          }
+          // Step 2: Enter Celex numbers
+          Opacity(
+            opacity: step1Complete ? 1.0 : 0.4,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '2.',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Enter Celex numbers of the documents to upload',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 10),
+                      TextField(
+                        enabled: step1Complete,
+                        decoration: InputDecoration(
+                          labelText: 'Enter Celex Numbers (comma separated)',
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (value) {
+                          setState(() {
+                            manualCelex =
+                                value.split(',').map((e) => e.trim()).toList();
+                          });
                         },
-                child: Text('Process Celex Numbers (Upload to $newIndexName)'),
-              ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          SizedBox(height: 20),
+
+          // Step 3: Upload button
+          Opacity(
+            opacity: step2Complete ? 1.0 : 0.4,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '3.',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Upload the document to the Collection',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 10),
+                      (newIndexName == '' || newIndexName == "eurolex_")
+                          ? Text('Enter Collection Name First!')
+                          : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ElevatedButton(
+                                onPressed:
+                                    (_indexErrorManual != null ||
+                                            !step2Complete)
+                                        ? null
+                                        : () {
+                                          if (newIndexName.isNotEmpty &&
+                                              newIndexName != "eurolex_") {
+                                            manualCelexListUpload(
+                                              manualCelex,
+                                              newIndexName,
+                                            );
+                                          } else {
+                                            print(
+                                              'Please enter a collection name first.',
+                                            );
+                                          }
+                                        },
+                                child: Text(
+                                  'Click to Upload Celex Numbers to $newIndexName',
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Tooltip(
+                                    message:
+                                        'Simulate (all processing except uploading data to the OpenSearch server)',
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Checkbox(
+                                          value: simulateUpload,
+                                          onChanged:
+                                              step2Complete
+                                                  ? (v) {
+                                                    setState(() {
+                                                      simulateUpload =
+                                                          v ?? false;
+                                                    });
+                                                  }
+                                                  : null,
+                                        ),
+                                        const Text('Simulate'),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Tooltip(
+                                    message:
+                                        'Debug Mode: save detailed logs to debug_output folder',
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Checkbox(
+                                          value: debugMode,
+                                          onChanged:
+                                              step2Complete
+                                                  ? (v) {
+                                                    setState(() {
+                                                      debugMode = v ?? false;
+                                                    });
+                                                  }
+                                                  : null,
+                                        ),
+                                        const Text('Debug Mode'),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
 
           SizedBox(height: 20),
           if (_progress > 0 && _progress < 1)
@@ -732,7 +1131,7 @@ class _manualCelexListState extends State<manualCelexList> {
             ),
           // existing results container:
           manualCelex.isEmpty
-              ? const Text('No file loaded.')
+              ? const Text('No document uploaded to Collection yet.')
               : Expanded(
                 child: SingleChildScrollView(
                   child: Padding(
@@ -1038,7 +1437,8 @@ Future<List<List<String>>> getListIndicesFull(server, isAdmin) async {
 
 // Helper to build spans
 List<TextSpan> buildCelexSpans(List<String> lines) {
-  return lines.map((line) {
+  final linesCopy = List<String>.from(lines);
+  return linesCopy.map((line) {
     if (line == 'COMPLETED') {
       return const TextSpan(
         text: '\nCOMPLETED',

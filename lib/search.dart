@@ -1004,7 +1004,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                   child: Container(
                     padding: const EdgeInsets.all(2),
                     decoration: const BoxDecoration(
-                      color: Colors.white,
+                      color: Color(0xFFF5F7FA),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -2108,16 +2108,29 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                     child: DropdownButton<String>(
                       isExpanded: true,
                       value:
-                          indices.contains(activeIndex)
+                          (activeIndex == "*" || indices.contains(activeIndex))
                               ? activeIndex
                               : (indices.isNotEmpty ? indices[0] : "*"),
-                      items:
-                          indices.map((String value) {
-                            return DropdownMenuItem<String>(
-                              value: value,
-                              child: Text(value),
-                            );
-                          }).toList(),
+                      items: [
+                        DropdownMenuItem<String>(
+                          value: "*",
+                          child: Row(
+                            children: [
+                              Icon(Icons.public, size: 18),
+                              SizedBox(width: 8),
+                              Text("All Content"),
+                            ],
+                          ),
+                        ),
+                        ...indices.where((idx) => idx != "*").map((
+                          String value,
+                        ) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                      ],
 
                       onTap:
                           () => setState(() {
@@ -2186,10 +2199,8 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                 waitDuration: Duration(seconds: 1),
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        Theme.of(context).colorScheme.primaryContainer,
-                    foregroundColor:
-                        Theme.of(context).colorScheme.onPrimaryContainer,
+                    backgroundColor: Color(0xFF277BBB),
+                    foregroundColor: Color(0xFFF5F7FA),
                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     textStyle: TextStyle(fontSize: 14),
                   ),
@@ -2215,10 +2226,8 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                 waitDuration: Duration(seconds: 1),
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        Theme.of(context).colorScheme.primaryContainer,
-                    foregroundColor:
-                        Theme.of(context).colorScheme.onPrimaryContainer,
+                    backgroundColor: Color(0xFF277BBB),
+                    foregroundColor: Color(0xFFF5F7FA),
                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     textStyle: TextStyle(fontSize: 14),
                   ),
@@ -2244,10 +2253,8 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                 waitDuration: Duration(seconds: 1),
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        Theme.of(context).colorScheme.tertiaryContainer,
-                    foregroundColor:
-                        Theme.of(context).colorScheme.onTertiaryContainer,
+                    backgroundColor: Color(0xFFF28C28),
+                    foregroundColor: Color(0xFF0F2A44),
                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     textStyle: TextStyle(
                       fontSize: 14,
