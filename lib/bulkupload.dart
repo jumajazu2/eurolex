@@ -291,54 +291,55 @@ class _DataUploadTabState extends State<DataUploadTab> {
                                 ),
                               ),
                               const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  Tooltip(
-                                    message:
-                                        'Simulate (all processing except uploading data to the OpenSearch server)',
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Checkbox(
-                                          value: simulateUpload,
-                                          onChanged:
-                                              step1Complete
-                                                  ? (v) {
-                                                    setState(() {
-                                                      simulateUpload =
-                                                          v ?? false;
-                                                    });
-                                                  }
-                                                  : null,
-                                        ),
-                                        const Text('Simulate'),
-                                      ],
+                              if (isAdmin)
+                                Row(
+                                  children: [
+                                    Tooltip(
+                                      message:
+                                          'Simulate (all processing except uploading data to the database)',
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Checkbox(
+                                            value: simulateUpload,
+                                            onChanged:
+                                                step1Complete
+                                                    ? (v) {
+                                                      setState(() {
+                                                        simulateUpload =
+                                                            v ?? false;
+                                                      });
+                                                    }
+                                                    : null,
+                                          ),
+                                          const Text('Simulate'),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Tooltip(
-                                    message:
-                                        'Debug Mode: for each uploaded files, a JSON file with multilingual pairs will be created in the local "debug_output" folder, to troubleshoot mismatched paragraphs and other issues.',
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Checkbox(
-                                          value: debugMode,
-                                          onChanged:
-                                              step1Complete
-                                                  ? (v) {
-                                                    setState(() {
-                                                      debugMode = v ?? false;
-                                                    });
-                                                  }
-                                                  : null,
-                                        ),
-                                        const Text('Debug Mode'),
-                                      ],
+                                    const SizedBox(width: 12),
+                                    Tooltip(
+                                      message:
+                                          'Debug Mode: for each uploaded files, a JSON file with multilingual pairs will be created in the local "debug_output" folder, to troubleshoot mismatched paragraphs and other issues.',
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Checkbox(
+                                            value: debugMode,
+                                            onChanged:
+                                                step1Complete
+                                                    ? (v) {
+                                                      setState(() {
+                                                        debugMode = v ?? false;
+                                                      });
+                                                    }
+                                                    : null,
+                                          ),
+                                          const Text('Debug Mode'),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
+                                  ],
+                                ),
                             ],
                           ),
                     ],
@@ -639,7 +640,7 @@ class _DataUploadTabState extends State<DataUploadTab> {
     String originalFileName,
   ) async {
     try {
-      final debugDir = Directory('debug_output');
+      final debugDir = Directory('logs');
       if (!await debugDir.exists()) {
         await debugDir.create(recursive: true);
       }

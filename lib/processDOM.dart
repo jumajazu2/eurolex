@@ -480,7 +480,6 @@ Future<String> sendToOpenSearch(String url, List<String> bulkData) async {
             "Content-Type": "application/x-ndjson; charset=utf-8",
             'x-api-key': '${jsonSettings['access_key']}',
             'x-email': '${jsonSettings['user_email']}',
-            
           }),
           body: utf8.encode(ndjsonBody),
         )
@@ -664,11 +663,20 @@ List<Map<String, dynamic>> processMultilingualMap(
   // }
 
   if (debug) {
-    final logger = LogManager(
-      fileName: 'logs/${fileSafeStamp}_${indexName}_debug.log',
-    );
-    final pretty = const JsonEncoder.withIndent('  ').convert(jsonData);
-    logger.log(pretty);
+    try {
+      final debugDir = Directory('logs');
+      if (!debugDir.existsSync()) {
+        debugDir.createSync(recursive: true);
+      }
+      final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
+      final debugFileName = 'parsed_${celex}_${timestamp}.json';
+      final debugFile = File('logs/$debugFileName');
+      final pretty = const JsonEncoder.withIndent('  ').convert(jsonData);
+      debugFile.writeAsStringSync(pretty);
+      print('Debug file saved: logs/$debugFileName');
+    } catch (e) {
+      print('ERROR saving debug file: $e');
+    }
   }
 
   final logger = LogManager(fileName: 'logs/${fileSafeStamp}_$indexName.log');

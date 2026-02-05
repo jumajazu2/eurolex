@@ -14,6 +14,9 @@ import 'package:html/parser.dart' as html_parser;
 import 'dart:io';
 import 'package:LegisTracerEU/logger.dart';
 import 'package:LegisTracerEU/testHtmlDumps.dart';
+import 'package:LegisTracerEU/harvest_progress.dart';
+import 'package:LegisTracerEU/harvest_progress_ui.dart';
+import 'package:LegisTracerEU/opensearch.dart';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
 import 'package:LegisTracerEU/main.dart';
@@ -36,7 +39,7 @@ var celexNumbersExtracted = [];
 List<String> extractedCelex = [];
 var manualEextractedCelex = [''];
 var newIndexName = '';
-var manualCelex = [];
+List<String> manualCelex = [];
 //List<String> indices = ['*'];
 var server = 'https://$osServer';
 var manualServer;
@@ -246,12 +249,54 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
     _progress = totalPhases == 0 ? 0.0 : done / totalPhases;
   }
 
+  Future<void> _saveCelexDebugFile(
+    List<String> celexNumbers,
+    String indexName,
+    String source,
+  ) async {
+    try {
+      final debugDir = Directory('logs');
+      if (!await debugDir.exists()) {
+        await debugDir.create(recursive: true);
+      }
+
+      final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
+      final debugFileName = 'celex_${source}_${indexName}_$timestamp.json';
+      final debugFile = File(path.join(debugDir.path, debugFileName));
+
+      final debugData = {
+        'source': source,
+        'index': indexName,
+        'timestamp': timestamp,
+        'celex_count': celexNumbers.length,
+        'celex_numbers': celexNumbers,
+      };
+
+      final jsonOutput = const JsonEncoder.withIndent('  ').convert(debugData);
+      await debugFile.writeAsString(jsonOutput);
+
+      final logger = LogManager();
+      logger.log('Debug file saved: ${debugFile.path}');
+      print('Debug JSON saved to: ${debugFile.path}');
+    } catch (e) {
+      final logger = LogManager();
+      logger.log('ERROR saving debug file: $e');
+    }
+  }
+
   Future<void> retryFailedCelex(List celex, String indexName) async {
     //failedCelex.clear();
     for (final cel in celex) {
       extractedCelex.add('${_completedUploads + 1}/$_totalUploads: $celex:');
 
-      var status = await uploadSparqlForCelex(cel, newIndexName, "html");
+      var status = await uploadSparqlForCelex(
+        cel,
+        newIndexName,
+        "html",
+        0,
+        debugMode,
+        simulateUpload,
+      );
       print(status);
 
       //failedCelex.removeWhere((item) => item.contains(cel));
@@ -343,7 +388,14 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
     for (final celex in celexNumbersExtracted) {
       extractedCelex.add('${_completedUploads + 1}/$_totalUploads: $celex:');
 
-      await uploadSparqlForCelex(celex, newIndexName, "xhtml");
+      await uploadSparqlForCelex(
+        celex,
+        newIndexName,
+        "xhtml",
+        0,
+        debugMode,
+        simulateUpload,
+      );
       if (failedCelex.contains(celex)) {
         extractedCelex.add('XHTML FAILED, WILL RETRY in HTML LATER');
       } else {}
@@ -356,6 +408,15 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
     }
 
     if (!mounted) return;
+
+    // Save debug file if debug mode is enabled
+    if (debugMode) {
+      await _saveCelexDebugFile(
+        List<String>.from(celexNumbersExtracted),
+        newIndexName,
+        'file_upload',
+      );
+    }
 
     if (failedCelex.isNotEmpty) {
       await retryFailedCelex(failedCelex, newIndexName);
@@ -581,54 +642,55 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
                                 ),
                               ),
                               const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  Tooltip(
-                                    message:
-                                        'Simulate (all processing except uploading data to the OpenSearch server)',
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Checkbox(
-                                          value: simulateUpload,
-                                          onChanged:
-                                              step1Complete
-                                                  ? (v) {
-                                                    setState(() {
-                                                      simulateUpload =
-                                                          v ?? false;
-                                                    });
-                                                  }
-                                                  : null,
-                                        ),
-                                        const Text('Simulate'),
-                                      ],
+                              if (isAdmin)
+                                Row(
+                                  children: [
+                                    Tooltip(
+                                      message:
+                                          'Simulate (all processing except uploading data to the database)',
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Checkbox(
+                                            value: simulateUpload,
+                                            onChanged:
+                                                step1Complete
+                                                    ? (v) {
+                                                      setState(() {
+                                                        simulateUpload =
+                                                            v ?? false;
+                                                      });
+                                                    }
+                                                    : null,
+                                          ),
+                                          const Text('Simulate'),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Tooltip(
-                                    message:
-                                        'Debug Mode: save detailed logs to debug_output folder',
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Checkbox(
-                                          value: debugMode,
-                                          onChanged:
-                                              step1Complete
-                                                  ? (v) {
-                                                    setState(() {
-                                                      debugMode = v ?? false;
-                                                    });
-                                                  }
-                                                  : null,
-                                        ),
-                                        const Text('Debug Mode'),
-                                      ],
+                                    const SizedBox(width: 12),
+                                    Tooltip(
+                                      message:
+                                          'Debug Mode: save detailed logs to debug_output folder',
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Checkbox(
+                                            value: debugMode,
+                                            onChanged:
+                                                step1Complete
+                                                    ? (v) {
+                                                      setState(() {
+                                                        debugMode = v ?? false;
+                                                      });
+                                                    }
+                                                    : null,
+                                          ),
+                                          const Text('Debug Mode'),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
+                                  ],
+                                ),
                             ],
                           ),
                     ],
@@ -745,6 +807,10 @@ class _manualCelexListState extends State<manualCelexList> {
   bool simulateUpload = false;
   bool debugMode = false;
 
+  // Progress tracking
+  HarvestSession? _harvestSession;
+  bool _showProgressTable = false;
+
   // Index name input state and validation
   String _indexBaseManual = '';
   String? _indexErrorManual;
@@ -766,18 +832,69 @@ class _manualCelexListState extends State<manualCelexList> {
     return null;
   }
 
+  Future<void> _saveCelexDebugFile(
+    List<String> celexNumbers,
+    String indexName,
+    String source,
+  ) async {
+    try {
+      final debugDir = Directory('logs');
+      if (!await debugDir.exists()) {
+        await debugDir.create(recursive: true);
+      }
+
+      final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
+      final debugFileName = 'celex_${source}_${indexName}_$timestamp.json';
+      final debugFile = File(path.join(debugDir.path, debugFileName));
+
+      final debugData = {
+        'source': source,
+        'index': indexName,
+        'timestamp': timestamp,
+        'celex_count': celexNumbers.length,
+        'celex_numbers': celexNumbers,
+      };
+
+      final jsonOutput = const JsonEncoder.withIndent('  ').convert(debugData);
+      await debugFile.writeAsString(jsonOutput);
+
+      final logger = LogManager();
+      logger.log('Debug file saved: ${debugFile.path}');
+      print('Debug JSON saved to: ${debugFile.path}');
+    } catch (e) {
+      final logger = LogManager();
+      logger.log('ERROR saving debug file: $e');
+    }
+  }
+
   Future manualCelexListUpload(manualCelexListEntry, newIndexName) async {
     setState(() {
       extractedCelex.clear();
       _progress = 0.01;
     });
 
+    // Save debug file if debug mode is enabled
+    if (debugMode) {
+      await _saveCelexDebugFile(
+        List<String>.from(manualCelexListEntry),
+        newIndexName,
+        'manual_upload',
+      );
+    }
+
     final logger = LogManager();
     final total = manualCelexListEntry.length;
     for (var index = 0; index < total; index++) {
       var i = manualCelexListEntry[index];
       extractedCelex.add('${index + 1}/$total: $i:');
-      await uploadSparqlForCelex(i, newIndexName, "xhtml");
+      await uploadSparqlForCelex(
+        i,
+        newIndexName,
+        "xhtml",
+        0,
+        debugMode,
+        simulateUpload,
+      );
 
       if (!mounted) return;
       setState(() {
@@ -787,6 +904,125 @@ class _manualCelexListState extends State<manualCelexList> {
 
       logger.log("$i uploaded to $activeIndex in manual Celex upload.");
     }
+
+    if (!mounted) return;
+    setState(() {
+      extractedCelex.add('COMPLETED');
+      getCustomIndices(
+        server,
+        isAdmin,
+        jsonSettings['access_key'] ?? DEFAULT_ACCESS_KEY,
+      );
+    });
+  }
+
+  /// New version with harvest progress tracking
+  Future<void> manualCelexListUploadWithProgress(
+    List<String> celexList,
+    String indexName,
+  ) async {
+    setState(() {
+      extractedCelex.clear();
+      _progress = 0.01;
+      _showProgressTable = true;
+    });
+
+    // Create session
+    final timestamp = DateTime.now().toIso8601String().replaceAll(
+      RegExp(r'[:.\ ]'),
+      '-',
+    );
+    final sessionId = 'manual_celex_$timestamp';
+
+    final session = HarvestSession(
+      sessionId: sessionId,
+      indexName: indexName,
+      celexOrder: celexList,
+    );
+
+    // Initialize progress for all CELEXs
+    for (final celex in celexList) {
+      // We don't know languages yet, so start with pending
+      session.documents[celex] = CelexProgress(
+        celex: celex,
+        languages: {'ALL': LangStatus.pending},
+      );
+    }
+
+    setState(() => _harvestSession = session);
+    await session.save();
+
+    final logger = LogManager();
+    final total = celexList.length;
+
+    // Save debug file if enabled
+    if (debugMode) {
+      await _saveCelexDebugFile(celexList, indexName, 'manual_upload');
+    }
+
+    for (var index = 0; index < total; index++) {
+      final celex = celexList[index];
+      final progress = session.documents[celex]!;
+      progress.startedAt = DateTime.now();
+
+      // Check if exists (deduplication)
+      final exists = await celexExistsInIndex(indexName, celex);
+      if (exists) {
+        print('⏭️ Skipping $celex (already exists)');
+        progress.languages['ALL'] = LangStatus.skipped;
+        progress.completedAt = DateTime.now();
+        extractedCelex.add(
+          '${index + 1}/$total: $celex: ⏭️ SKIPPED (already exists)',
+        );
+      } else {
+        try {
+          // Remove the placeholder 'ALL' and prepare for actual languages
+          progress.languages.clear();
+          if (mounted) setState(() {});
+
+          extractedCelex.add('${index + 1}/$total: $celex:');
+
+          await uploadSparqlForCelexWithProgress(
+            celex,
+            indexName,
+            "xhtml",
+            (String lang, LangStatus status, int unitCount) {
+              // Update language status in real-time
+              progress.languages[lang] = status;
+              if (unitCount > 0) {
+                progress.unitCounts[lang] = unitCount;
+              }
+              if (mounted) setState(() {});
+            },
+            0,
+            debugMode,
+            simulateUpload,
+          );
+
+          progress.completedAt = DateTime.now();
+          logger.log("$celex uploaded to $indexName in manual Celex upload.");
+        } catch (e) {
+          // Mark all languages as failed
+          for (final lang in progress.languages.keys.toList()) {
+            progress.languages[lang] = LangStatus.failed;
+          }
+          progress.errors['general'] = e.toString();
+          progress.completedAt = DateTime.now();
+          logger.log("Failed to upload $celex: $e");
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _progress = (index + 1) / total;
+        session.currentPointer = index;
+      });
+
+      await session.save();
+    }
+
+    session.completedAt = DateTime.now();
+    await session.save();
 
     if (!mounted) return;
     setState(() {
@@ -811,352 +1047,381 @@ class _manualCelexListState extends State<manualCelexList> {
 
     return Padding(
       padding: const EdgeInsets.all(12.0),
-      child: Column(
-        children: [
-          SizedBox(height: 10),
-          Text(
-            'Add one or more EU documents to your Collection',
-            style: Theme.of(context).textTheme.headlineMedium,
-          ),
-          SizedBox(height: 15),
-          Container(
-            color: Color(0xFFF5F7FA),
-            padding: EdgeInsets.all(8),
-            child: Image.asset('lib/data/Celexes2.png', height: 100),
-          ),
-          SizedBox(height: 15),
-          Text(
-            'You can create or update your own Collection of EU documents and search in them to get the most relevant results.',
-            style: TextStyle(fontSize: 17.5),
-          ),
-          SizedBox(height: 30),
+      child: SingleChildScrollView(
+        child: Column(
+          children: [
+            SizedBox(height: 10),
+            Text(
+              'Add one or more EU documents to your Collection',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            SizedBox(height: 15),
+            Container(
+              color: Color(0xFFF5F7FA),
+              padding: EdgeInsets.all(8),
+              child: Image.asset('lib/data/Celexes2.png', height: 100),
+            ),
+            SizedBox(height: 15),
+            Text(
+              'You can create or update your own Collection of EU documents and search in them to get the most relevant results.',
+              style: TextStyle(fontSize: 17.5),
+            ),
+            SizedBox(height: 30),
 
-          // Step 1: Choose Collection
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '1.',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Choose Collection',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+            // Step 1: Choose Collection
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '1.',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Choose Collection',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 5,
-                          child: InputDecorator(
-                            decoration: InputDecoration(
-                              labelText: 'Search Collection',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
+                      SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 5,
+                            child: InputDecorator(
+                              decoration: InputDecoration(
+                                labelText: 'Search Collection',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
                               ),
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  isExpanded: true,
+                                  hint: const Text(
+                                    'Choose existing collection',
+                                  ),
+                                  value:
+                                      indices.contains(newIndexName)
+                                          ? newIndexName
+                                          : null,
+                                  items:
+                                      indices.map((String value) {
+                                        return DropdownMenuItem<String>(
+                                          value: value,
+                                          child: Text(value),
+                                        );
+                                      }).toList(),
+                                  onTap: () async {
+                                    await getCustomIndices(
+                                      server,
+                                      isAdmin,
+                                      userPasskey,
+                                    );
+                                    if (!mounted) return;
+                                    setState(() {});
+                                  },
+                                  onChanged: (String? newValue) {
+                                    setState(() {
+                                      newIndexName = newValue!;
+                                    });
+                                    print(
+                                      'Selected for manual Celex Refs upload: $newValue',
+                                    );
+                                  },
+                                ),
                               ),
                             ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                isExpanded: true,
-                                hint: const Text('Choose existing collection'),
-                                value:
-                                    indices.contains(newIndexName)
-                                        ? newIndexName
-                                        : null,
-                                items:
-                                    indices.map((String value) {
-                                      return DropdownMenuItem<String>(
-                                        value: value,
-                                        child: Text(value),
-                                      );
-                                    }).toList(),
-                                onTap: () async {
-                                  await getCustomIndices(
-                                    server,
-                                    isAdmin,
+                          ),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              'OR',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 5,
+                            child: TextField(
+                              decoration: InputDecoration(
+                                labelText: 'Enter New Collection Name',
+                                border: OutlineInputBorder(),
+                                errorText: _indexErrorManual,
+                              ),
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(
+                                  RegExp('[a-z0-9._-]'),
+                                ),
+                              ],
+                              onChanged: (value) {
+                                final v = value.toLowerCase();
+                                setState(() {
+                                  _indexBaseManual = v;
+                                  _indexErrorManual = _validateIndexName(
+                                    v,
                                     userPasskey,
                                   );
-                                  if (!mounted) return;
-                                  setState(() {});
-                                },
-                                onChanged: (String? newValue) {
-                                  setState(() {
-                                    newIndexName = newValue!;
-                                  });
-                                  print(
-                                    'Selected for manual Celex Refs upload: $newValue',
-                                  );
-                                },
-                              ),
+                                });
+                              },
+                              onSubmitted: (value) {
+                                final v = value.toLowerCase();
+                                final err = _validateIndexName(v, userPasskey);
+                                setState(() {
+                                  _indexErrorManual = err;
+                                  if (err == null) {
+                                    newIndexName = 'eu_${userPasskey}_$v';
+                                  }
+                                });
+                              },
                             ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            SizedBox(height: 20),
+
+            // Step 2: Enter Celex numbers
+            Opacity(
+              opacity: step1Complete ? 1.0 : 0.4,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '2.',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Enter Celex numbers of the documents to upload',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16),
-                          child: Text(
-                            'OR',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
+                        SizedBox(height: 10),
+                        TextField(
+                          enabled: step1Complete,
+                          decoration: InputDecoration(
+                            labelText: 'Enter Celex Numbers (comma separated)',
+                            border: OutlineInputBorder(),
                           ),
-                        ),
-                        Expanded(
-                          flex: 5,
-                          child: TextField(
-                            decoration: InputDecoration(
-                              labelText: 'Enter New Collection Name',
-                              border: OutlineInputBorder(),
-                              errorText: _indexErrorManual,
-                            ),
-                            inputFormatters: [
-                              FilteringTextInputFormatter.allow(
-                                RegExp('[a-z0-9._-]'),
-                              ),
-                            ],
-                            onChanged: (value) {
-                              final v = value.toLowerCase();
-                              setState(() {
-                                _indexBaseManual = v;
-                                _indexErrorManual = _validateIndexName(
-                                  v,
-                                  userPasskey,
-                                );
-                              });
-                            },
-                            onSubmitted: (value) {
-                              final v = value.toLowerCase();
-                              final err = _validateIndexName(v, userPasskey);
-                              setState(() {
-                                _indexErrorManual = err;
-                                if (err == null) {
-                                  newIndexName = 'eu_${userPasskey}_$v';
-                                }
-                              });
-                            },
-                          ),
+                          onChanged: (value) {
+                            setState(() {
+                              manualCelex =
+                                  value
+                                      .split(',')
+                                      .map((e) => e.trim())
+                                      .toList();
+                            });
+                          },
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          SizedBox(height: 20),
-
-          // Step 2: Enter Celex numbers
-          Opacity(
-            opacity: step1Complete ? 1.0 : 0.4,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '2.',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Enter Celex numbers of the documents to upload',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: 10),
-                      TextField(
-                        enabled: step1Complete,
-                        decoration: InputDecoration(
-                          labelText: 'Enter Celex Numbers (comma separated)',
-                          border: OutlineInputBorder(),
-                        ),
-                        onChanged: (value) {
-                          setState(() {
-                            manualCelex =
-                                value.split(',').map((e) => e.trim()).toList();
-                          });
-                        },
-                      ),
-                    ],
                   ),
-                ),
-              ],
-            ),
-          ),
-
-          SizedBox(height: 20),
-
-          // Step 3: Upload button
-          Opacity(
-            opacity: step2Complete ? 1.0 : 0.4,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '3.',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Upload the document to the Collection',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: 10),
-                      (newIndexName == '' || newIndexName == "eurolex_")
-                          ? Text('Enter Collection Name First!')
-                          : Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              ElevatedButton(
-                                onPressed:
-                                    (_indexErrorManual != null ||
-                                            !step2Complete)
-                                        ? null
-                                        : () {
-                                          if (newIndexName.isNotEmpty &&
-                                              newIndexName != "eurolex_") {
-                                            manualCelexListUpload(
-                                              manualCelex,
-                                              newIndexName,
-                                            );
-                                          } else {
-                                            print(
-                                              'Please enter a collection name first.',
-                                            );
-                                          }
-                                        },
-                                child: Text(
-                                  'Click to Upload Celex Numbers to $newIndexName',
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  Tooltip(
-                                    message:
-                                        'Simulate (all processing except uploading data to the OpenSearch server)',
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Checkbox(
-                                          value: simulateUpload,
-                                          onChanged:
-                                              step2Complete
-                                                  ? (v) {
-                                                    setState(() {
-                                                      simulateUpload =
-                                                          v ?? false;
-                                                    });
-                                                  }
-                                                  : null,
-                                        ),
-                                        const Text('Simulate'),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Tooltip(
-                                    message:
-                                        'Debug Mode: save detailed logs to debug_output folder',
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Checkbox(
-                                          value: debugMode,
-                                          onChanged:
-                                              step2Complete
-                                                  ? (v) {
-                                                    setState(() {
-                                                      debugMode = v ?? false;
-                                                    });
-                                                  }
-                                                  : null,
-                                        ),
-                                        const Text('Debug Mode'),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          SizedBox(height: 20),
-          if (_progress > 0 && _progress < 1)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  LinearProgressIndicator(value: _progress),
-                  SizedBox(height: 4),
-                  Text('${(_progress * 100).floor()}%'),
                 ],
               ),
             ),
-          if (_progress >= 1.0)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: LinearProgressIndicator(value: 1.0),
-            ),
-          // existing results container:
-          manualCelex.isEmpty
-              ? const Text('No document uploaded to Collection yet.')
-              : Expanded(
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
+
+            SizedBox(height: 20),
+
+            // Step 3: Upload button
+            Opacity(
+              opacity: step2Complete ? 1.0 : 0.4,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '3.',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(width: 8),
+                  Expanded(
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SelectableText.rich(
-                          TextSpan(
-                            children:
-                                extractedCelex.isEmpty
-                                    ? [
-                                      const TextSpan(
-                                        text: 'No Celex Numbers Processed.',
-                                      ),
-                                    ]
-                                    : buildCelexSpans(extractedCelex),
-                            style: const TextStyle(fontFamily: 'monospace'),
+                        Text(
+                          'Upload the document to the Collection',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
+                        SizedBox(height: 10),
+                        (newIndexName == '' || newIndexName == "eurolex_")
+                            ? Text('Enter Collection Name First!')
+                            : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ElevatedButton(
+                                  onPressed:
+                                      (_indexErrorManual != null ||
+                                              !step2Complete)
+                                          ? null
+                                          : () {
+                                            if (newIndexName.isNotEmpty &&
+                                                newIndexName != "eurolex_") {
+                                              manualCelexListUploadWithProgress(
+                                                manualCelex,
+                                                newIndexName,
+                                              );
+                                            } else {
+                                              print(
+                                                'Please enter a collection name first.',
+                                              );
+                                            }
+                                          },
+                                  child: Text(
+                                    'Click to Upload Celex Numbers to $newIndexName',
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                if (isAdmin)
+                                  Row(
+                                    children: [
+                                      Tooltip(
+                                        message:
+                                            'Simulate (all processing except uploading data to the database)',
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Checkbox(
+                                              value: simulateUpload,
+                                              onChanged:
+                                                  step2Complete
+                                                      ? (v) {
+                                                        setState(() {
+                                                          simulateUpload =
+                                                              v ?? false;
+                                                        });
+                                                      }
+                                                      : null,
+                                            ),
+                                            const Text('Simulate'),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Tooltip(
+                                        message:
+                                            'Debug Mode: save detailed logs to debug_output folder',
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Checkbox(
+                                              value: debugMode,
+                                              onChanged:
+                                                  step2Complete
+                                                      ? (v) {
+                                                        setState(() {
+                                                          debugMode =
+                                                              v ?? false;
+                                                        });
+                                                      }
+                                                      : null,
+                                            ),
+                                            const Text('Debug Mode'),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                              ],
+                            ),
                       ],
                     ),
                   ),
+                ],
+              ),
+            ),
+
+            SizedBox(height: 20),
+            if (_progress > 0 && _progress < 1)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    LinearProgressIndicator(value: _progress),
+                    SizedBox(height: 4),
+                    Text('${(_progress * 100).floor()}%'),
+                  ],
                 ),
               ),
-        ],
+            if (_progress >= 1.0)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: LinearProgressIndicator(value: 1.0),
+              ),
+            // Harvest Progress Table
+            if (_showProgressTable && _harvestSession != null)
+              ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: 500),
+                child: HarvestProgressWidget(
+                  session: _harvestSession!,
+                  // Only show cancel button while in progress, not after completion
+                  onCancel:
+                      _harvestSession!.completedAt == null
+                          ? () {
+                            setState(() {
+                              _showProgressTable = false;
+                              _harvestSession = null;
+                            });
+                          }
+                          : null,
+                ),
+              ),
+            // existing results container:
+            if (!_showProgressTable)
+              manualCelex.isEmpty
+                  ? const Text('No document uploaded to Collection yet.')
+                  : SizedBox(
+                    height: 500,
+                    child: SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Column(
+                          children: [
+                            SelectableText.rich(
+                              TextSpan(
+                                children:
+                                    extractedCelex.isEmpty
+                                        ? [
+                                          const TextSpan(
+                                            text: 'No Celex Numbers Processed.',
+                                          ),
+                                        ]
+                                        : buildCelexSpans(extractedCelex),
+                                style: const TextStyle(fontFamily: 'monospace'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+          ],
+        ),
       ),
     );
   }
