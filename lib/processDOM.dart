@@ -423,7 +423,7 @@ void testExtractionMethods() async {
 
 //************************************************************ */
 */
-void openSearchUpload(json, indexName) {
+Future<int> openSearchUpload(json, indexName) async {
   // Your regular JSON data (similar to the data you uploaded)
   var bilingualData = json;
 
@@ -466,7 +466,15 @@ void openSearchUpload(json, indexName) {
     );
   } catch (_) {}
 
-  sendToOpenSearch(opensearchUrl, bulkData);
+  final response = await sendToOpenSearch(opensearchUrl, bulkData);
+
+  // Extract status code from response
+  if (response.startsWith('HTTP_ERROR_')) {
+    return int.parse(
+      response.substring(11),
+    ); // Extract code from "HTTP_ERROR_XXX"
+  }
+  return 200; // Success
 }
 
 // Function to send the NDJSON data to OpenSearch
@@ -508,7 +516,7 @@ Future<String> sendToOpenSearch(String url, List<String> bulkData) async {
                 : response.body;
         lgr.log('HTTP ${response.statusCode} at $url body: ' + bodyPrefix);
       } catch (_) {}
-      return response.body;
+      return "HTTP_ERROR_${response.statusCode}";
     }
   } on TimeoutException catch (e) {
     print("Timeout sending data to OpenSearch: $e");
@@ -516,7 +524,7 @@ Future<String> sendToOpenSearch(String url, List<String> bulkData) async {
       final lgr = LogManager(fileName: '${fileSafeStamp}_bulk_err.log');
       lgr.log('Timeout at $url: $e');
     } catch (_) {}
-    return "Timeout: $e";
+    return "HTTP_ERROR_408";
   } on SocketException catch (e) {
     print("SocketException sending data to OpenSearch: $e");
     try {
@@ -561,7 +569,7 @@ String getmetadata(metadataRDF) //get celex and cellar info from RDF metadata
 }
 
 //the function below will process a multilingual map with extracted plain text lines and create a list of json entries
-List<Map<String, dynamic>> processMultilingualMap(
+Future<int> processMultilingualMap(
   Map<String, List<List<String>>> map,
   String indexName,
   String celex,
@@ -571,7 +579,7 @@ List<Map<String, dynamic>> processMultilingualMap(
   bool paragraphsNotMatched,
   int pointer,
   LogManager runLogger,
-) {
+) async {
   List<Map<String, dynamic>> jsonData =
       []; //to store created json entry for file
 
@@ -641,26 +649,18 @@ List<Map<String, dynamic>> processMultilingualMap(
     }
   }
 
-  // Simple sync try/catch (note: this will NOT catch asynchronous errors
-  // originating inside sendToOpenSearch because openSearchUpload is not awaited)
+  // Upload and get HTTP status code
+  int statusCode = 200; // Default success
   try {
     if (!simulate) {
-      openSearchUpload(jsonData, indexName);
+      statusCode = await openSearchUpload(jsonData, indexName);
     }
   } catch (e, st) {
     runLogger.log(
       'OpenSearch upload failed, pointer: $pointer, celex: $celex: $e\n$st',
     );
+    statusCode = 500;
   }
-
-  // Recommended (to catch async errors): make processMultilingualMap async,
-  // change openSearchUpload to return Future<void> and then:
-  // try {
-  //   if (!simulate) await openSearchUpload(jsonData, indexName);
-  // } catch (e, st) {
-  //   final logger = LogManager(fileName: 'logs/${fileSafeStamp}_${indexName}_error.log');
-  //   logger.log('OpenSearch upload failed: $e\n$st');
-  // }
 
   if (debug) {
     try {
@@ -691,7 +691,7 @@ List<Map<String, dynamic>> processMultilingualMap(
     "$pointer Harvested paragraphs uploaded to Open Search $indexName>COMPLETED  $msg",
   );
 
-  return jsonData;
+  return statusCode;
 }
 
 void showSubscriptionDialog(int status) {

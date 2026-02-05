@@ -214,6 +214,9 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
   double _progress = 0.01;
   bool simulateUpload = false;
   bool debugMode = false;
+  bool _useWorkingLanguagesOnly = false;
+  HarvestSession? _harvestSession;
+  bool _showProgressTable = false;
 
   // Unify progress logic with picker 1: phases -> file read, celex extraction, uploads.
   // We treat total phases as: 1 (file loaded) + 1 (celex list extracted) + N uploads.
@@ -240,6 +243,15 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
     final full = 'eu_${userPrefix}_$value';
     if (full.length > 255) return 'Full index name too long (max 255 chars).';
     return null;
+  }
+
+  List<String>? _getSelectedWorkingLanguages() {
+    if (!_useWorkingLanguagesOnly) return null;
+    final selected = <String>[];
+    if (lang1 != null && lang1!.isNotEmpty) selected.add(lang1!);
+    if (lang2 != null && lang2!.isNotEmpty) selected.add(lang2!);
+    if (lang3 != null && lang3!.isNotEmpty) selected.add(lang3!);
+    return selected.isEmpty ? null : selected;
   }
 
   void _recalcProgress() {
@@ -350,6 +362,7 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
       _celexExtracted = false;
       _totalUploads = 0;
       _completedUploads = 0;
+      _showProgressTable = false;
     });
     if (result == null) return;
 
@@ -370,8 +383,8 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
         for (final td in fileDOM2.getElementsByTagName('td')) {
           if (td.text.contains('Celex number:')) {
             final celexNumberTd = td.nextElementSibling;
-            final celexNumber = celexNumberTd.text.trim();
-            celexNumbersExtracted.add(celexNumber);
+            final celexNumber = celexNumberTd?.text.trim();
+            if (celexNumber != null) celexNumbersExtracted.add(celexNumber);
           }
         }
         _celexExtracted = true;
@@ -385,20 +398,89 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
       });
     }
 
+    // Create harvest session
+    final timestamp = DateTime.now().toIso8601String().replaceAll(
+      RegExp(r'[:.\s]'),
+      '-',
+    );
+    final sessionId = 'file_refs_$timestamp';
+    final session = HarvestSession(
+      sessionId: sessionId,
+      indexName: newIndexName,
+      celexOrder: List<String>.from(celexNumbersExtracted),
+    );
+
+    // Initialize progress for all CELEXs
     for (final celex in celexNumbersExtracted) {
+      session.documents[celex] = CelexProgress(
+        celex: celex,
+        languages: {'ALL': LangStatus.pending},
+      );
+    }
+
+    setState(() {
+      _harvestSession = session;
+      _showProgressTable = true;
+    });
+    await session.save();
+
+    final logger = LogManager();
+
+    for (var i = 0; i < celexNumbersExtracted.length; i++) {
+      final celex = celexNumbersExtracted[i];
+      final progress = session.documents[celex]!;
+      progress.startedAt = DateTime.now();
+
       extractedCelex.add('${_completedUploads + 1}/$_totalUploads: $celex:');
 
-      await uploadSparqlForCelex(
-        celex,
-        newIndexName,
-        "xhtml",
-        0,
-        debugMode,
-        simulateUpload,
-      );
-      if (failedCelex.contains(celex)) {
-        extractedCelex.add('XHTML FAILED, WILL RETRY in HTML LATER');
-      } else {}
+      // Check if exists
+      final exists = await celexExistsInIndex(newIndexName, celex);
+      if (exists) {
+        progress.languages['ALL'] = LangStatus.skipped;
+        progress.completedAt = DateTime.now();
+        extractedCelex.add('⏭️ SKIPPED (already exists)');
+      } else {
+        // Remove placeholder and prepare for actual languages
+        progress.languages.clear();
+
+        await uploadSparqlForCelexWithProgress(
+          celex,
+          newIndexName,
+          "xhtml",
+          (String lang, LangStatus status, int unitCount) {
+            if (progress is! CelexProgress) {
+              print(
+                'ERROR: progress is not CelexProgress, it is: ${progress.runtimeType}',
+              );
+              return;
+            }
+            progress.languages[lang] = status;
+            if (unitCount > 0) progress.unitCounts[lang] = unitCount;
+            if (mounted) setState(() {});
+          },
+          (int httpStatus) {
+            if (progress is! CelexProgress) {
+              print(
+                'ERROR: progress is not CelexProgress, it is: ${progress.runtimeType}',
+              );
+              return;
+            }
+            progress.httpStatus = httpStatus;
+            if (mounted) setState(() {});
+          },
+          0,
+          debugMode,
+          simulateUpload,
+          _getSelectedWorkingLanguages(), // Pass selected languages
+        );
+
+        // Don't overwrite statuses - they were already set by the callback
+        // Only update completedAt
+        progress.completedAt = DateTime.now();
+      }
+
+      session.currentPointer = i + 1;
+      await session.save();
 
       _completedUploads++;
       if (!mounted) return;
@@ -421,6 +503,9 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
     if (failedCelex.isNotEmpty) {
       await retryFailedCelex(failedCelex, newIndexName);
     }
+
+    session.completedAt = DateTime.now();
+    await session.save();
 
     if (!mounted) return;
     setState(() {
@@ -456,335 +541,378 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
     return Padding(
       // ...existing code...
       padding: const EdgeInsets.all(12.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
-        children: [
-          SizedBox(height: 10),
-          Text(
-            'Add a list of EU documents to your Collection',
-            style: Theme.of(context).textTheme.headlineMedium,
-          ),
-          SizedBox(height: 15),
-          Container(
-            color: Color(0xFFF5F7FA),
-            padding: EdgeInsets.all(8),
-            child: Image.asset('lib/data/List2.png', height: 100),
-          ),
-          SizedBox(height: 15),
-          Text(
-            'You can upload a list of EU documents to your new or existing Collection to get the most relevant results.',
-            style: TextStyle(fontSize: 17.5),
-          ),
-          SizedBox(height: 30),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            SizedBox(height: 10),
+            Text(
+              'Add a list of EU documents to your Collection',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            SizedBox(height: 15),
+            Container(
+              color: Color(0xFFF5F7FA),
+              padding: EdgeInsets.all(8),
+              child: Image.asset('lib/data/List2.png', height: 100),
+            ),
+            SizedBox(height: 15),
+            Text(
+              'You can upload a list of EU documents to your new or existing Collection to get the most relevant results.',
+              style: TextStyle(fontSize: 17.5),
+            ),
+            SizedBox(height: 30),
 
-          // Step 1: Choose Collection
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '1.',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Choose Collection',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+            // Step 1: Choose Collection
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '1.',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Choose Collection',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 5,
-                          child: InputDecorator(
-                            decoration: InputDecoration(
-                              labelText: 'Search Collection',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
+                      SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 5,
+                            child: InputDecorator(
+                              decoration: InputDecoration(
+                                labelText: 'Search Collection',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
                               ),
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  isExpanded: true,
+                                  hint: const Text(
+                                    'Choose existing collection',
+                                  ),
+                                  value:
+                                      indices.contains(newIndexName)
+                                          ? newIndexName
+                                          : null,
+                                  items:
+                                      indices.map((String value) {
+                                        return DropdownMenuItem<String>(
+                                          value: value,
+                                          child: Text(value),
+                                        );
+                                      }).toList(),
+                                  onTap: () async {
+                                    await getCustomIndices(
+                                      server,
+                                      isAdmin,
+                                      userPasskey,
+                                    );
+                                    if (!mounted) return;
+                                    setState(() {});
+                                  },
+                                  onChanged: (String? newValue) {
+                                    setState(() {
+                                      newIndexName = newValue!;
+                                    });
+                                    print(
+                                      'Selected for Celex Refs upload: $newValue',
+                                    );
+                                  },
+                                ),
                               ),
                             ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                isExpanded: true,
-                                hint: const Text('Choose existing collection'),
-                                value:
-                                    indices.contains(newIndexName)
-                                        ? newIndexName
-                                        : null,
-                                items:
-                                    indices.map((String value) {
-                                      return DropdownMenuItem<String>(
-                                        value: value,
-                                        child: Text(value),
-                                      );
-                                    }).toList(),
-                                onTap: () async {
-                                  await getCustomIndices(
-                                    server,
-                                    isAdmin,
+                          ),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              'OR',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 5,
+                            child: TextField(
+                              decoration: InputDecoration(
+                                labelText: 'Enter New Collection Name',
+                                border: OutlineInputBorder(),
+                                errorText: _indexError2,
+                              ),
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(
+                                  RegExp('[a-z0-9._-]'),
+                                ),
+                              ],
+                              onChanged: (value) {
+                                final v = value.toLowerCase();
+                                setState(() {
+                                  _indexBase2 = v;
+                                  _indexError2 = _validateIndexName(
+                                    v,
                                     userPasskey,
                                   );
-                                  if (!mounted) return;
-                                  setState(() {});
-                                },
-                                onChanged: (String? newValue) {
-                                  setState(() {
-                                    newIndexName = newValue!;
-                                  });
-                                  print(
-                                    'Selected for Celex Refs upload: $newValue',
-                                  );
-                                },
-                              ),
+                                });
+                              },
+                              onSubmitted: (value) {
+                                final v = value.toLowerCase();
+                                final err = _validateIndexName(v, userPasskey);
+                                setState(() {
+                                  _indexError2 = err;
+                                  if (err == null) {
+                                    newIndexName = 'eu_${userPasskey}_$v';
+                                  }
+                                });
+                              },
                             ),
                           ),
-                        ),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16),
-                          child: Text(
-                            'OR',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          flex: 5,
-                          child: TextField(
-                            decoration: InputDecoration(
-                              labelText: 'Enter New Collection Name',
-                              border: OutlineInputBorder(),
-                              errorText: _indexError2,
-                            ),
-                            inputFormatters: [
-                              FilteringTextInputFormatter.allow(
-                                RegExp('[a-z0-9._-]'),
-                              ),
-                            ],
-                            onChanged: (value) {
-                              final v = value.toLowerCase();
-                              setState(() {
-                                _indexBase2 = v;
-                                _indexError2 = _validateIndexName(
-                                  v,
-                                  userPasskey,
-                                );
-                              });
-                            },
-                            onSubmitted: (value) {
-                              final v = value.toLowerCase();
-                              final err = _validateIndexName(v, userPasskey);
-                              setState(() {
-                                _indexError2 = err;
-                                if (err == null) {
-                                  newIndexName = 'eu_${userPasskey}_$v';
-                                }
-                              });
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          SizedBox(height: 20),
-
-          // Step 2: Pick file
-          Opacity(
-            opacity: step1Complete ? 1.0 : 0.4,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '2.',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Select a list of CELEX document references',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: 10),
-                      (newIndexName == '' ||
-                              newIndexName == "eurolex_" ||
-                              _indexError2 != null)
-                          ? Text('Complete Step 1 First!')
-                          : Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              ElevatedButton(
-                                onPressed:
-                                    step1Complete ? pickAndLoadFile2 : null,
-                                child: Text(
-                                  'Click to Pick File with List of References',
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              if (isAdmin)
-                                Row(
-                                  children: [
-                                    Tooltip(
-                                      message:
-                                          'Simulate (all processing except uploading data to the database)',
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Checkbox(
-                                            value: simulateUpload,
-                                            onChanged:
-                                                step1Complete
-                                                    ? (v) {
-                                                      setState(() {
-                                                        simulateUpload =
-                                                            v ?? false;
-                                                      });
-                                                    }
-                                                    : null,
-                                          ),
-                                          const Text('Simulate'),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Tooltip(
-                                      message:
-                                          'Debug Mode: save detailed logs to debug_output folder',
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Checkbox(
-                                            value: debugMode,
-                                            onChanged:
-                                                step1Complete
-                                                    ? (v) {
-                                                      setState(() {
-                                                        debugMode = v ?? false;
-                                                      });
-                                                    }
-                                                    : null,
-                                          ),
-                                          const Text('Debug Mode'),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                            ],
-                          ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          SizedBox(height: 20),
-
-          // Step 3: Upload
-          Opacity(
-            opacity: step2Complete ? 1.0 : 0.4,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '3.',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Upload the documents to the Collection',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: 10),
-                      Text(
-                        step2Complete
-                            ? 'File loaded. Processing will start automatically.'
-                            : 'Select a file first.',
+                        ],
                       ),
                     ],
                   ),
                 ),
               ],
             ),
-          ),
 
-          SizedBox(height: 20),
+            SizedBox(height: 20),
 
-          // Progress bar (added)
-          if (_progress > 0 && _progress < 1)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                LinearProgressIndicator(value: _progress),
-                const SizedBox(height: 4),
-                Text('${(_progress * 100).floor()}%'),
-              ],
-            ),
-          if (_progress >= 1.0) const LinearProgressIndicator(value: 1.0),
-          const SizedBox(height: 20),
-
-          fileContent2.isEmpty
-              ? const Text('No document uploaded to Collection yet.')
-              : Container(
-                width:
-                    double.infinity, // Make container take full available width
-                constraints: const BoxConstraints(
-                  maxHeight: 400,
-                  // Remove maxWidth or set to double.infinity for full width
-                ),
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
+            // Step 2: Pick file
+            Opacity(
+              opacity: step1Complete ? 1.0 : 0.4,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '2.',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(width: 8),
+                  Expanded(
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SelectableText.rich(
-                          TextSpan(
-                            children:
-                                extractedCelex.isEmpty
-                                    ? [
-                                      const TextSpan(
-                                        text: 'No Celex Numbers Processed.',
-                                      ),
-                                    ]
-                                    : buildCelexSpans(extractedCelex),
-                            style: const TextStyle(fontFamily: 'monospace'),
+                        Text(
+                          'Select a list of CELEX document references',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
                           ),
+                        ),
+                        SizedBox(height: 10),
+                        (newIndexName == '' ||
+                                newIndexName == "eurolex_" ||
+                                _indexError2 != null)
+                            ? Text('Complete Step 1 First!')
+                            : Wrap(
+                              spacing: 12,
+                              runSpacing: 8,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                ElevatedButton(
+                                  onPressed:
+                                      step1Complete ? pickAndLoadFile2 : null,
+                                  child: Text(
+                                    'Click to Pick File with List of References',
+                                  ),
+                                ),
+                                if (isAdmin) ...[
+                                  Tooltip(
+                                    message:
+                                        'Simulate (all processing except uploading data to the database)',
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Checkbox(
+                                          value: simulateUpload,
+                                          onChanged:
+                                              step1Complete
+                                                  ? (v) {
+                                                    setState(() {
+                                                      simulateUpload =
+                                                          v ?? false;
+                                                    });
+                                                  }
+                                                  : null,
+                                        ),
+                                        const Text('Simulate'),
+                                      ],
+                                    ),
+                                  ),
+                                  Tooltip(
+                                    message:
+                                        'Debug Mode: save detailed logs to debug_output folder',
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Checkbox(
+                                          value: debugMode,
+                                          onChanged:
+                                              step1Complete
+                                                  ? (v) {
+                                                    setState(() {
+                                                      debugMode = v ?? false;
+                                                    });
+                                                  }
+                                                  : null,
+                                        ),
+                                        const Text('Debug Mode'),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                                Tooltip(
+                                  message:
+                                      'Upload only selected working languages from Search tab (${[lang1, lang2, lang3].where((l) => l != null && l.isNotEmpty).join(', ')})',
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Checkbox(
+                                        value: _useWorkingLanguagesOnly,
+                                        onChanged:
+                                            step1Complete
+                                                ? (v) {
+                                                  setState(() {
+                                                    _useWorkingLanguagesOnly =
+                                                        v ?? false;
+                                                  });
+                                                }
+                                                : null,
+                                      ),
+                                      Text(
+                                        'Working Lang Only (${[lang1, lang2, lang3].where((l) => l != null && l.isNotEmpty).join(', ')})',
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            SizedBox(height: 20),
+
+            // Step 3: Upload
+            Opacity(
+              opacity: step2Complete ? 1.0 : 0.4,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '3.',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Upload the documents to the Collection',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 10),
+                        Text(
+                          step2Complete
+                              ? 'File loaded. Processing will start automatically.'
+                              : 'Select a file first.',
                         ),
                       ],
                     ),
                   ),
-                ),
+                ],
               ),
-        ],
+            ),
+
+            SizedBox(height: 20),
+
+            // Progress bar (added)
+            if (_progress > 0 && _progress < 1)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  LinearProgressIndicator(value: _progress),
+                  const SizedBox(height: 4),
+                  Text('${(_progress * 100).floor()}%'),
+                ],
+              ),
+            if (_progress >= 1.0) const LinearProgressIndicator(value: 1.0),
+            const SizedBox(height: 20),
+
+            fileContent2.isEmpty
+                ? const Text('No document uploaded to Collection yet.')
+                : (_showProgressTable && _harvestSession != null)
+                ? Container(
+                  height: MediaQuery.of(context).size.height * 0.45,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Theme.of(context).dividerColor),
+                  ),
+                  child: HarvestProgressWidget(
+                    session: _harvestSession!,
+                    onCancel: () {
+                      if (mounted) {
+                        setState(() {
+                          _showProgressTable = false;
+                        });
+                      }
+                    },
+                  ),
+                )
+                : Container(
+                  width:
+                      double
+                          .infinity, // Make container take full available width
+                  constraints: const BoxConstraints(
+                    maxHeight: 400,
+                    // Remove maxWidth or set to double.infinity for full width
+                  ),
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        children: [
+                          SelectableText.rich(
+                            TextSpan(
+                              children:
+                                  extractedCelex.isEmpty
+                                      ? [
+                                        const TextSpan(
+                                          text: 'No Celex Numbers Processed.',
+                                        ),
+                                      ]
+                                      : buildCelexSpans(extractedCelex),
+                              style: const TextStyle(fontFamily: 'monospace'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+          ],
+        ),
       ),
     );
   }
@@ -806,6 +934,7 @@ class _manualCelexListState extends State<manualCelexList> {
   double _progress = 0.01; // 0.0 - 1.0
   bool simulateUpload = false;
   bool debugMode = false;
+  bool _useWorkingLanguagesOnly = false;
 
   // Progress tracking
   HarvestSession? _harvestSession;
@@ -814,6 +943,15 @@ class _manualCelexListState extends State<manualCelexList> {
   // Index name input state and validation
   String _indexBaseManual = '';
   String? _indexErrorManual;
+
+  List<String>? _getSelectedWorkingLanguages() {
+    if (!_useWorkingLanguagesOnly) return null;
+    final selected = <String>[];
+    if (lang1 != null && lang1!.isNotEmpty) selected.add(lang1!);
+    if (lang2 != null && lang2!.isNotEmpty) selected.add(lang2!);
+    if (lang3 != null && lang3!.isNotEmpty) selected.add(lang3!);
+    return selected.isEmpty ? null : selected;
+  }
 
   String? _validateIndexName(String base, String userPrefix) {
     if (base.isEmpty) return 'Index name is required.';
@@ -988,15 +1126,32 @@ class _manualCelexListState extends State<manualCelexList> {
             "xhtml",
             (String lang, LangStatus status, int unitCount) {
               // Update language status in real-time
+              if (progress is! CelexProgress) {
+                print(
+                  'ERROR: progress is not CelexProgress, it is: ${progress.runtimeType}',
+                );
+                return;
+              }
               progress.languages[lang] = status;
               if (unitCount > 0) {
                 progress.unitCounts[lang] = unitCount;
               }
               if (mounted) setState(() {});
             },
+            (int httpStatus) {
+              if (progress is! CelexProgress) {
+                print(
+                  'ERROR: progress is not CelexProgress, it is: ${progress.runtimeType}',
+                );
+                return;
+              }
+              progress.httpStatus = httpStatus;
+              if (mounted) setState(() {});
+            },
             0,
             debugMode,
             simulateUpload,
+            _getSelectedWorkingLanguages(), // Pass selected languages
           );
 
           progress.completedAt = DateTime.now();
@@ -1270,8 +1425,10 @@ class _manualCelexListState extends State<manualCelexList> {
                         SizedBox(height: 10),
                         (newIndexName == '' || newIndexName == "eurolex_")
                             ? Text('Enter Collection Name First!')
-                            : Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            : Wrap(
+                              spacing: 12,
+                              runSpacing: 8,
+                              crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
                                 ElevatedButton(
                                   onPressed:
@@ -1295,57 +1452,75 @@ class _manualCelexListState extends State<manualCelexList> {
                                     'Click to Upload Celex Numbers to $newIndexName',
                                   ),
                                 ),
-                                const SizedBox(height: 12),
-                                if (isAdmin)
-                                  Row(
+                                if (isAdmin) ...[
+                                  Tooltip(
+                                    message:
+                                        'Simulate (all processing except uploading data to the database)',
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Checkbox(
+                                          value: simulateUpload,
+                                          onChanged:
+                                              step2Complete
+                                                  ? (v) {
+                                                    setState(() {
+                                                      simulateUpload =
+                                                          v ?? false;
+                                                    });
+                                                  }
+                                                  : null,
+                                        ),
+                                        const Text('Simulate'),
+                                      ],
+                                    ),
+                                  ),
+                                  Tooltip(
+                                    message:
+                                        'Debug Mode: save detailed logs to debug_output folder',
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Checkbox(
+                                          value: debugMode,
+                                          onChanged:
+                                              step2Complete
+                                                  ? (v) {
+                                                    setState(() {
+                                                      debugMode = v ?? false;
+                                                    });
+                                                  }
+                                                  : null,
+                                        ),
+                                        const Text('Debug Mode'),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                                Tooltip(
+                                  message:
+                                      'Upload only selected working languages from Search tab (${[lang1, lang2, lang3].where((l) => l != null && l.isNotEmpty).join(', ')})',
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Tooltip(
-                                        message:
-                                            'Simulate (all processing except uploading data to the database)',
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Checkbox(
-                                              value: simulateUpload,
-                                              onChanged:
-                                                  step2Complete
-                                                      ? (v) {
-                                                        setState(() {
-                                                          simulateUpload =
-                                                              v ?? false;
-                                                        });
-                                                      }
-                                                      : null,
-                                            ),
-                                            const Text('Simulate'),
-                                          ],
-                                        ),
+                                      Checkbox(
+                                        value: _useWorkingLanguagesOnly,
+                                        onChanged:
+                                            step2Complete
+                                                ? (v) {
+                                                  setState(() {
+                                                    _useWorkingLanguagesOnly =
+                                                        v ?? false;
+                                                  });
+                                                }
+                                                : null,
                                       ),
-                                      const SizedBox(width: 12),
-                                      Tooltip(
-                                        message:
-                                            'Debug Mode: save detailed logs to debug_output folder',
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Checkbox(
-                                              value: debugMode,
-                                              onChanged:
-                                                  step2Complete
-                                                      ? (v) {
-                                                        setState(() {
-                                                          debugMode =
-                                                              v ?? false;
-                                                        });
-                                                      }
-                                                      : null,
-                                            ),
-                                            const Text('Debug Mode'),
-                                          ],
-                                        ),
+                                      Text(
+                                        'Working Lang Only (${[lang1, lang2, lang3].where((l) => l != null && l.isNotEmpty).join(', ')})',
                                       ),
                                     ],
                                   ),
+                                ),
                               ],
                             ),
                       ],

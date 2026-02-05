@@ -5,6 +5,9 @@ import 'package:LegisTracerEU/processDOM.dart';
 import 'package:LegisTracerEU/setup.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:LegisTracerEU/harvest_progress.dart';
+import 'package:LegisTracerEU/harvest_progress_ui.dart';
+import 'package:LegisTracerEU/testHtmlDumps.dart';
 
 import 'package:html/parser.dart' as html_parser;
 
@@ -458,6 +461,30 @@ void setSectorUploaded(
   y['uploadedBySector'] = m;
 }
 
+String? getSectorSessionId(Map<String, dynamic> data, int year, String sector) {
+  final years = data['years'] as Map<String, dynamic>;
+  final y = years['$year'] as Map<String, dynamic>;
+  final m = (y['sessionIds'] as Map<String, dynamic>?) ?? <String, dynamic>{};
+  return m[sector] as String?;
+}
+
+void setSectorSessionId(
+  Map<String, dynamic> data,
+  int year,
+  String sector,
+  String? sessionId,
+) {
+  final years = data['years'] as Map<String, dynamic>;
+  final y = years['$year'] as Map<String, dynamic>;
+  final m = (y['sessionIds'] as Map<String, dynamic>?) ?? <String, dynamic>{};
+  if (sessionId == null) {
+    m.remove(sector);
+  } else {
+    m[sector] = sessionId;
+  }
+  y['sessionIds'] = m;
+}
+
 void extendRange(Map<String, dynamic> data, int newEndYear) {
   final range = data['range'] as Map<String, dynamic>;
   final start = (range['start'] as num).toInt();
@@ -495,6 +522,7 @@ void extendRange(Map<String, dynamic> data, int newEndYear) {
         's9': false,
         's10': false,
       },
+      'sessionIds': {},
     };
   }
   range['end'] = newEndYear;
@@ -512,6 +540,12 @@ class _CelexYearsWidgetState extends State<CelexYearsWidget> {
   bool saving = false;
   final expandedYears = <String>{};
 
+  // Track active uploads: "year_sector" -> HarvestSession
+  final Map<String, HarvestSession> _activeSessions = {};
+
+  // Track which sector is expanded to show progress
+  String? _expandedSectorKey;
+
   @override
   void initState() {
     super.initState();
@@ -523,10 +557,48 @@ class _CelexYearsWidgetState extends State<CelexYearsWidget> {
       final loaded =
           await loadCelexYears(); // defaults to data/celex_years.json
       setState(() => data = loaded);
+
+      // Auto-load incomplete sessions to show progress immediately
+      await _loadIncompleteSessions();
     } catch (e) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Failed to load celex years: $e')));
+    }
+  }
+
+  /// Load all incomplete sessions referenced in celex_years.json
+  Future<void> _loadIncompleteSessions() async {
+    if (data == null) return;
+
+    final yearsMap = data!['years'] as Map<String, dynamic>;
+    for (final year in yearsMap.keys) {
+      final yearData = yearsMap[year] as Map<String, dynamic>;
+      final sessionIds = yearData['sessionIds'] as Map<String, dynamic>? ?? {};
+      final uploadedBySector =
+          yearData['uploadedBySector'] as Map<String, dynamic>? ?? {};
+
+      for (final sector in sessionIds.keys) {
+        final sessionId = sessionIds[sector] as String?;
+        final uploaded = uploadedBySector[sector] as bool? ?? false;
+
+        // Load session if it exists and is not completed
+        if (sessionId != null && !uploaded) {
+          try {
+            final session = await HarvestSession.load(sessionId);
+            if (session != null && session.completedAt == null) {
+              final key = '${year}_$sector';
+              if (mounted) {
+                setState(() {
+                  _activeSessions[key] = session;
+                });
+              }
+            }
+          } catch (e) {
+            print('Failed to load session $sessionId: $e');
+          }
+        }
+      }
     }
   }
 
@@ -578,6 +650,40 @@ class _CelexYearsWidgetState extends State<CelexYearsWidget> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   ),
                 ),
+              // Button to show progress table for active sessions
+              if (_activeSessions.isNotEmpty && _expandedSectorKey == null)
+                TextButton.icon(
+                  onPressed: () async {
+                    // Reload session from disk before showing to get latest progress
+                    final firstKey = _activeSessions.keys.first;
+                    final session = _activeSessions[firstKey];
+                    if (session != null) {
+                      final reloadedSession = await HarvestSession.load(
+                        session.sessionId,
+                      );
+                      if (reloadedSession != null && mounted) {
+                        setState(() {
+                          _activeSessions[firstKey] = reloadedSession;
+                          _expandedSectorKey = firstKey;
+                        });
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.table_chart),
+                  label: Text('Show Progress (${_activeSessions.length})'),
+                  style: TextButton.styleFrom(foregroundColor: Colors.blue),
+                ),
+              IconButton(
+                onPressed: () async {
+                  await _loadIncompleteSessions();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Progress refreshed')),
+                  );
+                },
+                icon: const Icon(Icons.refresh),
+                tooltip: 'Refresh progress from disk',
+              ),
+              const SizedBox(width: 8),
               ElevatedButton.icon(
                 onPressed: saving ? null : _save,
                 icon: const Icon(Icons.save),
@@ -660,7 +766,7 @@ class _CelexYearsWidgetState extends State<CelexYearsWidget> {
                       ),
                       const SizedBox(width: 16),
                       Expanded(
-                        child: _buildSectorTogglesRow(
+                        child: _buildSectorButtonsRow(
                           year,
                           sectors,
                           uploadedBySector,
@@ -673,7 +779,276 @@ class _CelexYearsWidgetState extends State<CelexYearsWidget> {
             },
           ),
         ),
+        // Progress widget at bottom when sector is uploading
+        if (_expandedSectorKey != null &&
+            _activeSessions[_expandedSectorKey] != null)
+          Container(
+            height: MediaQuery.of(context).size.height * 0.75,
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              border: Border(
+                top: BorderSide(color: Theme.of(context).dividerColor),
+              ),
+            ),
+            child: HarvestProgressWidget(
+              session: _activeSessions[_expandedSectorKey]!,
+              onCancel: () async {
+                if (mounted) {
+                  setState(() {
+                    _expandedSectorKey = null;
+                  });
+                }
+              },
+            ),
+          ),
       ],
+    );
+  }
+
+  Future<void> _startSectorUpload(int year, String sector) async {
+    final sectorNum = int.parse(sector.replaceAll('s', ''));
+    final indexName = 'eurolex_sparql_sector$sectorNum';
+    final key = '${year}_$sector';
+
+    if (mounted) {
+      setState(() {
+        _expandedSectorKey = key;
+      });
+    }
+
+    try {
+      final session = await uploadTestSparqlSectorYearWithProgress(
+        sectorNum,
+        year,
+        indexName,
+        onProgressUpdate: (updatedSession) {
+          if (mounted) {
+            setState(() {
+              _activeSessions[key] = updatedSession;
+            });
+          }
+        },
+        onSessionCreated: (sessionId) {
+          // Save session ID immediately when upload starts
+          if (mounted) {
+            setState(() {
+              setSectorSessionId(data!, year, sector, sessionId);
+            });
+            _save();
+          }
+        },
+      );
+
+      // Mark as uploaded when complete
+      if (mounted) {
+        setState(() {
+          setSectorUploaded(data!, year, sector, true);
+          _activeSessions[key] = session;
+        });
+        await _save();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+      }
+    }
+  }
+
+  Future<void> _resumeSectorUpload(
+    int year,
+    String sector,
+    String sessionId,
+  ) async {
+    final key = '${year}_$sector';
+
+    try {
+      final session = await HarvestSession.load(sessionId);
+      if (session == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Session not found')));
+        }
+        return;
+      }
+
+      if (session.completedAt != null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Session already completed')),
+          );
+        }
+        return;
+      }
+
+      if (mounted) {
+        setState(() {
+          _activeSessions[key] = session;
+          _expandedSectorKey = key;
+        });
+      }
+
+      final sectorNum = int.parse(sector.replaceAll('s', ''));
+      final resumedSession = await uploadTestSparqlSectorYearWithProgress(
+        sectorNum,
+        year,
+        session.indexName,
+        startPointer: session.currentPointer,
+        onProgressUpdate: (updatedSession) {
+          if (mounted) {
+            setState(() {
+              _activeSessions[key] = updatedSession;
+            });
+          }
+        },
+      );
+
+      if (mounted) {
+        setState(() {
+          setSectorUploaded(data!, year, sector, true);
+          _activeSessions[key] = resumedSession;
+        });
+        await _save();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Resume failed: $e')));
+      }
+    }
+  }
+
+  Widget _buildSectorButtonsRow(
+    String year,
+    Map<String, dynamic> sectors,
+    Map<String, dynamic> uploadedBySector,
+  ) {
+    final entries =
+        sectors.keys.toList()..sort((a, b) {
+          int ai = int.tryParse(a.replaceAll('s', '')) ?? 0;
+          int bi = int.tryParse(b.replaceAll('s', '')) ?? 0;
+          return ai.compareTo(bi);
+        });
+
+    return LayoutBuilder(
+      builder: (ctx, constraints) {
+        const spacing = 8.0;
+        const minCellWidth = 80.0;
+        final count = entries.length;
+        final available = constraints.maxWidth - spacing * (count - 1);
+        final proposed = available / count;
+        final useScroll = proposed < minCellWidth;
+        final cellWidth = useScroll ? minCellWidth : proposed;
+
+        final row = Row(
+          children: List.generate(count, (i) {
+            final key = entries[i];
+            final countVal = ((sectors[key] ?? 0) as num).toInt();
+            final uploaded = (uploadedBySector[key] ?? false) as bool;
+            final sessionId = getSectorSessionId(data!, int.parse(year), key);
+            final yearInt = int.parse(year);
+            final sectorKey = '${year}_$key';
+            final isActive = _activeSessions[sectorKey] != null;
+            final session = _activeSessions[sectorKey];
+            final isIncomplete = sessionId != null && !uploaded;
+
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: cellWidth,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color:
+                        uploaded
+                            ? Colors.green.withOpacity(0.15)
+                            : isActive
+                            ? Colors.blue.withOpacity(0.15)
+                            : null,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: isActive ? Colors.blue : Colors.transparent,
+                      width: 2,
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '${key.toUpperCase()}: $countVal',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontFeatures: [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      if (uploaded && !isIncomplete)
+                        const Icon(
+                          Icons.check_circle,
+                          size: 16,
+                          color: Colors.green,
+                        )
+                      else if (isIncomplete)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.play_arrow, size: 16),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              tooltip: 'Resume',
+                              onPressed:
+                                  () => _resumeSectorUpload(
+                                    yearInt,
+                                    key,
+                                    sessionId!,
+                                  ),
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              '${(session?.progressPercentage ?? 0).toStringAsFixed(0)}%',
+                              style: const TextStyle(fontSize: 10),
+                            ),
+                          ],
+                        )
+                      else if (isActive)
+                        Text(
+                          '${session!.progressPercentage.toStringAsFixed(0)}%',
+                          style: const TextStyle(fontSize: 10),
+                        )
+                      else
+                        IconButton(
+                          icon: const Icon(Icons.upload, size: 16),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          tooltip: 'Upload',
+                          onPressed:
+                              countVal > 0
+                                  ? () => _startSectorUpload(yearInt, key)
+                                  : null,
+                        ),
+                    ],
+                  ),
+                ),
+                if (i < count - 1) const SizedBox(width: spacing),
+              ],
+            );
+          }),
+        );
+
+        return useScroll
+            ? SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: row,
+            )
+            : row;
+      },
     );
   }
 

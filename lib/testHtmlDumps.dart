@@ -72,8 +72,8 @@ List<List<String>> splitTextAndClass(List<String> taggedLines) {
 
 Duration _backoffWithJitter(
   int attempt, {
-  Duration base = const Duration(seconds: 5),
-  Duration cap = const Duration(minutes: 2),
+  Duration base = const Duration(seconds: 1),
+  Duration cap = const Duration(seconds: 4),
 }) {
   final r = Random();
   final ms = min(cap.inMilliseconds, base.inMilliseconds * (1 << attempt));
@@ -173,7 +173,7 @@ Future<Map<String, List<List<String>>>> createUploadArrayFromMap(
   final out = <String, List<List<String>>>{};
   final failed = <String>[];
   //TODO maximum concurrent langs for download from cellar
-  const maxConcurrent = 10; // Reduced to 2 to prevent pool overload
+  const maxConcurrent = 25; // Reduced to 2 to prevent pool overload
   final langs = langLinks.keys.toList();
   var idx = 0;
   var hasError = false;
@@ -450,10 +450,14 @@ Future<HarvestSession> uploadTestSparqlSectorYearWithProgress(
   String indexName, {
   int startPointer = 0,
   Function(HarvestSession)? onProgressUpdate,
+  Function(String sessionId)? onSessionCreated,
   bool skipExisting = true,
 }) async {
   // Create session ID
-  final timestamp = DateTime.now().toIso8601String().replaceAll(RegExp(r'[:.\ ]'), '-');
+  final timestamp = DateTime.now().toIso8601String().replaceAll(
+    RegExp(r'[:.\ ]'),
+    '-',
+  );
   final sessionId = 'sector${sector}_${year}_$timestamp';
 
   // Fetch download links
@@ -472,14 +476,21 @@ Future<HarvestSession> uploadTestSparqlSectorYearWithProgress(
 
   // Initialize progress for all documents
   for (final celex in celexIds) {
-    final langs = downloadLinks[celex]!.keys.toList();
+    final langMap = downloadLinks[celex]!;
+    final langs = langMap.keys.toList();
     session.documents[celex] = CelexProgress(
       celex: celex,
       languages: {for (var lang in langs) lang: LangStatus.pending},
+      downloadUrls: Map<String, String>.from(
+        langMap,
+      ), // Store the download URLs
     );
   }
 
   await session.save();
+
+  // Notify that session has been created and saved
+  onSessionCreated?.call(sessionId);
 
   // Logging setup
   final loggerUrl = LogManager(
@@ -490,9 +501,7 @@ Future<HarvestSession> uploadTestSparqlSectorYearWithProgress(
   );
 
   final logger = LogManager(fileName: 'logs/${fileSafeStamp}_$indexName.log');
-  logger.log(
-    'Cellar Upload with progress tracking. SessionID: $sessionId',
-  );
+  logger.log('Cellar Upload with progress tracking. SessionID: $sessionId');
 
   // Main harvest loop
   for (var i = startPointer; i < celexIds.length; i++) {
@@ -501,14 +510,23 @@ Future<HarvestSession> uploadTestSparqlSectorYearWithProgress(
     final langMapForCelex = downloadLinks[celex]!;
     final progress = session.documents[celex]!;
 
+    // Skip if already completed in this session (resume scenario)
+    if (progress.isCompleted) {
+      print('⏭️ Skipping $celex (already processed in this session)');
+      session.currentPointer = i;
+      await session.save();
+      onProgressUpdate?.call(session);
+      continue;
+    }
+
     progress.startedAt = DateTime.now();
     session.currentPointer = i;
 
-    // Check if exists (deduplication)
+    // Check if exists in index (deduplication across sessions)
     if (skipExisting) {
       final exists = await celexExistsInIndex(indexName, celex);
       if (exists) {
-        print('⏭️ Skipping $celex (already exists)');
+        print('⏭️ Skipping $celex (already exists in index)');
         for (final lang in progress.languages.keys) {
           progress.languages[lang] = LangStatus.skipped;
         }
@@ -522,47 +540,78 @@ Future<HarvestSession> uploadTestSparqlSectorYearWithProgress(
     print('Harvesting $pointer/${celexIds.length} — $celex');
 
     try {
-      // Download phase
+      // Mark all languages as downloading
       for (final lang in langMapForCelex.keys) {
         progress.languages[lang] = LangStatus.downloading;
       }
       onProgressUpdate?.call(session);
 
-      final uploadData = await createUploadArrayFromMap(
+      // Download all languages concurrently for speed
+      final allUploadData = await createUploadArrayFromMap(
         celex,
-        langMapForCelex,
+        langMapForCelex, // Pass entire language map for concurrent download
         logger,
         pointer,
       );
 
-      // Upload phase
+      // Update unit counts and mark as parsing
+      for (final lang in allUploadData.keys) {
+        final units = allUploadData[lang]?.length ?? 0;
+        progress.unitCounts[lang] = units;
+        progress.languages[lang] = LangStatus.parsing;
+      }
+
+      // Mark failed languages
       for (final lang in langMapForCelex.keys) {
-        progress.languages[lang] = LangStatus.uploading;
+        if (!allUploadData.containsKey(lang)) {
+          progress.languages[lang] = LangStatus.failed;
+          progress.errors[lang] = 'Download failed';
+        }
       }
       onProgressUpdate?.call(session);
 
-      processMultilingualMap(
-        uploadData,
-        indexName,
-        celex,
-        pointer.toString(),
-        false, // simulate
-        false, // debug
-        false,
-        i,
-        logger,
-      );
+      // Step 4: Upload all languages to server
+      if (allUploadData.isNotEmpty) {
+        // Mark all successful downloads as uploading
+        for (final lang in allUploadData.keys) {
+          progress.languages[lang] = LangStatus.uploading;
+        }
+        onProgressUpdate?.call(session);
 
-      // Mark all as completed
-      for (final lang in langMapForCelex.keys) {
-        progress.languages[lang] = LangStatus.completed;
+        final statusCode = await processMultilingualMap(
+          allUploadData,
+          indexName,
+          celex,
+          pointer.toString(),
+          false, // simulate
+          false, // debug
+          false,
+          i,
+          logger,
+        );
+
+        // Store HTTP status once for the entire document
+        progress.httpStatus = statusCode;
+
+        // Mark languages based on HTTP status code
+        for (final lang in allUploadData.keys) {
+          if (statusCode == 200) {
+            progress.languages[lang] = LangStatus.completed;
+          } else {
+            progress.languages[lang] = LangStatus.failed;
+            progress.errors[lang] = 'Upload failed with HTTP $statusCode';
+          }
+        }
       }
+
       progress.completedAt = DateTime.now();
     } catch (e) {
       print('❌ Failed to harvest $celex: $e');
       for (final lang in langMapForCelex.keys) {
-        progress.languages[lang] = LangStatus.failed;
-        progress.errors[lang] = e.toString();
+        if (progress.languages[lang] != LangStatus.failed) {
+          progress.languages[lang] = LangStatus.failed;
+          progress.errors[lang] = e.toString();
+        }
       }
       progress.completedAt = DateTime.now();
       logger.log('Failed to harvest $celex at index $i: $e');
@@ -818,20 +867,23 @@ Future<Map<String, int>> uploadSparqlForCelexWithProgress(
   String celex,
   String indexName,
   String format,
-  void Function(String lang, LangStatus status, int unitCount)? onLangProgress, [
+  void Function(String lang, LangStatus status, int unitCount)? onLangProgress,
+  void Function(int httpStatus)? onHttpStatus, [
   int startPointer = 0,
   bool debugMode = false,
   bool simulateUpload = false,
+  List<String>? filterLanguages, // null = all languages, or list of language codes
 ]) async {
   final langUnitCounts = <String, int>{};
-  
+  final langHttpStatus = <String, int>{}; // Track HTTP status per language
+
   final htmlDownloadLinks = await fetchLinksForCelex(celex, "html");
   final xhtmlDownloadLinks = await fetchLinksForCelex(celex, "xhtml");
   var downloadLinks = <String, Map<String, String>>{};
 
   final htmlCount = htmlDownloadLinks[celex]?.length ?? 0;
   final xhtmlCount = xhtmlDownloadLinks[celex]?.length ?? 0;
-  
+
   if (htmlCount >= xhtmlCount) {
     downloadLinks = htmlDownloadLinks;
   } else {
@@ -856,12 +908,25 @@ Future<Map<String, int>> uploadSparqlForCelexWithProgress(
     try {
       // Process each language individually for real-time progress
       final allUploadData = <String, List<List<String>>>{};
-      
-      for (final lang in langMapForCelex.keys) {
+
+      // Filter languages if requested
+      final langsToProcess = filterLanguages != null
+          ? langMapForCelex.keys.where(
+              (lang) => filterLanguages.any(
+                (filter) => filter.toUpperCase() == lang.toUpperCase(),
+              ),
+            ).toList()
+          : langMapForCelex.keys.toList();
+
+      if (filterLanguages != null && langsToProcess.isEmpty) {
+        print('⚠️ No matching languages found for $currentCelex. Filter: $filterLanguages, Available: ${langMapForCelex.keys}');
+      }
+
+      for (final lang in langsToProcess) {
         try {
           // Step 1: Notify downloading
           onLangProgress?.call(lang, LangStatus.downloading, 0);
-          
+
           // Step 2: Download this language's content
           final singleLangMap = {lang: langMapForCelex[lang]!};
           final langUploadData = await createUploadArrayFromMap(
@@ -870,12 +935,12 @@ Future<Map<String, int>> uploadSparqlForCelexWithProgress(
             logger,
             pointer,
           );
-          
+
           // Step 3: Notify parsing/ready (use uploading status with unit count)
           final units = langUploadData[lang]?.length ?? 0;
           langUnitCounts[lang] = units;
           onLangProgress?.call(lang, LangStatus.parsing, units);
-          
+
           // Store for batch upload
           allUploadData.addAll(langUploadData);
         } catch (e) {
@@ -891,8 +956,8 @@ Future<Map<String, int>> uploadSparqlForCelexWithProgress(
           final units = langUnitCounts[lang] ?? 0;
           onLangProgress?.call(lang, LangStatus.uploading, units);
         }
-        
-        await processMultilingualMap(
+
+        final httpStatusCode = await processMultilingualMap(
           allUploadData,
           indexName,
           currentCelex,
@@ -904,16 +969,24 @@ Future<Map<String, int>> uploadSparqlForCelexWithProgress(
           logger,
         );
 
-        // Mark all as completed
+        // Report HTTP status once for the entire document
+        onHttpStatus?.call(httpStatusCode);
+
+        // Mark all as completed or failed based on HTTP status
         for (final lang in allUploadData.keys) {
           final units = langUnitCounts[lang] ?? 0;
-          onLangProgress?.call(lang, LangStatus.completed, units);
+          langHttpStatus[lang] = httpStatusCode;
+          if (httpStatusCode == 200) {
+            onLangProgress?.call(lang, LangStatus.completed, units);
+          } else {
+            onLangProgress?.call(lang, LangStatus.failed, units);
+          }
         }
       }
     } on Exception catch (e) {
       print('Failed to harvest $currentCelex: $e');
       logger.log('Failed to harvest $currentCelex: (resume at index $i)\n$e');
-      
+
       // Mark languages as failed
       for (final lang in langMapForCelex.keys) {
         onLangProgress?.call(lang, LangStatus.failed, 0);
@@ -921,7 +994,7 @@ Future<Map<String, int>> uploadSparqlForCelexWithProgress(
       rethrow;
     }
   }
-  
+
   return langUnitCounts;
 }
 
