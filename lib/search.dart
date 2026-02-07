@@ -1189,7 +1189,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
       "term": _httpSource,
       "langs": displayedLangs,
       "pattern":
-          6, // Dedicated pattern for Trados auto-lookup (can be customized server-side)
+          jsonSettings['trados_search_pattern'], // Dedicated pattern for Trados auto-lookup (can be customized server-side)
       "size": 10,
       "existsLangs": displayedLangs,
     };
@@ -2277,7 +2277,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                 ),
               ),
 
-              adminUIEnabled
+              (isAdmin && adminUIEnabled)
                   ? Tooltip(
                     message:
                         'Temporary A/B: intervals query using informative tokens',

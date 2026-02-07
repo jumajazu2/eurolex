@@ -474,6 +474,45 @@ Future<int> openSearchUpload(json, indexName) async {
       response.substring(11),
     ); // Extract code from "HTTP_ERROR_XXX"
   }
+
+  // Parse JSON response to check for per-document errors
+  try {
+    final jsonResponse = jsonDecode(response);
+    if (jsonResponse['errors'] == true) {
+      // Collect error details
+      final items = jsonResponse['items'] as List?;
+      if (items != null) {
+        final errorItems = items.where((item) {
+          final actionResult = item['index'] ?? item['create'] ?? item['update'] ?? item['delete'];
+          final status = actionResult?['status'];
+          return status != null && status >= 400;
+        }).toList();
+        
+        if (errorItems.isNotEmpty) {
+          print('🔍 Cellar Debug: OpenSearch bulk errors detected (${errorItems.length}/${items.length} failed):');
+          for (int i = 0; i < errorItems.length && i < 5; i++) {
+            final item = errorItems[i];
+            final actionResult = item['index'] ?? item['create'] ?? item['update'] ?? item['delete'];
+            final status = actionResult?['status'];
+            final error = actionResult?['error'];
+            final reason = error != null ? error['reason'] ?? 'Unknown error' : 'Unknown error';
+            print('  - Status $status: $reason');
+          }
+          if (errorItems.length > 5) {
+            print('  ... and ${errorItems.length - 5} more errors');
+          }
+          
+          // Return the first error status code
+          final firstError = errorItems.first;
+          final actionResult = firstError['index'] ?? firstError['create'] ?? firstError['update'] ?? firstError['delete'];
+          return actionResult?['status'] as int? ?? 500;
+        }
+      }
+    }
+  } catch (e) {
+    print('🔍 Cellar Debug: Failed to parse bulk response JSON: $e');
+  }
+
   return 200; // Success
 }
 
@@ -481,6 +520,12 @@ Future<int> openSearchUpload(json, indexName) async {
 Future<String> sendToOpenSearch(String url, List<String> bulkData) async {
   try {
     final ndjsonBody = bulkData.join("\n") + "\n";
+    final bodySize = utf8.encode(ndjsonBody).length;
+
+    print(
+      "🔍 Cellar Debug: Sending ${bulkData.length} lines, ${bodySize} bytes to OpenSearch",
+    );
+
     final response = await http
         .post(
           Uri.parse(url),
@@ -491,7 +536,19 @@ Future<String> sendToOpenSearch(String url, List<String> bulkData) async {
           }),
           body: utf8.encode(ndjsonBody),
         )
-        .timeout(const Duration(seconds: 20));
+        .timeout(const Duration(seconds: 100));
+
+    // Cellar Debug: Full response details
+    print("🔍 Cellar Debug: HTTP ${response.statusCode}");
+    print("🔍 Cellar Debug: Headers: ${response.headers}");
+    print("🔍 Cellar Debug: Body length: ${response.body.length} bytes");
+    if (response.body.length <= 2000) {
+      print("🔍 Cellar Debug: Full response body:\n${response.body}");
+    } else {
+      print(
+        "🔍 Cellar Debug: Response body (first 2000 chars):\n${response.body.substring(0, 2000)}...",
+      );
+    }
 
     if (response.statusCode == 200) {
       print(
@@ -519,13 +576,15 @@ Future<String> sendToOpenSearch(String url, List<String> bulkData) async {
       return "HTTP_ERROR_${response.statusCode}";
     }
   } on TimeoutException catch (e) {
+    print("🔍 Cellar Debug: CLIENT-SIDE TIMEOUT (100 seconds exceeded)");
     print("Timeout sending data to OpenSearch: $e");
     try {
       final lgr = LogManager(fileName: '${fileSafeStamp}_bulk_err.log');
-      lgr.log('Timeout at $url: $e');
+      lgr.log('CLIENT TIMEOUT (100s) at $url: $e');
     } catch (_) {}
     return "HTTP_ERROR_408";
   } on SocketException catch (e) {
+    print("🔍 Cellar Debug: SOCKET EXCEPTION (network issue)");
     print("SocketException sending data to OpenSearch: $e");
     try {
       final lgr = LogManager(fileName: '${fileSafeStamp}_bulk_err.log');
@@ -533,6 +592,7 @@ Future<String> sendToOpenSearch(String url, List<String> bulkData) async {
     } catch (_) {}
     return "SocketException: $e";
   } on http.ClientException catch (e) {
+    print("🔍 Cellar Debug: HTTP CLIENT EXCEPTION");
     print("ClientException sending data to OpenSearch: $e");
     try {
       final lgr = LogManager(fileName: '${fileSafeStamp}_bulk_err.log');
@@ -540,6 +600,7 @@ Future<String> sendToOpenSearch(String url, List<String> bulkData) async {
     } catch (_) {}
     return "ClientException: $e";
   } catch (e) {
+    print("🔍 Cellar Debug: UNEXPECTED ERROR: ${e.runtimeType}");
     print("Error sending data to OpenSearch: $e");
     try {
       final lgr = LogManager(fileName: '${fileSafeStamp}_bulk_err.log');

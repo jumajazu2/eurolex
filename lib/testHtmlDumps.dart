@@ -173,7 +173,7 @@ Future<Map<String, List<List<String>>>> createUploadArrayFromMap(
   final out = <String, List<List<String>>>{};
   final failed = <String>[];
   //TODO maximum concurrent langs for download from cellar
-  const maxConcurrent = 25; // Reduced to 2 to prevent pool overload
+  const maxConcurrent = 15; // Reduced to 2 to prevent pool overload
   final langs = langLinks.keys.toList();
   var idx = 0;
   var hasError = false;
@@ -872,7 +872,8 @@ Future<Map<String, int>> uploadSparqlForCelexWithProgress(
   int startPointer = 0,
   bool debugMode = false,
   bool simulateUpload = false,
-  List<String>? filterLanguages, // null = all languages, or list of language codes
+  List<String>?
+  filterLanguages, // null = all languages, or list of language codes
 ]) async {
   final langUnitCounts = <String, int>{};
   final langHttpStatus = <String, int>{}; // Track HTTP status per language
@@ -910,16 +911,21 @@ Future<Map<String, int>> uploadSparqlForCelexWithProgress(
       final allUploadData = <String, List<List<String>>>{};
 
       // Filter languages if requested
-      final langsToProcess = filterLanguages != null
-          ? langMapForCelex.keys.where(
-              (lang) => filterLanguages.any(
-                (filter) => filter.toUpperCase() == lang.toUpperCase(),
-              ),
-            ).toList()
-          : langMapForCelex.keys.toList();
+      final langsToProcess =
+          filterLanguages != null
+              ? langMapForCelex.keys
+                  .where(
+                    (lang) => filterLanguages.any(
+                      (filter) => filter.toUpperCase() == lang.toUpperCase(),
+                    ),
+                  )
+                  .toList()
+              : langMapForCelex.keys.toList();
 
       if (filterLanguages != null && langsToProcess.isEmpty) {
-        print('⚠️ No matching languages found for $currentCelex. Filter: $filterLanguages, Available: ${langMapForCelex.keys}');
+        print(
+          '⚠️ No matching languages found for $currentCelex. Filter: $filterLanguages, Available: ${langMapForCelex.keys}',
+        );
       }
 
       for (final lang in langsToProcess) {

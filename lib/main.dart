@@ -109,7 +109,7 @@ final isAdminNotifier = ValueNotifier<bool>(isAdmin);
 
 bool isAdmin = false;
 bool adminUIEnabled =
-    true; // Toggle to disable admin UI even when logged in as admin
+    false; // Toggle to disable admin UI even when logged in as admin - defaults to false for security
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -387,7 +387,7 @@ class _MainTabbedAppState extends State<MainTabbedApp>
       isAdmin =
           jsonSettings['user_email']?.toString().toLowerCase() ==
           'juraj.kuban.sk@gmail.com';
-      adminUIEnabled = jsonSettings['admin_ui_enabled'] ?? true;
+      adminUIEnabled = jsonSettings['admin_ui_enabled'] ?? false;
       isAdminNotifier.value = isAdmin && adminUIEnabled;
       print("isAdmin: $isAdmin, adminUIEnabled: $adminUIEnabled");
 

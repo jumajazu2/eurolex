@@ -1845,7 +1845,8 @@ Future<List<List<String>>> getListIndicesFull(server, isAdmin) async {
                 .toList();
       }
 
-      indicesList =
+      // Parse and fetch readonly status for each index
+      final tempList =
           lines
               .map((line) {
                 final parts = line.split(RegExp(r'\s+'));
@@ -1858,7 +1859,18 @@ Future<List<List<String>>> getListIndicesFull(server, isAdmin) async {
               .where((sublist) => sublist.isNotEmpty)
               .toList();
 
-      // Parse each line into [name, size, docs]
+      indicesList =
+          lines
+              .map((line) {
+                final parts = line.split(RegExp(r'\s+'));
+                if (parts.length >= 3) {
+                  return <String>[parts[0], parts[1], parts[2]];
+                } else {
+                  return <String>[];
+                }
+              })
+              .where((sublist) => sublist.isNotEmpty)
+              .toList();
 
       print('Indices details loaded: $indicesList for server: $server');
       indicesFull = indicesList;

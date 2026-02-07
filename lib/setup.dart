@@ -55,12 +55,15 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
   final _emailCtrl = TextEditingController(text: userEmail);
   final _passkeyCtrl = TextEditingController(text: userPasskey);
   String? _emailError;
+  String? _passkeyError;
   double _fontScale = 1.0;
   String _fontFamily = 'System';
   bool _autoScaleWithSystem = false;
   // Search results-only font scale (does not affect global UI)
   double _resultsFontScale = 1.0;
   bool _adminUIEnabled = true;
+  // Trados Studio Plugin search strategy pattern
+  int _tradosSearchPattern = 2;
   // Update: hosted JSON endpoint (editable as needed)
   static const String updateInfoUrl =
       'https://www.pts-translation.sk/updateInfoUrl.json';
@@ -85,6 +88,8 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
             ((jsonSettings['search_results_font_scale'] ?? 1.0) as num)
                 .toDouble();
         _adminUIEnabled = (jsonSettings['admin_ui_enabled'] ?? true) == true;
+        _tradosSearchPattern =
+            ((jsonSettings['trados_search_pattern'] ?? 2) as num).toInt();
         final all =
             (langsEU ?? const <String>[])
                 .map((e) => e.toUpperCase())
@@ -204,9 +209,39 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
     }
   }
 
+  bool _isAsciiOnly(String text) {
+    // HTTP headers must contain only ASCII characters (0-127)
+    for (int i = 0; i < text.length; i++) {
+      if (text.codeUnitAt(i) > 127) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   Future<void> _confirmSettings() async {
     userEmail = _emailCtrl.text.trim();
     userPasskey = _passkeyCtrl.text.trim();
+
+    // Validate passkey contains only ASCII characters
+    if (userPasskey.isNotEmpty && !_isAsciiOnly(userPasskey)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Passkey contains invalid characters. Only standard ASCII characters (a-z, A-Z, 0-9) are allowed.',
+            ),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 4),
+          ),
+        );
+        setState(() {
+          _passkeyError = 'Only ASCII characters allowed';
+        });
+      }
+      return; // Don't save invalid passkey
+    }
+
     jsonSettings['user_email'] = userEmail;
     jsonSettings['access_key'] = userPasskey;
     if (lang1 != null) jsonSettings['lang1'] = lang1;
@@ -348,12 +383,31 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                               children: [
                                 TextField(
                                   controller: _passkeyCtrl,
-                                  decoration: const InputDecoration(
+                                  decoration: InputDecoration(
                                     labelText: 'Passkey',
-                                    border: OutlineInputBorder(),
+                                    border: const OutlineInputBorder(),
+                                    errorText: _passkeyError,
+                                    helperText:
+                                        _passkeyError == null
+                                            ? 'Only ASCII characters (a-z, A-Z, 0-9) allowed'
+                                            : null,
+                                    helperStyle: const TextStyle(fontSize: 11),
                                   ),
                                   obscureText: false,
-                                  onChanged: (v) => userPasskey = v,
+                                  onChanged: (v) {
+                                    userPasskey = v;
+                                    // Real-time validation
+                                    if (v.isNotEmpty && !_isAsciiOnly(v)) {
+                                      setState(() {
+                                        _passkeyError =
+                                            'Contains invalid characters (é, ñ, etc.)';
+                                      });
+                                    } else {
+                                      setState(() {
+                                        _passkeyError = null;
+                                      });
+                                    }
+                                  },
                                 ),
                                 const SizedBox(height: 4),
                                 const SizedBox(
@@ -642,6 +696,91 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
             const SizedBox(height: 24),
 
             const Text(
+              'Search Strategy for Trados Studio Plugin',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<int>(
+                    value: _tradosSearchPattern,
+                    decoration: const InputDecoration(
+                      labelText: 'Search Pattern',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 1,
+                        child: Text(
+                          'Pattern 1: Phrase search (precise, single language)',
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 2,
+                        child: Text(
+                          'Pattern 2: Multi-match with fuzziness (recommended)',
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 3,
+                        child: Text(
+                          'Pattern 3: Phrase + fuzzy with boosting (balanced)',
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 5,
+                        child: Text(
+                          'Pattern 5: Phrase search across ALL collections',
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 6,
+                        child: Text(
+                          'Pattern 6: Trados auto-lookup (optimized for CAT tools)',
+                        ),
+                      ),
+                    ],
+                    onChanged: (v) async {
+                      if (v == null) return;
+                      setState(() => _tradosSearchPattern = v);
+                      jsonSettings['trados_search_pattern'] = v;
+                      try {
+                        await writeSettingsToFile(jsonSettings);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Trados search pattern set to $v'),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Save failed: $e')),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Pattern descriptions:\n'
+              '• Pattern 1: Exact phrase match with slight word variations\n'
+              '• Pattern 2: Flexible matching with fuzzy search (default)\n'
+              '• Pattern 3: Combines phrase and fuzzy for better relevance\n'
+              '• Pattern 5: Searches across all your collections\n'
+              '• Pattern 6: Optimized for translation memory workflow',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+
+            const SizedBox(height: 24),
+
+            const Text(
               'Updates',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
@@ -701,11 +840,14 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                     dense: true,
                     title: Row(
                       children: [
-                        Text(
-                          indicesFull[index][0],
-                          style: const TextStyle(fontSize: 14),
-                          overflow: TextOverflow.ellipsis,
+                        Flexible(
+                          child: Text(
+                            indicesFull[index][0],
+                            style: const TextStyle(fontSize: 14),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
+                        const SizedBox(width: 4),
                         Text(
                           ' (' + indicesFull[index][1] + ' ',
                           style: const TextStyle(fontSize: 14),
