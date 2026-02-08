@@ -67,6 +67,9 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
   // Update: hosted JSON endpoint (editable as needed)
   static const String updateInfoUrl =
       'https://www.pts-translation.sk/updateInfoUrl.json';
+  // Collections maintenance sort and filter
+  String _collectionsSortBy = 'name'; // 'name', 'size', or 'docs'
+  String _collectionsFilter = '';
 
   @override
   void initState() {
@@ -284,6 +287,60 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
           context,
         ).showSnackBar(SnackBar(content: Text('Save failed: $e')));
       }
+    }
+  }
+
+  List<List<String>> _getFilteredAndSortedIndices() {
+    // Filter by name (case-insensitive)
+    var filtered =
+        indicesFull.where((index) {
+          return index[0].toLowerCase().contains(
+            _collectionsFilter.toLowerCase(),
+          );
+        }).toList();
+
+    // Sort based on selected option
+    filtered.sort((a, b) {
+      switch (_collectionsSortBy) {
+        case 'size':
+          // Parse size strings (e.g., "4.7kb", "1.2mb") for comparison
+          final aSize = _parseSize(a[1]);
+          final bSize = _parseSize(b[1]);
+          return bSize.compareTo(aSize); // Descending order
+        case 'docs':
+          // Parse document count for comparison
+          final aDocs = int.tryParse(a[2]) ?? 0;
+          final bDocs = int.tryParse(b[2]) ?? 0;
+          return bDocs.compareTo(aDocs); // Descending order
+        case 'name':
+        default:
+          return a[0].compareTo(b[0]); // Ascending alphabetical
+      }
+    });
+
+    return filtered;
+  }
+
+  double _parseSize(String sizeStr) {
+    // Parse size strings like "4.7kb", "1.2mb", "512b" to bytes
+    final str = sizeStr.toLowerCase().trim();
+    final match = RegExp(r'([\d.]+)([kmgt]?b)').firstMatch(str);
+    if (match == null) return 0;
+
+    final value = double.tryParse(match.group(1) ?? '0') ?? 0;
+    final unit = match.group(2) ?? 'b';
+
+    switch (unit) {
+      case 'tb':
+        return value * 1024 * 1024 * 1024 * 1024;
+      case 'gb':
+        return value * 1024 * 1024 * 1024;
+      case 'mb':
+        return value * 1024 * 1024;
+      case 'kb':
+        return value * 1024;
+      default:
+        return value;
     }
   }
 
@@ -821,256 +878,316 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
+            // Sort and Filter controls
+            Row(
+              children: [
+                const Text('Sort by:', style: TextStyle(fontSize: 14)),
+                const SizedBox(width: 8),
+                DropdownButton<String>(
+                  value: _collectionsSortBy,
+                  items: const [
+                    DropdownMenuItem(value: 'name', child: Text('Name')),
+                    DropdownMenuItem(value: 'size', child: Text('Size')),
+                    DropdownMenuItem(value: 'docs', child: Text('Documents')),
+                  ],
+                  onChanged: (String? value) {
+                    if (value != null) {
+                      setState(() {
+                        _collectionsSortBy = value;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(width: 24),
+                Expanded(
+                  child: TextField(
+                    decoration: const InputDecoration(
+                      labelText: 'Filter by name',
+                      hintText: 'Type to filter collections...',
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    onChanged: (String value) {
+                      setState(() {
+                        _collectionsFilter = value;
+                      });
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
             // Index selection dropdown for maintenance (optional, if you want to allow switching)
             // The rest of the maintenance UI (unchanged)
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: indicesFull.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3, // Two columns
-                childAspectRatio: 15, // Adjust for row height
-                mainAxisSpacing: 4,
-                crossAxisSpacing: 4,
-              ),
-              itemBuilder: (BuildContext context, int index) {
-                return Card(
-                  margin: EdgeInsets.zero,
-                  child: ListTile(
-                    dense: true,
-                    title: Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            indicesFull[index][0],
-                            style: const TextStyle(fontSize: 14),
-                            overflow: TextOverflow.ellipsis,
-                          ),
+            Builder(
+              builder: (context) {
+                final filteredIndices = _getFilteredAndSortedIndices();
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: filteredIndices.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3, // Two columns
+                    childAspectRatio: 15, // Adjust for row height
+                    mainAxisSpacing: 4,
+                    crossAxisSpacing: 4,
+                  ),
+                  itemBuilder: (BuildContext context, int index) {
+                    return Card(
+                      margin: EdgeInsets.zero,
+                      child: ListTile(
+                        dense: true,
+                        title: Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                filteredIndices[index][0],
+                                style: const TextStyle(fontSize: 14),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              ' (' + filteredIndices[index][1] + ' ',
+                              style: const TextStyle(fontSize: 14),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              filteredIndices[index][2] + ' units)',
+                              style: const TextStyle(fontSize: 14),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          ' (' + indicesFull[index][1] + ' ',
-                          style: const TextStyle(fontSize: 14),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          indicesFull[index][2] + ' units)',
-                          style: const TextStyle(fontSize: 14),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                    trailing:
-                        indicesFull[index][0].contains("sparql")
-                            ? null
-                            : Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // Info icon (available to both admin and owner)
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.info_outline,
-                                    size: 18,
-                                  ),
-                                  tooltip: 'Collection details',
-                                  onPressed: () {
-                                    final name = indicesFull[index][0];
-                                    final shardCount = indicesFull[index][1];
-                                    final unitCount = indicesFull[index][2];
+                        trailing:
+                            filteredIndices[index][0].contains("sparql")
+                                ? null
+                                : Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // Info icon (available to both admin and owner)
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.info_outline,
+                                        size: 18,
+                                      ),
+                                      tooltip: 'Collection details',
+                                      onPressed: () {
+                                        final name = filteredIndices[index][0];
+                                        final shardCount =
+                                            filteredIndices[index][1];
+                                        final unitCount =
+                                            filteredIndices[index][2];
 
-                                    showDialog(
-                                      context: context,
-                                      builder: (_) {
-                                        String _filter = '';
-                                        return AlertDialog(
-                                          title: SelectableText(
-                                            'Your Custom Collection: $name',
-                                          ),
-                                          content: FutureBuilder<List<String>>(
-                                            future: getDistinctCelexForIndex(
-                                              name,
-                                            ),
-                                            builder: (ctx, snap) {
-                                              final loading =
-                                                  snap.connectionState ==
-                                                  ConnectionState.waiting;
-                                              final error = snap.hasError;
-                                              final celexes =
-                                                  snap.data ?? const <String>[];
-
-                                              return SizedBox(
-                                                width: 1200,
-                                                child: Column(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      'Size: ${shardCount.toString().toUpperCase()}',
+                                        showDialog(
+                                          context: context,
+                                          builder: (_) {
+                                            String _filter = '';
+                                            return AlertDialog(
+                                              title: SelectableText(
+                                                'Your Custom Collection: $name',
+                                              ),
+                                              content: FutureBuilder<
+                                                List<String>
+                                              >(
+                                                future:
+                                                    getDistinctCelexForIndex(
+                                                      name,
                                                     ),
-                                                    Text('Units: $unitCount'),
+                                                builder: (ctx, snap) {
+                                                  final loading =
+                                                      snap.connectionState ==
+                                                      ConnectionState.waiting;
+                                                  final error = snap.hasError;
+                                                  final celexes =
+                                                      snap.data ??
+                                                      const <String>[];
 
-                                                    const Divider(),
-                                                    Text(
-                                                      'Documents (${celexes.length}):',
-                                                      style: const TextStyle(
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                    if (loading)
-                                                      const Padding(
-                                                        padding:
-                                                            EdgeInsets.only(
-                                                              top: 8,
-                                                            ),
-                                                        child:
-                                                            LinearProgressIndicator(),
-                                                      ),
-                                                    if (error)
-                                                      const Padding(
-                                                        padding:
-                                                            EdgeInsets.only(
-                                                              top: 8,
-                                                            ),
-                                                        child: Text(
-                                                          'Failed to load CELEX list',
+                                                  return SizedBox(
+                                                    width: 1200,
+                                                    child: Column(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Text(
+                                                          'Size: ${shardCount.toString().toUpperCase()}',
                                                         ),
-                                                      ),
-                                                    if (!loading && !error)
-                                                      StatefulBuilder(
-                                                        builder: (ctx2, setSB) {
-                                                          final list =
-                                                              _filter.isEmpty
-                                                                  ? celexes
-                                                                  : celexes
-                                                                      .where(
-                                                                        (e) => e
-                                                                            .toLowerCase()
-                                                                            .contains(
+                                                        Text(
+                                                          'Units: $unitCount',
+                                                        ),
+
+                                                        const Divider(),
+                                                        Text(
+                                                          'Documents (${celexes.length}):',
+                                                          style:
+                                                              const TextStyle(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
+                                                        ),
+                                                        if (loading)
+                                                          const Padding(
+                                                            padding:
+                                                                EdgeInsets.only(
+                                                                  top: 8,
+                                                                ),
+                                                            child:
+                                                                LinearProgressIndicator(),
+                                                          ),
+                                                        if (error)
+                                                          const Padding(
+                                                            padding:
+                                                                EdgeInsets.only(
+                                                                  top: 8,
+                                                                ),
+                                                            child: Text(
+                                                              'Failed to load CELEX list',
+                                                            ),
+                                                          ),
+                                                        if (!loading && !error)
+                                                          StatefulBuilder(
+                                                            builder: (
+                                                              ctx2,
+                                                              setSB,
+                                                            ) {
+                                                              final list =
+                                                                  _filter.isEmpty
+                                                                      ? celexes
+                                                                      : celexes
+                                                                          .where(
+                                                                            (
+                                                                              e,
+                                                                            ) => e.toLowerCase().contains(
                                                                               _filter.toLowerCase(),
                                                                             ),
-                                                                      )
-                                                                      .toList();
-                                                          return Column(
-                                                            mainAxisSize:
-                                                                MainAxisSize
-                                                                    .min,
-                                                            crossAxisAlignment:
-                                                                CrossAxisAlignment
-                                                                    .start,
-                                                            children: [
-                                                              TextField(
-                                                                decoration: const InputDecoration(
-                                                                  labelText:
-                                                                      'Filter documents',
-                                                                  isDense: true,
-                                                                  border:
-                                                                      OutlineInputBorder(),
-                                                                ),
-                                                                onChanged:
-                                                                    (
-                                                                      v,
-                                                                    ) => setSB(
-                                                                      () =>
-                                                                          _filter =
-                                                                              v,
+                                                                          )
+                                                                          .toList();
+                                                              return Column(
+                                                                mainAxisSize:
+                                                                    MainAxisSize
+                                                                        .min,
+                                                                crossAxisAlignment:
+                                                                    CrossAxisAlignment
+                                                                        .start,
+                                                                children: [
+                                                                  TextField(
+                                                                    decoration: const InputDecoration(
+                                                                      labelText:
+                                                                          'Filter documents',
+                                                                      isDense:
+                                                                          true,
+                                                                      border:
+                                                                          OutlineInputBorder(),
                                                                     ),
-                                                              ),
-                                                              const SizedBox(
-                                                                height: 8,
-                                                              ),
-                                                              SizedBox(
-                                                                height: 400,
-                                                                child:
-                                                                    list.isEmpty
-                                                                        ? const Center(
-                                                                          child: Text(
-                                                                            'No CELEX values found.',
-                                                                          ),
-                                                                        )
-                                                                        : ListView.builder(
-                                                                          itemCount:
-                                                                              list.length,
-                                                                          itemBuilder: (
-                                                                            _,
-                                                                            i,
-                                                                          ) {
-                                                                            final c =
-                                                                                list[i];
-                                                                            final d =
-                                                                                '${i + 1}. $c';
-                                                                            return ListTile(
-                                                                              dense:
-                                                                                  false,
-                                                                              title: SelectableText(
-                                                                                d,
-                                                                              ),
-                                                                            );
-                                                                          },
+                                                                    onChanged:
+                                                                        (
+                                                                          v,
+                                                                        ) => setSB(
+                                                                          () =>
+                                                                              _filter =
+                                                                                  v,
                                                                         ),
-                                                              ),
-                                                            ],
-                                                          );
-                                                        },
-                                                      ),
-                                                  ],
+                                                                  ),
+                                                                  const SizedBox(
+                                                                    height: 8,
+                                                                  ),
+                                                                  SizedBox(
+                                                                    height: 400,
+                                                                    child:
+                                                                        list.isEmpty
+                                                                            ? const Center(
+                                                                              child: Text(
+                                                                                'No CELEX values found.',
+                                                                              ),
+                                                                            )
+                                                                            : ListView.builder(
+                                                                              itemCount:
+                                                                                  list.length,
+                                                                              itemBuilder: (
+                                                                                _,
+                                                                                i,
+                                                                              ) {
+                                                                                final c = list[i];
+                                                                                final d = '${i + 1}. $c';
+                                                                                return ListTile(
+                                                                                  dense:
+                                                                                      false,
+                                                                                  title: SelectableText(
+                                                                                    d,
+                                                                                  ),
+                                                                                );
+                                                                              },
+                                                                            ),
+                                                                  ),
+                                                                ],
+                                                              );
+                                                            },
+                                                          ),
+                                                      ],
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed:
+                                                      () =>
+                                                          Navigator.of(
+                                                            context,
+                                                          ).pop(),
+                                                  child: const Text('Close'),
                                                 ),
-                                              );
-                                            },
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed:
-                                                  () =>
-                                                      Navigator.of(
-                                                        context,
-                                                      ).pop(),
-                                              child: const Text('Close'),
-                                            ),
-                                          ],
+                                              ],
+                                            );
+                                          },
                                         );
                                       },
-                                    );
-                                  },
-                                ),
-
-                                // Delete icon (admin or owner only)
-                                if (isAdmin ||
-                                    indicesFull[index][0].contains(userPasskey))
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.delete,
-                                      size: 18,
-                                      color: Colors.redAccent,
                                     ),
-                                    tooltip: 'Delete collection',
-                                    onPressed: () {
-                                      setState(() {
-                                        confirmAndDeleteOpenSearchIndex(
-                                          context,
-                                          indicesFull[index][0],
-                                        ).then((_) {
+
+                                    // Delete icon (admin or owner only)
+                                    if (isAdmin ||
+                                        filteredIndices[index][0].contains(
+                                          userPasskey,
+                                        ))
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.delete,
+                                          size: 18,
+                                          color: Colors.redAccent,
+                                        ),
+                                        tooltip: 'Delete collection',
+                                        onPressed: () {
                                           setState(() {
-                                            getListIndicesFull(
-                                              server,
-                                              isAdmin,
+                                            confirmAndDeleteOpenSearchIndex(
+                                              context,
+                                              filteredIndices[index][0],
                                             ).then((_) {
                                               setState(() {
-                                                print(
-                                                  "Indices reloaded details: $indicesFull",
-                                                );
+                                                getListIndicesFull(
+                                                  server,
+                                                  isAdmin,
+                                                ).then((_) {
+                                                  setState(() {
+                                                    print(
+                                                      "Indices reloaded details: $indicesFull",
+                                                    );
+                                                  });
+                                                });
                                               });
                                             });
                                           });
-                                        });
-                                      });
-                                    },
-                                  ),
-                              ],
-                            ),
-                  ),
+                                        },
+                                      ),
+                                  ],
+                                ),
+                      ),
+                    );
+                  },
                 );
               },
             ),

@@ -92,6 +92,9 @@ curl http://localhost:9200/_all/_settings | grep -A5 "blocks"
 
 ### Single Index
 
+CUSTOM: curl -H "x-api-key: ****" -H "x-email: juraj.kuban.sk@gmail.com"  -X PUT "http://localhost:9200/eurolex_sparql_sector6/_settings"   -H "Content-Type: application/json"   -d '{"index": {"blocks": {"read_only": null}}}'
+
+
 ```bash
 curl -X PUT "http://localhost:9200/eurolex_sparql_sector6/_settings" \
   -H "Content-Type: application/json" \
