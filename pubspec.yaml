@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 0.9.9+0
+version: 1.0.0+0
 
 environment:
   sdk: ^3.7.2
@@ -67,7 +67,7 @@ msix:
   publisher: CN=9687351F-CD29-4738-A1E5-91A13D3AEBB4           # From Partner Center publisher ID
   logo_path: windows/runner/resources/icons.png
   store: true         
-  version: 0.9.9.0                    # Generates Store-ready manifest
+  version: 1.0.0.0                    # Generates Store-ready manifest
   # Optional:
   # description: EU law search and highlight client
   # architecture: x64                      # defaults to auto-detect

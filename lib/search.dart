@@ -958,7 +958,10 @@ class SearchTabWidget extends StatefulWidget {
 }
 
 class _SearchTabWidgetState extends State<SearchTabWidget>
-    with WidgetsBindingObserver, SingleTickerProviderStateMixin {
+    with
+        WidgetsBindingObserver,
+        SingleTickerProviderStateMixin,
+        AutomaticKeepAliveClientMixin {
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _controller3 = TextEditingController();
   //final List<bool> _quickSettings = List.generate(6, (_) => true);
@@ -1038,6 +1041,16 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
       ),
     );
     _indexArrowBlinkController.repeat(reverse: true);
+
+    // Auto-hide arrow hint after 10 seconds
+    Future.delayed(const Duration(seconds: 30), () {
+      if (mounted) {
+        setState(() {
+          _showIndexArrowHint = false;
+          _indexArrowBlinkController.stop();
+        });
+      }
+    });
 
     // Load settings before using jsonSettings
     loadSettingsFromFile().then((_) {
@@ -1977,6 +1990,9 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
 
   final Map<String, String> _titleCache = {};
 
+  @override
+  bool get wantKeepAlive => true;
+
   Future<String?> _fetchTitleForCelex(
     String celex, {
     String lang = 'en',
@@ -2055,6 +2071,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
     return Column(
       children: [
         // Search field with Enter key trigger

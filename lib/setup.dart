@@ -440,15 +440,9 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                               children: [
                                 TextField(
                                   controller: _passkeyCtrl,
-                                  decoration: InputDecoration(
+                                  decoration: const InputDecoration(
                                     labelText: 'Passkey',
-                                    border: const OutlineInputBorder(),
-                                    errorText: _passkeyError,
-                                    helperText:
-                                        _passkeyError == null
-                                            ? 'Only ASCII characters (a-z, A-Z, 0-9) allowed'
-                                            : null,
-                                    helperStyle: const TextStyle(fontSize: 11),
+                                    border: OutlineInputBorder(),
                                   ),
                                   obscureText: false,
                                   onChanged: (v) {
@@ -467,15 +461,68 @@ class _indicesMaintenanceState extends State<indicesMaintenance> {
                                   },
                                 ),
                                 const SizedBox(height: 4),
-                                const SizedBox(
+                                SizedBox(
                                   height: 16,
-                                  // reserved space so it aligns vertically with the email field
-                                  child: SizedBox.shrink(),
+                                  child:
+                                      _passkeyError != null
+                                          ? Text(
+                                            _passkeyError!,
+                                            style: TextStyle(
+                                              color:
+                                                  Theme.of(
+                                                    context,
+                                                  ).colorScheme.error,
+                                              fontSize: 12,
+                                            ),
+                                          )
+                                          : Text(
+                                            'Only ASCII characters (a-z, A-Z, 0-9) allowed',
+                                            style: TextStyle(
+                                              color: Colors.grey[600],
+                                              fontSize: 12,
+                                            ),
+                                          ),
                                 ),
                               ],
                             ),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 8),
+                      RichText(
+                        text: TextSpan(
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[600],
+                          ),
+                          children: [
+                            const TextSpan(
+                              text:
+                                  'By providing your email and clicking Confirm, you agree that we may send you service-related information and offers. \nFor more information, see the ',
+                            ),
+                            WidgetSpan(
+                              child: InkWell(
+                                onTap: () {
+                                  launchUrl(
+                                    Uri.parse(
+                                      'https://www.pts-translation.sk/privacy.html',
+                                    ),
+                                    mode: LaunchMode.externalApplication,
+                                  );
+                                },
+                                child: Text(
+                                  'Privacy Policy',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.blue,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const TextSpan(text: '.'),
+                          ],
+                        ),
                       ),
                     ],
                   ),

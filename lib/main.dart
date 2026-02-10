@@ -330,7 +330,7 @@ class _MainTabbedAppState extends State<MainTabbedApp>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'Please enter the email you use for access, even in Trial Mode. It helps identify your account for support and licensing.',
+                            'Please enter the email you use for access, even in Trial Mode. It helps identify your account for support and licensing.\n By providing your email, you agree that we may send you service-related information and offers.',
                           ),
                           const SizedBox(height: 12),
                           TextField(
@@ -577,7 +577,8 @@ class _MainTabbedAppState extends State<MainTabbedApp>
     Tab(child: Text('Search', style: TextStyle(fontSize: 16.8))),
     Tab(child: Text('IATE Terminology', style: TextStyle(fontSize: 16.8))),
     Tab(child: Text('Setup', style: TextStyle(fontSize: 16.8))),
-    if (isAdmin) Tab(child: Text('Data Process', style: TextStyle(fontSize: 16.8))),
+    if (isAdmin)
+      Tab(child: Text('Data Process', style: TextStyle(fontSize: 16.8))),
     Tab(child: Text('Upload References', style: TextStyle(fontSize: 16.8))),
   ];
 
