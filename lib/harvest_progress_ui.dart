@@ -406,10 +406,7 @@ class _HarvestProgressWidgetState extends State<HarvestProgressWidget> {
         margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 0),
         child: ListTile(
           leading: CircleAvatar(child: Text('$displayNumber')),
-          title: Text(
-            celex,
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
+          title: Text(celex, style: TextStyle(fontWeight: FontWeight.bold)),
           subtitle: Text('⏳ Pending'),
         ),
       );

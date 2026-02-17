@@ -989,31 +989,71 @@ class _CelexYearsWidgetState extends State<CelexYearsWidget> {
                       ),
                       const SizedBox(height: 4),
                       if (uploaded && !isIncomplete)
-                        const Icon(
-                          Icons.check_circle,
-                          size: 16,
-                          color: Colors.green,
-                        )
-                      else if (isIncomplete)
-                        Row(
+                        Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            const Icon(
+                              Icons.check_circle,
+                              size: 16,
+                              color: Colors.green,
+                            ),
+                            const SizedBox(height: 2),
                             IconButton(
-                              icon: const Icon(Icons.play_arrow, size: 16),
+                              icon: const Icon(Icons.refresh, size: 14),
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(),
-                              tooltip: 'Resume',
-                              onPressed:
-                                  () => _resumeSectorUpload(
-                                    yearInt,
-                                    key,
-                                    sessionId!,
-                                  ),
+                              tooltip: 'Reset for reupload',
+                              onPressed: () {
+                                setState(() {
+                                  setSectorUploaded(data!, yearInt, key, false);
+                                  setSectorSessionId(data!, yearInt, key, null);
+                                  _activeSessions.remove(sectorKey);
+                                });
+                                _save();
+                              },
                             ),
-                            const SizedBox(width: 2),
-                            Text(
-                              '${(session?.progressPercentage ?? 0).toStringAsFixed(0)}%',
-                              style: const TextStyle(fontSize: 10),
+                          ],
+                        )
+                      else if (isIncomplete)
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.play_arrow, size: 16),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                  tooltip: 'Resume',
+                                  onPressed:
+                                      () => _resumeSectorUpload(
+                                        yearInt,
+                                        key,
+                                        sessionId!,
+                                      ),
+                                ),
+                                const SizedBox(width: 2),
+                                Text(
+                                  '${(session?.progressPercentage ?? 0).toStringAsFixed(0)}%',
+                                  style: const TextStyle(fontSize: 10),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            IconButton(
+                              icon: const Icon(Icons.refresh, size: 14),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              tooltip: 'Reset for reupload',
+                              onPressed: () {
+                                setState(() {
+                                  setSectorUploaded(data!, yearInt, key, false);
+                                  setSectorSessionId(data!, yearInt, key, null);
+                                  _activeSessions.remove(sectorKey);
+                                });
+                                _save();
+                              },
                             ),
                           ],
                         )

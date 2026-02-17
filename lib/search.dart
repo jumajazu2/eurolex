@@ -2815,23 +2815,176 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
 */
                                         Row(
                                           children: [
-                                            Text("Date: "),
                                             Expanded(
-                                              child: SelectableText(
-                                                docDate.length > index
-                                                    ? (() {
-                                                      final raw =
-                                                          docDate[index];
-                                                      final dt =
-                                                          DateTime.tryParse(
-                                                            raw,
-                                                          );
-                                                      if (dt == null)
-                                                        return raw;
-                                                      return "${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}";
-                                                    })()
-                                                    : '',
-                                                // maxLines: 1,
+                                              child: FutureBuilder<
+                                                Map<String, String>
+                                              >(
+                                                future:
+                                                    metaCelex.length > index
+                                                        ? fetchTitlesForCelex(
+                                                          metaCelex[index],
+                                                        )
+                                                        : Future.value({}),
+                                                builder: (context, snapshot) {
+                                                  if (snapshot
+                                                          .connectionState ==
+                                                      ConnectionState.waiting) {
+                                                    return Text('Loading...');
+                                                  }
+                                                  final titleMap =
+                                                      snapshot.data ?? {};
+                                                  // Filter to only show languages with checkboxes selected
+                                                  final selectedLangs = <
+                                                    String
+                                                  >{
+                                                    if (jsonSettings['display_lang1'] ==
+                                                            true &&
+                                                        lang1 != null)
+                                                      lang1!.toUpperCase(),
+                                                    if (jsonSettings['display_lang2'] ==
+                                                            true &&
+                                                        lang2 != null)
+                                                      lang2!.toUpperCase(),
+                                                    if (jsonSettings['display_lang3'] ==
+                                                            true &&
+                                                        lang3 != null)
+                                                      lang3!.toUpperCase(),
+                                                  };
+                                                  final filteredTitleMap =
+                                                      Map.fromEntries(
+                                                        titleMap.entries.where(
+                                                          (e) => selectedLangs
+                                                              .contains(
+                                                                e.key
+                                                                    .toUpperCase(),
+                                                              ),
+                                                        ),
+                                                      );
+                                                  // Prefer English, then any available title
+                                                  final fullTitle =
+                                                      filteredTitleMap['EN'] ??
+                                                      filteredTitleMap['en'] ??
+                                                      (filteredTitleMap
+                                                              .isNotEmpty
+                                                          ? filteredTitleMap
+                                                              .values
+                                                              .first
+                                                          : '');
+                                                  final shortTitle =
+                                                      fullTitle.length > 80
+                                                          ? '${fullTitle.substring(0, 80)}...'
+                                                          : fullTitle;
+                                                  return GestureDetector(
+                                                    onTap:
+                                                        fullTitle.isNotEmpty &&
+                                                                (fullTitle.length >
+                                                                        80 ||
+                                                                    filteredTitleMap
+                                                                            .length >
+                                                                        1)
+                                                            ? () => showDialog(
+                                                              context: context,
+                                                              builder:
+                                                                  (
+                                                                    _,
+                                                                  ) => AlertDialog(
+                                                                    title: Text(
+                                                                      'Document Titles',
+                                                                    ),
+                                                                    content: SingleChildScrollView(
+                                                                      child: Column(
+                                                                        crossAxisAlignment:
+                                                                            CrossAxisAlignment.start,
+                                                                        mainAxisSize:
+                                                                            MainAxisSize.min,
+                                                                        children:
+                                                                            filteredTitleMap.entries
+                                                                                .map(
+                                                                                  (
+                                                                                    e,
+                                                                                  ) => Padding(
+                                                                                    padding: EdgeInsets.only(
+                                                                                      bottom:
+                                                                                          12,
+                                                                                    ),
+                                                                                    child: Column(
+                                                                                      crossAxisAlignment:
+                                                                                          CrossAxisAlignment.start,
+                                                                                      children: [
+                                                                                        Text(
+                                                                                          e.key,
+                                                                                          style: TextStyle(
+                                                                                            fontWeight:
+                                                                                                FontWeight.bold,
+                                                                                            fontSize:
+                                                                                                14,
+                                                                                          ),
+                                                                                        ),
+                                                                                        SizedBox(
+                                                                                          height:
+                                                                                              4,
+                                                                                        ),
+                                                                                        SelectableText(
+                                                                                          e.value,
+                                                                                        ),
+                                                                                      ],
+                                                                                    ),
+                                                                                  ),
+                                                                                )
+                                                                                .toList(),
+                                                                      ),
+                                                                    ),
+                                                                    actions: [
+                                                                      TextButton(
+                                                                        onPressed:
+                                                                            () =>
+                                                                                Navigator.of(
+                                                                                  context,
+                                                                                ).pop(),
+                                                                        child: Text(
+                                                                          'Close',
+                                                                        ),
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                            )
+                                                            : null,
+                                                    child: Tooltip(
+                                                      message: filteredTitleMap
+                                                          .entries
+                                                          .map(
+                                                            (e) =>
+                                                                '${e.key}: ${e.value}',
+                                                          )
+                                                          .join('\n\n'),
+                                                      waitDuration: Duration(
+                                                        seconds: 1,
+                                                      ),
+                                                      child: Text(
+                                                        shortTitle,
+                                                        style: TextStyle(
+                                                          color:
+                                                              (fullTitle.length >
+                                                                          80 ||
+                                                                      titleMap.length >
+                                                                          1)
+                                                                  ? Color(
+                                                                    0xFF0F2A44,
+                                                                  )
+                                                                  : null,
+                                                          decoration:
+                                                              (fullTitle.length >
+                                                                          80 ||
+                                                                      titleMap.length >
+                                                                          1)
+                                                                  ? TextDecoration
+                                                                      .underline
+                                                                  : null,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
                                               ),
                                             ),
                                           ],
@@ -2853,152 +3006,66 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
 
                                         Row(
                                           children: [
-                                            Text("Title: "),
-                                            Expanded(
-                                              child: FutureBuilder<
-                                                Map<String, String>
-                                              >(
-                                                future:
-                                                    metaCelex.length > index
-                                                        ? fetchTitlesForCelex(
-                                                          metaCelex[index],
-                                                        )
-                                                        : Future.value({}),
-                                                builder: (context, snapshot) {
-                                                  if (snapshot
-                                                          .connectionState ==
-                                                      ConnectionState.waiting) {
-                                                    return Text('Loading...');
-                                                  }
-                                                  final titleMap =
-                                                      snapshot.data ?? {};
-                                                  // Filter to only show selected working languages
-                                                  final selectedLangs = [lang1, lang2, lang3]
-                                                      .where((l) => l != null)
-                                                      .map((l) => l!.toUpperCase())
-                                                      .toSet();
-                                                  final filteredTitleMap = Map.fromEntries(
-                                                    titleMap.entries.where((e) =>
-                                                      selectedLangs.contains(e.key.toUpperCase())
-                                                    )
-                                                  );
-                                                  // Prefer English, then any available title
-                                                  final fullTitle =
-                                                      filteredTitleMap['EN'] ??
-                                                      filteredTitleMap['en'] ??
-                                                      (filteredTitleMap.isNotEmpty
-                                                          ? filteredTitleMap
-                                                              .values.first
-                                                          : '');
-                                                  final shortTitle =
-                                                      fullTitle.length > 80
-                                                          ? '${fullTitle.substring(0, 80)}...'
-                                                          : fullTitle;
-                                                  return GestureDetector(
-                                                    onTap:
-                                                        fullTitle.isNotEmpty &&
-                                                                (fullTitle
-                                                                        .length >
-                                                                    80 || filteredTitleMap.length > 1)
-                                                            ? () => showDialog(
-                                                              context: context,
-                                                              builder:
-                                                                  (
-                                                                    _,
-                                                                  ) => AlertDialog(
-                                                                    title: Text(
-                                                                      'Document Titles',
-                                                                    ),
-                                                                    content:
-                                                                        SingleChildScrollView(
-                                                                          child: Column(
-                                                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                                                            mainAxisSize: MainAxisSize.min,
-                                                                            children: filteredTitleMap.entries.map((e) => 
-                                                                              Padding(
-                                                                                padding: EdgeInsets.only(bottom: 12),
-                                                                                child: Column(
-                                                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                                                  children: [
-                                                                                    Text(
-                                                                                      e.key,
-                                                                                      style: TextStyle(
-                                                                                        fontWeight: FontWeight.bold,
-                                                                                        fontSize: 14,
-                                                                                      ),
-                                                                                    ),
-                                                                                    SizedBox(height: 4),
-                                                                                    SelectableText(e.value),
-                                                                                  ],
-                                                                                ),
-                                                                              )
-                                                                            ).toList(),
-                                                                          ),
-                                                                        ),
-                                                                    actions: [
-                                                                      TextButton(
-                                                                        onPressed:
-                                                                            () =>
-                                                                                Navigator.of(
-                                                                                  context,
-                                                                                ).pop(),
-                                                                        child: Text(
-                                                                          'Close',
-                                                                        ),
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                            )
-                                                            : null,
-                                                    child: Text(
-                                                      shortTitle,
-                                                      style: TextStyle(
-                                                        color:
-                                                            (fullTitle.length >
-                                                                    80 || titleMap.length > 1)
-                                                                ? Colors.blue
-                                                                : null,
-                                                        decoration:
-                                                            (fullTitle.length >
-                                                                    80 || titleMap.length > 1)
-                                                                ? TextDecoration
-                                                                    .underline
-                                                                : null,
-                                                      ),
-                                                    ),
-                                                  );
-                                                },
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-
-                                        Row(
-                                          children: [
                                             Text("Sequence ID: "),
                                             Expanded(
-                                              child: SelectableText(
-                                                pointerPar.length > index
-                                                    ? pointerPar[index]
-                                                    : '',
-                                                // maxLines: 1,
+                                              child: Row(
+                                                children: [
+                                                  Flexible(
+                                                    child: SelectableText(
+                                                      pointerPar.length > index
+                                                          ? pointerPar[index]
+                                                          : '',
+                                                      // maxLines: 1,
+                                                    ),
+                                                  ),
+                                                  if (docDate.length > index &&
+                                                      docDate[index].isNotEmpty)
+                                                    Padding(
+                                                      padding: EdgeInsets.only(
+                                                        left: 8,
+                                                      ),
+                                                      child: Tooltip(
+                                                        message:
+                                                            "Date added to Collection",
+                                                        child: Text(
+                                                          '(${(() {
+                                                            final raw = docDate[index];
+                                                            final dt = DateTime.tryParse(raw);
+                                                            if (dt == null) return raw;
+                                                            return "${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}";
+                                                          })()})',
+                                                          style: TextStyle(
+                                                            fontSize: 12,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                ],
                                               ),
                                             ),
+                                            if (parNotMatched[index] == "true")
+                                              Tooltip(
+                                                message:
+                                                    "Due to inconsistencies in source documents, texts may be misaligned, use Context feature to align sentences",
+                                                child: Icon(
+                                                  Icons.warning_amber,
+                                                  color: Colors.orange,
+                                                  size: 18,
+                                                ),
+                                              ),
                                           ],
                                         ),
-                                        (parNotMatched[index] == "true")
-                                            ? Row(
-                                              children: [
-                                                Text(
-                                                  "Texts may be misaligned!",
-                                                ),
-                                              ],
-                                            )
-                                            : SizedBox.shrink(),
 
                                         Row(
                                           children: [
-                                            Text("Eur-Lex: "),
+                                            Tooltip(
+                                              message:
+                                                  "Click to display the full document on the Eur-lex site",
+                                              waitDuration: Duration(
+                                                seconds: 1,
+                                              ),
+                                              child: Text("Eur-Lex: "),
+                                            ),
                                             GestureDetector(
                                               onTap: () {
                                                 // Handle the tap event here, e.g. open the link in a browser
