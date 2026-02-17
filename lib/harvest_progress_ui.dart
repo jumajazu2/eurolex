@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:LegisTracerEU/harvest_progress.dart';
+import 'package:LegisTracerEU/search.dart';
 import 'package:url_launcher/url_launcher.dart' as url_launcher;
 
 /// Helper function to launch URLs
@@ -405,7 +406,10 @@ class _HarvestProgressWidgetState extends State<HarvestProgressWidget> {
         margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 0),
         child: ListTile(
           leading: CircleAvatar(child: Text('$displayNumber')),
-          title: Text(celex, style: TextStyle(fontFamily: 'monospace')),
+          title: Text(
+            celex,
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           subtitle: Text('⏳ Pending'),
         ),
       );

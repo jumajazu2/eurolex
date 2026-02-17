@@ -1,0 +1,31 @@
+### OpenSearch Query Test
+POST https://search.pts-translation.sk/eu_7239_bibles_5langs/_search
+Content-Type: application/json
+x-api-key: 7239
+x-email: juraj.kuban.sk@gmail.com
+
+{
+  "query": {
+"bool": { "must": [ { "term": { "sequence_id": 13983 } } ] } }, "size": 10 }
+
+### Another example - Search by CELEX
+POST https://search.pts-translation.sk/eu_7239_bibles_5langs/_search
+Content-Type: application/json
+x-api-key: 7239
+x-email: juraj.kuban.sk@gmail.com
+
+{
+  "query": {
+    "bool": {
+      "should": [
+        { "term": { "celex": "32014R0680" } },
+        { "term": { "celex.keyword": "32014R0680" } }
+      ],
+      "minimum_should_match": 1
+    }
+  },
+  "size": 5
+}
+
+
+

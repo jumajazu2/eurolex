@@ -23,29 +23,24 @@ class Config {
       'https://search.pts-translation.sk'; // Or http://localhost:3000 for testing
   static const String apiKey = '7239';
   static const String email = 'juraj.kuban.sk@gmail.com';
-  static const String targetIndex = 'eu_7239_bibles'; // Change to your index
+  static const String targetIndex =
+      'eu_7239_bibles_5langs2'; // Change to your index
 
   // Batch settings
   static const int batchSize = 1000; // Records per bulk request
 
   // Index mapping for OpenSearch
-  static const bool createIndexMapping = true; // Set to false after first run
-
-  // Bible ID to language mapping
-  // Maps bible_id values from database to language codes
-  static const Map<String, String> bibleLanguageMap = {
-    '1': 'en', // English Bible
-    '2': 'sk', // Slovak Bible
-    '3': 'de', // German Bible
-    '4': 'fr', // French Bible
-    '5': 'de2', // German Bible (second version)
-  };
+  static const bool createIndexMapping = false; // Server handles index creation
 }
 
 // ==================== METADATA FUNCTION ====================
 /// Add custom metadata to each record from SQLite
 /// Modify this function to add your custom fields
 Map<String, dynamic> addMetadata(Map<String, dynamic> record) {
+  final bibleId = record['bible_id'] as String?;
+  final bookName = record['book_name']?.toString() ?? '';
+  final chapter = record['bible_chapter']?.toString() ?? '';
+  final verse = record['verse']?.toString() ?? '';
   return {
     ...record, // Original fields from SQLite
     // Add your custom metadata here:
@@ -55,8 +50,8 @@ Map<String, dynamic> addMetadata(Map<String, dynamic> record) {
     'paragraphsNotMatched': false, // For compatibility with legal doc queries
     // Compatibility fields for app (empty/default values)
     'celex': 'BIBLE',
-    'dir_id': 'bible_${record['bible_id'] ?? '1'}',
-    'class': 'Bible',
+    'dir_id': 'bible_${bibleId ?? '1'}',
+    'class': '$bookName $chapter:$verse',
     'date': DateTime.now().toIso8601String(),
     // Add more fields as needed
   };
@@ -91,7 +86,7 @@ Future<void> createIndexWithMapping() async {
             'keyword': {'type': 'keyword'},
           },
         },
-        'de2_text': {
+        'dm_text': {
           'type': 'text',
           'analyzer': 'standard',
           'fields': {
@@ -99,13 +94,6 @@ Future<void> createIndexWithMapping() async {
           },
         },
         'fr_text': {
-          'type': 'text',
-          'analyzer': 'standard',
-          'fields': {
-            'keyword': {'type': 'keyword'},
-          },
-        },
-        'cs_text': {
           'type': 'text',
           'analyzer': 'standard',
           'fields': {
@@ -161,56 +149,40 @@ Future<void> createIndexWithMapping() async {
   }
 }
 
-// ==================== BULK UPLOAD ====================
+// ==================== UPLOAD TO OPENSEARCH ====================
 Future<void> sendBulkToOpenSearch(List<Map<String, dynamic>> records) async {
-  // Build NDJSON bulk request body
-  final bulkLines = <String>[];
-  for (final record in records) {
-    // Index action (with or without ID)
-    final action =
-        record.containsKey('id')
-            ? {
-              'index': {'_index': Config.targetIndex, '_id': record['id']},
-            }
-            : {
-              'index': {'_index': Config.targetIndex},
-            };
+  // Use the secure /upload endpoint
+  final url = Uri.parse('${Config.proxyUrl}/upload');
+  final body = jsonEncode({'index': Config.targetIndex, 'documents': records});
 
-    bulkLines.add(jsonEncode(action));
-    bulkLines.add(jsonEncode(record));
-  }
-  final bulkBody = bulkLines.join('\n') + '\n';
-
-  // Send to your proxy server's bulk endpoint
-  final url = Uri.parse('${Config.proxyUrl}/opensearch/_bulk');
   final response = await http.post(
     url,
     headers: {
-      'Content-Type': 'application/x-ndjson',
+      'Content-Type': 'application/json',
       'x-api-key': Config.apiKey,
       'x-email': Config.email,
     },
-    body: bulkBody,
+    body: body,
   );
 
   if (response.statusCode != 200) {
-    throw Exception(
-      'Bulk upload failed: ${response.statusCode} ${response.body}',
-    );
+    throw Exception('Upload failed: ${response.statusCode} ${response.body}');
   }
 
   // Check for errors in response
   final result = jsonDecode(response.body);
   if (result['errors'] == true) {
-    final items = result['items'] as List;
-    final errorCount =
-        items.where((item) => item['index']['error'] != null).length;
-    if (errorCount > 0) {
-      print('⚠️  Warning: $errorCount items had errors');
-      // Print first few errors for debugging
-      for (var i = 0; i < items.length && i < 3; i++) {
-        if (items[i]['index']['error'] != null) {
-          print('   Error: ${items[i]['index']['error']}');
+    final items = result['items'] as List?;
+    if (items != null) {
+      final errorCount =
+          items.where((item) => item['index']['error'] != null).length;
+      if (errorCount > 0) {
+        print('⚠️  Warning: $errorCount items had errors');
+        // Print first few errors for debugging
+        for (var i = 0; i < items.length && i < 3; i++) {
+          if (items[i]['index']['error'] != null) {
+            print('   Error: ${items[i]['index']['error']}');
+          }
         }
       }
     }
@@ -266,6 +238,59 @@ Map<String, Map<String, String>> loadBookData(Database db) {
   return bookMap;
 }
 
+// ==================== LOAD BIBLE LANGUAGE MAP ====================
+Map<String, String> loadBibleLanguageMap(Database db) {
+  final bibleMap = <String, String>{};
+
+  // Map from abb to language code
+  const Map<String, String> abbToLang = {
+    'KJV': 'en',
+    'ROH': 'sk',
+    'LUT': 'de',
+    'KJV-FR': 'fr',
+    'MNG': 'dm',
+  };
+
+  try {
+    // Query to see what columns are available
+    final bibles = db.select('SELECT * FROM msk_bibles');
+
+    // Debug: Show column names from first row
+    if (bibles.isNotEmpty) {
+      print('📖 msk_bibles columns: ${bibles.first.keys.toList()}');
+    }
+
+    for (final bible in bibles) {
+      // The bible identifier - try different column names
+      final bibleId =
+          bible['ID']?.toString() ??
+          bible['bible_id']?.toString() ??
+          bible['id']?.toString();
+      final abb = bible['abb']?.toString();
+      final lang = abb != null ? abbToLang[abb] ?? abb : null;
+
+      if (bibleId != null && lang != null) {
+        bibleMap[bibleId] = lang;
+
+        // Debug: print first few bibles
+        if (bibleMap.length <= 5) {
+          print('  Bible ID: $bibleId (abb: $abb) -> $lang');
+        }
+      }
+    }
+
+    print(
+      'Loaded ${bibleMap.length} bible language mappings from msk_bibles\n',
+    );
+  } catch (e) {
+    print('⚠️  Warning: Could not load bible language map: $e\n');
+    // Fallback to hardcoded if table doesn't exist
+    bibleMap.addAll({'1': 'en', '2': 'sk', '3': 'de', '4': 'fr', '5': 'dm'});
+  }
+
+  return bibleMap;
+}
+
 // ==================== MAIN IMPORT FUNCTION ====================
 Future<void> importFromSqlite() async {
   print('Starting SQLite to OpenSearch import...\n');
@@ -287,6 +312,9 @@ Future<void> importFromSqlite() async {
     // Load book data for joining
     final bookData = loadBookData(db);
 
+    // Load bible language mappings
+    final bibleLanguageMap = loadBibleLanguageMap(db);
+
     // Get total count
     final countResult = db.select(
       'SELECT COUNT(*) as count FROM ${Config.sqliteTable}',
@@ -294,119 +322,115 @@ Future<void> importFromSqlite() async {
     final totalCount = countResult.first['count'] as int;
     print('Found $totalCount records to import\n');
 
-    // Get column names
-    final columnsResult = db.select('PRAGMA table_info(${Config.sqliteTable})');
-    final columnNames =
-        columnsResult.map((row) => row['name'] as String).toList();
-
-    // Read and process records in batches
-    var batch = <Map<String, dynamic>>[];
-    var processedCount = 0;
-    var successCount = 0;
-    var sequenceId = 0; // Sequential ID for all verses
-
-    // Read verses in proper order (by book_id, chapter, verse)
+    // Read all rows and group by (book_id, bible_chapter, verse)
     final rows = db.select(
       'SELECT * FROM ${Config.sqliteTable} ORDER BY book_id, bible_chapter, verse',
     );
 
+    // Grouping key: book_id|bible_chapter|verse
+    final Map<String, Map<String, dynamic>> grouped = {};
+    final Map<String, Set<String>> groupedLangs = {};
+    int sequenceId = 0;
+
     for (final row in rows) {
-      sequenceId++; // Increment for each verse
+      final bookId = row['book_id']?.toString() ?? '';
+      final chapter = row['bible_chapter']?.toString() ?? '';
+      final verse = row['verse']?.toString() ?? '';
+      final bibleId = row['bible_id']?.toString();
+      final content = row['content'];
 
-      // Convert SQLite row to Map
-      final record = <String, dynamic>{};
-      for (final columnName in columnNames) {
-        record[columnName] = row[columnName];
+      // Compute canonical book_id based on bible_id offsets
+      final bookIdInt = int.tryParse(bookId) ?? 0;
+      final bibleIdInt = int.tryParse(bibleId ?? '') ?? 0;
+      int offset = 0;
+      if (bibleIdInt == 2)
+        offset = 69;
+      else if (bibleIdInt == 3)
+        offset = 135;
+      else if (bibleIdInt == 4)
+        offset = 201;
+      // bible_id 1 and 5 have offset 0
+      final canonicalBookId = bookIdInt - offset;
+      final canonicalBookIdStr = canonicalBookId.toString();
+
+      final key = '$canonicalBookIdStr|$chapter|$verse';
+
+      // Initialize group if not exists
+      if (!grouped.containsKey(key)) {
+        sequenceId++;
+        grouped[key] = {
+          'book_id': canonicalBookIdStr,
+          'bible_chapter': int.tryParse(chapter) ?? chapter,
+          'verse': int.tryParse(verse) ?? verse,
+          'sequence_id': sequenceId,
+        };
+        groupedLangs[key] = <String>{};
       }
 
-      // Add sequence_id for context display
-      record['sequence_id'] = sequenceId;
-
-      // Join book data
-      final bookId = record['book_id']?.toString();
-
-      // Debug: Print first verse details
-      if (processedCount == 0) {
-        print('🔍 DEBUG - First verse:');
-        print('   verse book_id: $bookId');
-        print('   verse bible_chapter: ${record['bible_chapter']}');
-        print('   verse verse: ${record['verse']}');
-        final contentStr = record['content']?.toString() ?? '';
-        final preview =
-            contentStr.length > 50
-                ? contentStr.substring(0, 50) + '...'
-                : contentStr;
-        print('   verse content: $preview');
-        print('   Available in bookData: ${bookData.containsKey(bookId)}');
-        if (bookData.containsKey(bookId)) {
-          print('   Matched book: ${bookData[bookId]!['book_name']}');
-        }
-        print('');
-      }
-
-      if (bookId != null && bookData.containsKey(bookId)) {
-        record['book_name'] = bookData[bookId]!['book_name'];
-        record['book_abbreviation'] = bookData[bookId]!['book_abbreviation'];
-      } else {
-        // Debug: Log when no match found
-        if (processedCount < 5) {
-          print('⚠️  No book match for book_id: $bookId');
-        }
-      }
-
-      // Transform 'content' to language-specific field based on bible_id
-      final bibleId = record['bible_id']?.toString();
-      final content = record['content'];
-
+      // Add language-specific text
       if (bibleId != null &&
           content != null &&
-          Config.bibleLanguageMap.containsKey(bibleId)) {
-        final lang = Config.bibleLanguageMap[bibleId];
-        record['${lang}_text'] = content;
-        // Remove generic 'content' field to keep data clean
-        record.remove('content');
-
-        // Track found bible_ids (show summary at end)
-        if (processedCount < 10 || processedCount % 1000 == 0) {
-          if (processedCount == 0) print('Bible IDs found:');
-          print('  Record $processedCount: bible_id=$bibleId → ${lang}_text');
-        }
+          bibleLanguageMap.containsKey(bibleId)) {
+        final lang = bibleLanguageMap[bibleId]!;
+        grouped[key]!['${lang}_text'] = content;
+        groupedLangs[key]!.add(lang);
       } else if (content != null) {
-        // If bible_id not mapped, put content in en_text as fallback
-        record['en_text'] = content;
-        record.remove('content');
-        if (bibleId != null) {
-          print(
-            '⚠️  Warning: bible_id "$bibleId" not mapped to language. Add to Config.bibleLanguageMap',
-          );
-        }
+        // Fallback: put in en_text if unknown
+        grouped[key]!['en_text'] = content;
+        groupedLangs[key]!.add('en');
       }
 
-      // Add metadata
-      final enrichedRecord = addMetadata(record);
-      batch.add(enrichedRecord);
+      // Add/overwrite bible_id for last seen (not critical)
+      grouped[key]!['bible_id'] = bibleId;
+    }
 
-      // Send batch when it reaches batchSize
+    // Ensure all groups have all 5 language fields (add empty if missing)
+    final allLangs = bibleLanguageMap.values.toSet();
+    for (final key in grouped.keys) {
+      for (final lang in allLangs) {
+        if (!grouped[key]!.containsKey('${lang}_text')) {
+          grouped[key]!['${lang}_text'] = '';
+        }
+      }
+    }
+
+    print('All ${grouped.length} verses now have complete language fields');
+
+    // Add book_name and abbreviation, and metadata
+    for (final entry in grouped.entries) {
+      final rec = entry.value;
+      final bookId = rec['book_id']?.toString();
+      if (bookId != null && bookData.containsKey(bookId)) {
+        rec['book_name'] = bookData[bookId]!['book_name'];
+        rec['book_abbreviation'] = bookData[bookId]!['book_abbreviation'];
+      }
+    }
+
+    // Prepare batches
+    var batch = <Map<String, dynamic>>[];
+    var processedCount = 0;
+    var successCount = 0;
+    final groupedList = grouped.values.toList();
+    final groupedTotal = groupedList.length;
+
+    for (final rec in groupedList) {
+      final enrichedRecord = addMetadata(rec);
+      batch.add(enrichedRecord);
+      processedCount++;
+
       if (batch.length >= Config.batchSize) {
         try {
           await sendBulkToOpenSearch(batch);
           successCount += batch.length;
-          processedCount += batch.length;
-
-          final progress = (processedCount / totalCount * 100).toStringAsFixed(
-            1,
-          );
+          final progress = (processedCount / groupedTotal * 100)
+              .toStringAsFixed(1);
           print(
-            'Progress: $processedCount/$totalCount ($progress%) - Success: $successCount',
+            'Progress: $processedCount/$groupedTotal ($progress%) - Success: $successCount',
           );
         } catch (e) {
           print('❌ Batch upload failed: $e');
-          processedCount += batch.length;
         }
-
         batch = [];
-
-        // Small delay to avoid overwhelming the server
         await Future.delayed(Duration(milliseconds: 100));
       }
     }
@@ -416,20 +440,17 @@ Future<void> importFromSqlite() async {
       try {
         await sendBulkToOpenSearch(batch);
         successCount += batch.length;
-        processedCount += batch.length;
-
         print(
-          'Progress: $processedCount/$totalCount (100%) - Success: $successCount',
+          'Progress: $processedCount/$groupedTotal (100%) - Success: $successCount',
         );
       } catch (e) {
         print('❌ Final batch upload failed: $e');
-        processedCount += batch.length;
       }
     }
 
     print('\n✅ Import completed!');
     print(
-      'Total: $totalCount, Success: $successCount, Failed: ${totalCount - successCount}',
+      'Total: $groupedTotal, Success: $successCount, Failed: ${groupedTotal - successCount}',
     );
   } finally {
     db.dispose();

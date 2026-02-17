@@ -1993,47 +1993,6 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
   @override
   bool get wantKeepAlive => true;
 
-  Future<String?> _fetchTitleForCelex(
-    String celex, {
-    String lang = 'en',
-  }) async {
-    final uri = Uri.parse(
-      'http://publications.europa.eu/resource/celex/$celex',
-    );
-    try {
-      final resp = await http
-          .get(uri, headers: {'Accept': 'application/rdf+xml;notice=tree'})
-          .timeout(const Duration(seconds: 15));
-      if (resp.statusCode != 200) return null;
-
-      final doc = xml.XmlDocument.parse(utf8.decode(resp.bodyBytes));
-      //print('title prefetch response: ${doc.length} for $uri');
-      // Prefer title with xml:lang == lang
-      for (final e in doc.descendants.whereType<xml.XmlElement>()) {
-        if (e.name.local == 'title') {
-          final langAttr = e.getAttribute(
-            'lang',
-            namespace: 'http://www.w3.org/XML/1998/namespace',
-          );
-          if ((langAttr ?? '').toLowerCase() == lang.toLowerCase()) {
-            final t = e.innerText.trim();
-            if (t.isNotEmpty) return t;
-          }
-        }
-      }
-      // Fallback: any title text
-      for (final e in doc.descendants.whereType<xml.XmlElement>()) {
-        if (e.name.local == 'title') {
-          final t = e.innerText.trim();
-          if (t.isNotEmpty) return t;
-        }
-      }
-      return null;
-    } catch (_) {
-      return null;
-    }
-  }
-
   Future titlesForCelex() async {
     for (final c in metaCelex) {
       final t = _titleCache[c];
@@ -2887,6 +2846,128 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                                     ? className[index]
                                                     : '',
                                                 // maxLines: 1,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+
+                                        Row(
+                                          children: [
+                                            Text("Title: "),
+                                            Expanded(
+                                              child: FutureBuilder<
+                                                Map<String, String>
+                                              >(
+                                                future:
+                                                    metaCelex.length > index
+                                                        ? fetchTitlesForCelex(
+                                                          metaCelex[index],
+                                                        )
+                                                        : Future.value({}),
+                                                builder: (context, snapshot) {
+                                                  if (snapshot
+                                                          .connectionState ==
+                                                      ConnectionState.waiting) {
+                                                    return Text('Loading...');
+                                                  }
+                                                  final titleMap =
+                                                      snapshot.data ?? {};
+                                                  // Filter to only show selected working languages
+                                                  final selectedLangs = [lang1, lang2, lang3]
+                                                      .where((l) => l != null)
+                                                      .map((l) => l!.toUpperCase())
+                                                      .toSet();
+                                                  final filteredTitleMap = Map.fromEntries(
+                                                    titleMap.entries.where((e) =>
+                                                      selectedLangs.contains(e.key.toUpperCase())
+                                                    )
+                                                  );
+                                                  // Prefer English, then any available title
+                                                  final fullTitle =
+                                                      filteredTitleMap['EN'] ??
+                                                      filteredTitleMap['en'] ??
+                                                      (filteredTitleMap.isNotEmpty
+                                                          ? filteredTitleMap
+                                                              .values.first
+                                                          : '');
+                                                  final shortTitle =
+                                                      fullTitle.length > 80
+                                                          ? '${fullTitle.substring(0, 80)}...'
+                                                          : fullTitle;
+                                                  return GestureDetector(
+                                                    onTap:
+                                                        fullTitle.isNotEmpty &&
+                                                                (fullTitle
+                                                                        .length >
+                                                                    80 || filteredTitleMap.length > 1)
+                                                            ? () => showDialog(
+                                                              context: context,
+                                                              builder:
+                                                                  (
+                                                                    _,
+                                                                  ) => AlertDialog(
+                                                                    title: Text(
+                                                                      'Document Titles',
+                                                                    ),
+                                                                    content:
+                                                                        SingleChildScrollView(
+                                                                          child: Column(
+                                                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                                                            mainAxisSize: MainAxisSize.min,
+                                                                            children: filteredTitleMap.entries.map((e) => 
+                                                                              Padding(
+                                                                                padding: EdgeInsets.only(bottom: 12),
+                                                                                child: Column(
+                                                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                                                  children: [
+                                                                                    Text(
+                                                                                      e.key,
+                                                                                      style: TextStyle(
+                                                                                        fontWeight: FontWeight.bold,
+                                                                                        fontSize: 14,
+                                                                                      ),
+                                                                                    ),
+                                                                                    SizedBox(height: 4),
+                                                                                    SelectableText(e.value),
+                                                                                  ],
+                                                                                ),
+                                                                              )
+                                                                            ).toList(),
+                                                                          ),
+                                                                        ),
+                                                                    actions: [
+                                                                      TextButton(
+                                                                        onPressed:
+                                                                            () =>
+                                                                                Navigator.of(
+                                                                                  context,
+                                                                                ).pop(),
+                                                                        child: Text(
+                                                                          'Close',
+                                                                        ),
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                            )
+                                                            : null,
+                                                    child: Text(
+                                                      shortTitle,
+                                                      style: TextStyle(
+                                                        color:
+                                                            (fullTitle.length >
+                                                                    80 || titleMap.length > 1)
+                                                                ? Colors.blue
+                                                                : null,
+                                                        decoration:
+                                                            (fullTitle.length >
+                                                                    80 || titleMap.length > 1)
+                                                                ? TextDecoration
+                                                                    .underline
+                                                                : null,
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
                                               ),
                                             ),
                                           ],
