@@ -109,12 +109,6 @@ Future<List<List<String>>> retrieveCelexForLang(
         );
       }
 
-      if (extractedCelex.isNotEmpty) {
-        extractedCelex[extractedCelex.length - 1] += " $lang ${pairs.length}";
-      } else {
-        extractedCelex.add("$lang: ${pairs.length}");
-      }
-
       if (pairs.length < 5) {
         print(
           'CELLAR DEBUG [$pointer]: ⚠️  Warning: Very few lines (${pairs.length}) for $celex/$lang - may need HTML format instead of XHTML',
@@ -127,10 +121,6 @@ Future<List<List<String>>> retrieveCelexForLang(
       return pairs;
     } catch (e) {
       final msg = e.toString();
-
-      if (extractedCelex.isNotEmpty) {
-        extractedCelex[extractedCelex.length - 1] += "  $lang: ERR";
-      }
 
       final isThrottle =
           msg.contains('403') ||
@@ -492,6 +482,9 @@ Future<HarvestSession> uploadTestSparqlSectorYearWithProgress(
   // Notify that session has been created and saved
   onSessionCreated?.call(sessionId);
 
+  // Also notify with initial progress update so count is visible immediately
+  onProgressUpdate?.call(session);
+
   // Logging setup
   final loggerUrl = LogManager(
     fileName: 'logs/${fileSafeStamp}_${indexName}_URLs.log',
@@ -599,7 +592,12 @@ Future<HarvestSession> uploadTestSparqlSectorYearWithProgress(
             progress.languages[lang] = LangStatus.completed;
           } else {
             progress.languages[lang] = LangStatus.failed;
-            progress.errors[lang] = 'Upload failed with HTTP $statusCode';
+            if (statusCode == 413) {
+              progress.errors[lang] =
+                  'Document too large (HTTP 413) - reduce languages or split document';
+            } else {
+              progress.errors[lang] = 'Upload failed with HTTP $statusCode';
+            }
           }
         }
       }

@@ -3,6 +3,7 @@ import 'package:LegisTracerEU/file_handling.dart';
 import 'package:LegisTracerEU/setup.dart';
 import 'package:LegisTracerEU/splash.dart';
 import 'package:LegisTracerEU/ui_notices.dart';
+import 'package:LegisTracerEU/user_access.dart';
 import 'package:flutter/material.dart';
 import 'package:LegisTracerEU/preparehtml.dart';
 import 'package:LegisTracerEU/browseFiles.dart';
@@ -515,8 +516,13 @@ class _MainTabbedAppState extends State<MainTabbedApp>
       valueListenable: isAdminNotifier,
       builder: (_, isAdmin, __) {
         return DefaultTabController(
-          key: ValueKey(isAdmin), // recreate controller on admin flip
-          length: isAdmin ? 5 : 4, // tab count depends on isAdmin
+          key: ValueKey(
+            '$isAdmin-$adminUIEnabled',
+          ), // recreate controller on admin flip or adminUIEnabled change
+          length:
+              isAdmin
+                  ? (adminUIEnabled ? 6 : 5)
+                  : 4, // tab count depends on isAdmin and adminUIEnabled
           child: Scaffold(
             appBar: AppBar(
               toolbarHeight: 1,
@@ -579,6 +585,8 @@ class _MainTabbedAppState extends State<MainTabbedApp>
     Tab(child: Text('Setup', style: TextStyle(fontSize: 16.8))),
     if (isAdmin)
       Tab(child: Text('Data Process', style: TextStyle(fontSize: 16.8))),
+    if (isAdmin && adminUIEnabled)
+      Tab(child: Text('User Access', style: TextStyle(fontSize: 16.8))),
     Tab(child: Text('Upload References', style: TextStyle(fontSize: 16.8))),
   ];
 
@@ -587,6 +595,7 @@ class _MainTabbedAppState extends State<MainTabbedApp>
     Center(child: AnalyserWidget()),
     Center(child: indicesMaintenance()),
     if (isAdmin) BrowseFilesWidget(),
+    if (isAdmin && adminUIEnabled) const UserAccessWidget(),
     DataUploadPage(),
   ];
 

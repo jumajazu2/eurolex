@@ -3043,7 +3043,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                                 ],
                                               ),
                                             ),
-                                            if (parNotMatched[index] == "true")
+                                            if (parNotMatched.length > index && parNotMatched[index] == "true")
                                               Tooltip(
                                                 message:
                                                     "Due to inconsistencies in source documents, texts may be misaligned, use Context feature to align sentences",

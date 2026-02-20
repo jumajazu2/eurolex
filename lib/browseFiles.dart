@@ -493,9 +493,9 @@ void extendRange(Map<String, dynamic> data, int newEndYear) {
 
   final years = data['years'] as Map<String, dynamic>;
   for (int y = currentEnd + 1; y <= newEndYear; y++) {
-    years['$y'] = {
+    years['$y'] = <String, dynamic>{
       'total': 0,
-      'sectors': {
+      'sectors': <String, dynamic>{
         's0': 0,
         's1': 0,
         's2': 0,
@@ -509,7 +509,7 @@ void extendRange(Map<String, dynamic> data, int newEndYear) {
         's10': 0,
       },
       'uploaded': false,
-      'uploadedBySector': {
+      'uploadedBySector': <String, dynamic>{
         's0': false,
         's1': false,
         's2': false,
@@ -522,7 +522,7 @@ void extendRange(Map<String, dynamic> data, int newEndYear) {
         's9': false,
         's10': false,
       },
-      'sessionIds': {},
+      'sessionIds': <String, dynamic>{},
     };
   }
   range['end'] = newEndYear;
@@ -591,6 +591,10 @@ class _CelexYearsWidgetState extends State<CelexYearsWidget> {
               if (mounted) {
                 setState(() {
                   _activeSessions[key] = session;
+                  // Update sector count from loaded session
+                  final totalDocs = session.celexOrder.length;
+                  final yearInt = int.parse(year);
+                  setSectorCount(data!, yearInt, sector, totalDocs);
                 });
               }
             }
@@ -616,6 +620,78 @@ class _CelexYearsWidgetState extends State<CelexYearsWidget> {
       ).showSnackBar(SnackBar(content: Text('Save failed: $e')));
     } finally {
       if (mounted) setState(() => saving = false);
+    }
+  }
+
+  Future<void> _addNewYear() async {
+    if (data == null) return;
+
+    final range = data!['range'] as Map<String, dynamic>;
+    final currentEnd = (range['end'] as num).toInt();
+    final suggestedYear = currentEnd + 1;
+
+    final yearController = TextEditingController(
+      text: suggestedYear.toString(),
+    );
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('Add New Year'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Current range: ${range['start']}–${range['end']}',
+                  style: const TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: yearController,
+                  decoration: const InputDecoration(
+                    labelText: 'New Year',
+                    hintText: 'Enter year to add',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Add'),
+              ),
+            ],
+          ),
+    );
+
+    if (confirmed == true) {
+      final newYear = int.tryParse(yearController.text);
+      if (newYear == null || newYear <= currentEnd) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Year must be greater than current end year ($currentEnd)',
+            ),
+          ),
+        );
+        return;
+      }
+
+      setState(() {
+        extendRange(data!, newYear);
+      });
+      await _save();
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Added year $newYear')));
     }
   }
 
@@ -682,6 +758,16 @@ class _CelexYearsWidgetState extends State<CelexYearsWidget> {
                 },
                 icon: const Icon(Icons.refresh),
                 tooltip: 'Refresh progress from disk',
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton.icon(
+                onPressed: saving ? null : _addNewYear,
+                icon: const Icon(Icons.add),
+                label: const Text('Add Year'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                ),
               ),
               const SizedBox(width: 8),
               ElevatedButton.icon(
@@ -825,6 +911,9 @@ class _CelexYearsWidgetState extends State<CelexYearsWidget> {
           if (mounted) {
             setState(() {
               _activeSessions[key] = updatedSession;
+              // Update sector count from session's total document count
+              final totalDocs = updatedSession.celexOrder.length;
+              setSectorCount(data!, year, sector, totalDocs);
             });
           }
         },
@@ -887,6 +976,9 @@ class _CelexYearsWidgetState extends State<CelexYearsWidget> {
         setState(() {
           _activeSessions[key] = session;
           _expandedSectorKey = key;
+          // Update sector count from loaded session
+          final totalDocs = session.celexOrder.length;
+          setSectorCount(data!, year, sector, totalDocs);
         });
       }
 
@@ -900,6 +992,9 @@ class _CelexYearsWidgetState extends State<CelexYearsWidget> {
           if (mounted) {
             setState(() {
               _activeSessions[key] = updatedSession;
+              // Update sector count from session's total document count
+              final totalDocs = updatedSession.celexOrder.length;
+              setSectorCount(data!, year, sector, totalDocs);
             });
           }
         },
@@ -1067,11 +1162,8 @@ class _CelexYearsWidgetState extends State<CelexYearsWidget> {
                           icon: const Icon(Icons.upload, size: 16),
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
-                          tooltip: 'Upload',
-                          onPressed:
-                              countVal > 0
-                                  ? () => _startSectorUpload(yearInt, key)
-                                  : null,
+                          tooltip: 'Upload (fetches from SPARQL)',
+                          onPressed: () => _startSectorUpload(yearInt, key),
                         ),
                     ],
                   ),

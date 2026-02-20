@@ -482,29 +482,47 @@ Future<int> openSearchUpload(json, indexName) async {
       // Collect error details
       final items = jsonResponse['items'] as List?;
       if (items != null) {
-        final errorItems = items.where((item) {
-          final actionResult = item['index'] ?? item['create'] ?? item['update'] ?? item['delete'];
-          final status = actionResult?['status'];
-          return status != null && status >= 400;
-        }).toList();
-        
+        final errorItems =
+            items.where((item) {
+              final actionResult =
+                  item['index'] ??
+                  item['create'] ??
+                  item['update'] ??
+                  item['delete'];
+              final status = actionResult?['status'];
+              return status != null && status >= 400;
+            }).toList();
+
         if (errorItems.isNotEmpty) {
-          print('🔍 Cellar Debug: OpenSearch bulk errors detected (${errorItems.length}/${items.length} failed):');
+          print(
+            '🔍 Cellar Debug: OpenSearch bulk errors detected (${errorItems.length}/${items.length} failed):',
+          );
           for (int i = 0; i < errorItems.length && i < 5; i++) {
             final item = errorItems[i];
-            final actionResult = item['index'] ?? item['create'] ?? item['update'] ?? item['delete'];
+            final actionResult =
+                item['index'] ??
+                item['create'] ??
+                item['update'] ??
+                item['delete'];
             final status = actionResult?['status'];
             final error = actionResult?['error'];
-            final reason = error != null ? error['reason'] ?? 'Unknown error' : 'Unknown error';
+            final reason =
+                error != null
+                    ? error['reason'] ?? 'Unknown error'
+                    : 'Unknown error';
             print('  - Status $status: $reason');
           }
           if (errorItems.length > 5) {
             print('  ... and ${errorItems.length - 5} more errors');
           }
-          
+
           // Return the first error status code
           final firstError = errorItems.first;
-          final actionResult = firstError['index'] ?? firstError['create'] ?? firstError['update'] ?? firstError['delete'];
+          final actionResult =
+              firstError['index'] ??
+              firstError['create'] ??
+              firstError['update'] ??
+              firstError['delete'];
           return actionResult?['status'] as int? ?? 500;
         }
       }
@@ -564,6 +582,11 @@ Future<String> sendToOpenSearch(String url, List<String> bulkData) async {
       if (response.statusCode == 401 || response.statusCode == 429) {
         print("Showing subscription dialog for status ${response.statusCode}");
         showSubscriptionDialog(response.statusCode);
+      } else if (response.statusCode == 413) {
+        print(
+          "Showing payload too large dialog for status ${response.statusCode}",
+        );
+        showPayloadTooLargeDialog(bodySize);
       }
       try {
         final lgr = LogManager(fileName: '${fileSafeStamp}_bulk_err.log');
@@ -796,6 +819,46 @@ void _showSubDialogInternal(BuildContext ctx, int status) {
                 );
               },
               child: const Text('Purchase'),
+            ),
+          ],
+        ),
+  );
+}
+
+void showPayloadTooLargeDialog(int payloadSizeBytes) {
+  final ctx = navigatorKey.currentContext;
+  if (ctx == null) {
+    // Defer until a frame exists
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final lateCtx = navigatorKey.currentContext;
+      if (lateCtx == null) return;
+      _showPayloadDialogInternal(lateCtx, payloadSizeBytes);
+    });
+    return;
+  }
+  _showPayloadDialogInternal(ctx, payloadSizeBytes);
+}
+
+void _showPayloadDialogInternal(BuildContext ctx, int payloadSizeBytes) {
+  final sizeMB = (payloadSizeBytes / (1024 * 1024)).toStringAsFixed(2);
+  showDialog(
+    context: ctx,
+    barrierDismissible: true,
+    builder:
+        (_) => AlertDialog(
+          title: const Text('Document Too Large'),
+          content: Text(
+            'The document you are trying to upload is too large ($sizeMB MB).\n\n'
+            'The server has a size limit to prevent memory issues.\n\n'
+            'Possible solutions:\n'
+            '• Try uploading documents with fewer languages (use "Working Lang Only" option)\n'
+            '• Split large documents into smaller sections\n'
+            '• Contact support if you need to upload very large documents regularly',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Close'),
             ),
           ],
         ),

@@ -299,8 +299,6 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
   Future<void> retryFailedCelex(List celex, String indexName) async {
     //failedCelex.clear();
     for (final cel in celex) {
-      extractedCelex.add('${_completedUploads + 1}/$_totalUploads: $celex:');
-
       var status = await uploadSparqlForCelex(
         cel,
         newIndexName,
@@ -313,9 +311,6 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
 
       //failedCelex.removeWhere((item) => item.contains(cel));
       print("After retry, failedCelex: $failedCelex");
-      if (failedCelex.contains(celex)) {
-        extractedCelex.add('XHTML FAILED, WILL RETRY in HTML LATER');
-      } else {}
 
       _completedUploads++;
       if (!mounted) return;
@@ -328,14 +323,6 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
 
     if (failedCelex.isNotEmpty) {}
     setState(() {
-      if (failedCelex.isNotEmpty) {
-        extractedCelex.add(
-          'FAILED CELEX NUMBERS (will retry HTML upload): ${failedCelex.join(', ')}',
-        );
-      } else {
-        extractedCelex.add('COMPLETED');
-      }
-
       _recalcProgress(); // should hit 100%
       getCustomIndices(
         server,
@@ -346,11 +333,6 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
   }
 
   Future<void> pickAndLoadFile2() async {
-    setState(() {
-      extractedCelex.clear();
-      print("extractedCelex cleared at start of pickAndLoadFile2");
-    });
-
     FilePickerResult? result = await FilePicker.platform.pickFiles();
     if (!mounted) return;
     setState(() {
@@ -431,14 +413,11 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
       final progress = session.documents[celex]!;
       progress.startedAt = DateTime.now();
 
-      extractedCelex.add('${_completedUploads + 1}/$_totalUploads: $celex:');
-
       // Check if exists
       final exists = await celexExistsInIndex(newIndexName, celex);
       if (exists) {
         progress.languages['ALL'] = LangStatus.skipped;
         progress.completedAt = DateTime.now();
-        extractedCelex.add('⏭️ SKIPPED (already exists)');
       } else {
         // Remove placeholder and prepare for actual languages
         progress.languages.clear();
@@ -509,14 +488,6 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
 
     if (!mounted) return;
     setState(() {
-      if (failedCelex.isNotEmpty) {
-        extractedCelex.add(
-          'FAILED CELEX NUMBERS (will retry HTML upload): ${failedCelex.join(', ')}',
-        );
-      } else {
-        extractedCelex.add('COMPLETED');
-      }
-
       _recalcProgress(); // should hit 100%
       getCustomIndices(
         server,
@@ -880,37 +851,7 @@ class _FilePickerButtonState2 extends State<FilePickerButton2> {
                     },
                   ),
                 )
-                : Container(
-                  width:
-                      double
-                          .infinity, // Make container take full available width
-                  constraints: const BoxConstraints(
-                    maxHeight: 400,
-                    // Remove maxWidth or set to double.infinity for full width
-                  ),
-                  child: SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Column(
-                        children: [
-                          SelectableText.rich(
-                            TextSpan(
-                              children:
-                                  extractedCelex.isEmpty
-                                      ? [
-                                        const TextSpan(
-                                          text: 'No Celex Numbers Processed.',
-                                        ),
-                                      ]
-                                      : buildCelexSpans(extractedCelex),
-                              style: const TextStyle(fontFamily: 'monospace'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+                : const Text('Upload starting...'),
           ],
         ),
       ),
@@ -1005,6 +946,9 @@ class _manualCelexListState extends State<manualCelexList> {
     }
   }
 
+  // DEPRECATED: Legacy upload function using extractedCelex list.
+  // Use manualCelexListUploadWithProgress() instead.
+  // This function is not called anywhere and can be removed in future cleanup.
   Future manualCelexListUpload(manualCelexListEntry, newIndexName) async {
     setState(() {
       extractedCelex.clear();
@@ -1060,7 +1004,6 @@ class _manualCelexListState extends State<manualCelexList> {
     String indexName,
   ) async {
     setState(() {
-      extractedCelex.clear();
       _progress = 0.01;
       _showProgressTable = true;
     });
@@ -1109,16 +1052,11 @@ class _manualCelexListState extends State<manualCelexList> {
         print('⏭️ Skipping $celex (already exists)');
         progress.languages['ALL'] = LangStatus.skipped;
         progress.completedAt = DateTime.now();
-        extractedCelex.add(
-          '${index + 1}/$total: $celex: ⏭️ SKIPPED (already exists)',
-        );
       } else {
         try {
           // Remove the placeholder 'ALL' and prepare for actual languages
           progress.languages.clear();
           if (mounted) setState(() {});
-
-          extractedCelex.add('${index + 1}/$total: $celex:');
 
           await uploadSparqlForCelexWithProgress(
             celex,
@@ -1181,7 +1119,6 @@ class _manualCelexListState extends State<manualCelexList> {
 
     if (!mounted) return;
     setState(() {
-      extractedCelex.add('COMPLETED');
       getCustomIndices(
         server,
         isAdmin,
@@ -1570,31 +1507,7 @@ class _manualCelexListState extends State<manualCelexList> {
             if (!_showProgressTable)
               manualCelex.isEmpty
                   ? const Text('No document uploaded to Collection yet.')
-                  : SizedBox(
-                    height: 500,
-                    child: SingleChildScrollView(
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Column(
-                          children: [
-                            SelectableText.rich(
-                              TextSpan(
-                                children:
-                                    extractedCelex.isEmpty
-                                        ? [
-                                          const TextSpan(
-                                            text: 'No Celex Numbers Processed.',
-                                          ),
-                                        ]
-                                        : buildCelexSpans(extractedCelex),
-                                style: const TextStyle(fontFamily: 'monospace'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
+                  : const Text('Upload starting...'),
           ],
         ),
       ),
@@ -1888,36 +1801,4 @@ Future<List<List<String>>> getListIndicesFull(server, isAdmin) async {
 }
 
 // Helper to build spans
-List<TextSpan> buildCelexSpans(List<String> lines) {
-  final linesCopy = List<String>.from(lines);
-  return linesCopy.map((line) {
-    if (line == 'COMPLETED') {
-      return const TextSpan(
-        text: '\nCOMPLETED',
-        style: TextStyle(fontWeight: FontWeight.bold),
-      );
-    }
-    final parts = line.split(':');
-    print(parts);
-    if (parts.length < 2) {
-      return TextSpan(text: '\n$line');
-    }
-    final left = parts[0].trim();
-    final right =
-        parts.length > 2 ? parts.sublist(2).map((s) => s.trim()).join(':') : '';
-    final celex = parts[1].trim() + ': '; // handle any extra colons
-    return TextSpan(
-      children: [
-        TextSpan(text: '\n$left: '),
-        TextSpan(
-          text: celex,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-
-        TextSpan(text: right),
-      ],
-    );
-  }).toList();
-}
-
-// In your build where you had SelectableText.rich(...)
+// Old display function removed - now using HarvestProgressWidget
