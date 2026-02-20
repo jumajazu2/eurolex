@@ -979,6 +979,10 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
   late final AnimationController _indexArrowBlinkController;
   late final Animation<double> _indexArrowOpacity;
 
+  // IATE side panel state
+  bool _showIATEPanel = false;
+  double _iatePanelWidth = 400;
+
   Widget _buildIndexArrowHint() {
     return Tooltip(
       message: 'Make sure that the correct custom collection is selected',
@@ -2031,465 +2035,519 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
   @override
   Widget build(BuildContext context) {
     super.build(context); // Required for AutomaticKeepAliveClientMixin
-    return Column(
+    return Row(
       children: [
-        // Search field with Enter key trigger
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Row(
+        // Main content area (existing UI)
+        Expanded(
+          child: Column(
             children: [
-              // TextField taking most of the space
-              Expanded(
-                flex: 9, // 9/10 of the row
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search...',
-                    prefixIcon: Icon(Icons.search),
-                    filled: true,
-                    fillColor: Theme.of(
-                      context,
-                    ).colorScheme.primary.withValues(alpha: 0.1),
-                    contentPadding: EdgeInsets.symmetric(
-                      vertical: 20,
-                      horizontal: 16,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                  onSubmitted: (value) => _startSearch3(),
-                ),
-              ),
-              SizedBox(
-                width: 30,
-              ), // Add some spacing between the TextField and the dropdown
-              // Dropdown taking about 1/10 of the space
-              Flexible(
-                flex: 2, // 1/10 of the row
-                child: InputDecorator(
-                  decoration: InputDecoration(
-                    labelText:
-                        'Search Collection ($activeIndex)', // Label embedded in the frame
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      isExpanded: true,
-                      value:
-                          (activeIndex == "*" || indices.contains(activeIndex))
-                              ? activeIndex
-                              : (indices.isNotEmpty ? indices[0] : "*"),
-                      items: [
-                        DropdownMenuItem<String>(
-                          value: "*",
-                          child: Row(
-                            children: [
-                              Icon(Icons.public, size: 18),
-                              SizedBox(width: 8),
-                              Text("All Content"),
-                            ],
+              // Search field with Enter key trigger
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Row(
+                  children: [
+                    // TextField taking most of the space
+                    Expanded(
+                      flex: 9, // 9/10 of the row
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Search...',
+                          prefixIcon: Icon(Icons.search),
+                          filled: true,
+                          fillColor: Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.1),
+                          contentPadding: EdgeInsets.symmetric(
+                            vertical: 20,
+                            horizontal: 16,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide.none,
                           ),
                         ),
-                        ...indices.where((idx) => idx != "*").map((
-                          String value,
-                        ) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(value),
-                          );
-                        }).toList(),
-                      ],
-
-                      onTap:
-                          () => setState(() {
-                            updateDropdown();
-                          }),
-
-                      onChanged: (String? newValue) async {
-                        setState(() {
-                          activeIndex = newValue!;
-                        });
-                        // Persist selected index
-                        jsonSettings['selected_index'] = activeIndex;
-                        await writeSettingsToFile(jsonSettings);
-                        print('Selected: $newValue (saved to settings)');
-                      },
+                        onSubmitted: (value) => _startSearch3(),
+                      ),
                     ),
-                  ),
-                ),
-              ),
-              if (_showIndexArrowHint) _buildIndexArrowHint(),
-            ],
-          ),
-        ),
-        // Start Search button
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4.0),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              // Most prominent: Combine match and phrase search for better recall in your custom index
-              Tooltip(
-                message:
-                    'Combine match and phrase search in your custom collection in all working languages: $lang1, $lang2, $lang3',
-                waitDuration: Duration(seconds: 1),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF0F2A44),
-                    foregroundColor: Color(0xFFF5F7FA),
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                    textStyle: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  onPressed: () {
-                    if (_searchController.text.trim().isEmpty) return;
-                    setState(() => _progressColor = Colors.purple);
-                    _startSearch3();
-                  },
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.search, size: 20),
-                      SizedBox(width: 8),
-                      Text('Smart Search'),
-                    ],
-                  ),
-                ),
-              ),
-              // Secondary: Multi-language flexible search in custom index
-              Tooltip(
-                message:
-                    'Search across working languages ($lang1, $lang2, $lang3) with flexible matching in your custom collection',
-                waitDuration: Duration(seconds: 1),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF277BBB),
-                    foregroundColor: Color(0xFFF5F7FA),
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    textStyle: TextStyle(fontSize: 14),
-                  ),
-                  onPressed: () {
-                    if (_searchController.text.trim().isEmpty) return;
-                    setState(() => _progressColor = Colors.green);
-                    _startSearch2();
-                  },
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.search),
-                      SizedBox(width: 6),
-                      Text('Flexible Search'),
-                    ],
-                  ),
-                ),
-              ),
-              // Secondary options
-              Tooltip(
-                message:
-                    'Phrase search in $lang1 with tight matching in your custom collection',
-                waitDuration: Duration(seconds: 1),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF277BBB),
-                    foregroundColor: Color(0xFFF5F7FA),
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    textStyle: TextStyle(fontSize: 14),
-                  ),
-                  onPressed: () {
-                    if (_searchController.text.trim().isEmpty) return;
-                    setState(() => _progressColor = Colors.blue);
-                    _startSearch();
-                  },
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.search),
-                      SizedBox(width: 6),
-                      Text('Phrase Search'),
-                    ],
-                  ),
-                ),
-              ),
-              // Global EU Search moved to the right
-              Tooltip(
-                message:
-                    'Phrase search across all language fields in Global Collection (All EU law available) - Most comprehensive but slower',
-                waitDuration: Duration(seconds: 1),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFFF28C28),
-                    foregroundColor: Color(0xFF0F2A44),
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    textStyle: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  onPressed: () {
-                    if (_searchController.text.trim().isEmpty) return;
-                    setState(() => _progressColor = Colors.orange);
-                    _startSearchPhraseAll();
-                  },
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.public),
-                      SizedBox(width: 6),
-                      Text('Global EU Law Search'),
-                    ],
-                  ),
-                ),
-              ),
-
-              (isAdmin && adminUIEnabled)
-                  ? Tooltip(
-                    message:
-                        'Temporary A/B: intervals query using informative tokens',
-                    waitDuration: Duration(seconds: 1),
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            Theme.of(context).colorScheme.primaryContainer,
-                        foregroundColor:
-                            Theme.of(context).colorScheme.onPrimaryContainer,
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
+                    SizedBox(
+                      width: 30,
+                    ), // Add some spacing between the TextField and the dropdown
+                    // Dropdown taking about 1/10 of the space
+                    Flexible(
+                      flex: 2, // 1/10 of the row
+                      child: InputDecorator(
+                        decoration: InputDecoration(
+                          labelText:
+                              'Search Collection ($activeIndex)', // Label embedded in the frame
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                         ),
-                        textStyle: TextStyle(fontSize: 14),
-                      ),
-                      onPressed: () {
-                        if (_searchController.text.trim().isEmpty) return;
-                        setState(() => _progressColor = Colors.teal);
-                        _startIntervalsTest();
-                      },
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.science_outlined),
-                          SizedBox(width: 6),
-                          Text('Intervals A/B'),
-                        ],
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            isExpanded: true,
+                            value:
+                                (activeIndex == "*" ||
+                                        indices.contains(activeIndex))
+                                    ? activeIndex
+                                    : (indices.isNotEmpty ? indices[0] : "*"),
+                            items: [
+                              DropdownMenuItem<String>(
+                                value: "*",
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.public, size: 18),
+                                    SizedBox(width: 8),
+                                    Text("All Content"),
+                                  ],
+                                ),
+                              ),
+                              ...indices.where((idx) => idx != "*").map((
+                                String value,
+                              ) {
+                                return DropdownMenuItem<String>(
+                                  value: value,
+                                  child: Text(value),
+                                );
+                              }).toList(),
+                            ],
+
+                            onTap:
+                                () => setState(() {
+                                  updateDropdown();
+                                }),
+
+                            onChanged: (String? newValue) async {
+                              setState(() {
+                                activeIndex = newValue!;
+                              });
+                              // Persist selected index
+                              jsonSettings['selected_index'] = activeIndex;
+                              await writeSettingsToFile(jsonSettings);
+                              print('Selected: $newValue (saved to settings)');
+                            },
+                          ),
+                        ),
                       ),
                     ),
-                  )
-                  : SizedBox.shrink(),
-
-              SizedBox(
-                width: 170,
-                child: TextFormField(
-                  controller: _controller3,
-                  //key: ValueKey(_searchController.text),
-                  decoration: InputDecoration(
-                    labelText: 'Filter Results',
-                    border: OutlineInputBorder(),
-                    filled: true,
-                    fillColor: _fillColor,
-                    suffixIcon:
-                        containsFilter.isNotEmpty
-                            ? IconButton(
-                              icon: Icon(Icons.clear),
-                              tooltip: 'Clear filter',
-                              onPressed: () {
-                                setState(() {
-                                  containsFilter = "";
-                                  celexFilter = "";
-                                  _fillColor = Theme.of(context).canvasColor;
-                                  _controller3.clear();
-                                });
-                              },
-                            )
-                            : Tooltip(
-                              message:
-                                  'Enter text to filter results by content or CELEX ID. Press Enter to activate the filter (the field will turn orange).',
-                              child: Icon(Icons.info_outline, size: 13),
-                            ),
-                  ),
-                  onFieldSubmitted: (value) {
-                    _controller3.text = value;
-                    setState(() {
-                      containsFilter = value.trim();
-                      celexFilter =
-                          value
-                              .trim(); // Also set celexFilter for combined filtering
-
-                      _fillColor =
-                          value.isNotEmpty
-                              ? Colors.orangeAccent
-                              : Theme.of(context).canvasColor;
-                    });
-
-                    print(" Filter: $containsFilter");
-                  },
+                    if (_showIndexArrowHint) _buildIndexArrowHint(),
+                  ],
                 ),
               ),
+              // Start Search button
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4.0),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    // Most prominent: Combine match and phrase search for better recall in your custom index
+                    Tooltip(
+                      message:
+                          'Combine match and phrase search in your custom collection in all working languages: $lang1, $lang2, $lang3',
+                      waitDuration: Duration(seconds: 1),
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFF0F2A44),
+                          foregroundColor: Color(0xFFF5F7FA),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 14,
+                          ),
+                          textStyle: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        onPressed: () {
+                          if (_searchController.text.trim().isEmpty) return;
+                          setState(() => _progressColor = Colors.purple);
+                          _startSearch3();
+                        },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.search, size: 20),
+                            SizedBox(width: 8),
+                            Text('Smart Search'),
+                          ],
+                        ),
+                      ),
+                    ),
+                    // Secondary: Multi-language flexible search in custom index
+                    Tooltip(
+                      message:
+                          'Search across working languages ($lang1, $lang2, $lang3) with flexible matching in your custom collection',
+                      waitDuration: Duration(seconds: 1),
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFF277BBB),
+                          foregroundColor: Color(0xFFF5F7FA),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          textStyle: TextStyle(fontSize: 14),
+                        ),
+                        onPressed: () {
+                          if (_searchController.text.trim().isEmpty) return;
+                          setState(() => _progressColor = Colors.green);
+                          _startSearch2();
+                        },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.search),
+                            SizedBox(width: 6),
+                            Text('Flexible Search'),
+                          ],
+                        ),
+                      ),
+                    ),
+                    // Secondary options
+                    Tooltip(
+                      message:
+                          'Phrase search in $lang1 with tight matching in your custom collection',
+                      waitDuration: Duration(seconds: 1),
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFF277BBB),
+                          foregroundColor: Color(0xFFF5F7FA),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          textStyle: TextStyle(fontSize: 14),
+                        ),
+                        onPressed: () {
+                          if (_searchController.text.trim().isEmpty) return;
+                          setState(() => _progressColor = Colors.blue);
+                          _startSearch();
+                        },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.search),
+                            SizedBox(width: 6),
+                            Text('Phrase Search'),
+                          ],
+                        ),
+                      ),
+                    ),
+                    // Global EU Search moved to the right
+                    Tooltip(
+                      message:
+                          'Phrase search across all language fields in Global Collection (All EU law available) - Most comprehensive but slower',
+                      waitDuration: Duration(seconds: 1),
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFFF28C28),
+                          foregroundColor: Color(0xFF0F2A44),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          textStyle: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        onPressed: () {
+                          if (_searchController.text.trim().isEmpty) return;
+                          setState(() => _progressColor = Colors.orange);
+                          _startSearchPhraseAll();
+                        },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.public),
+                            SizedBox(width: 6),
+                            Text('Global EU Law Search'),
+                          ],
+                        ),
+                      ),
+                    ),
 
-              Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Tooltip(
-                    message:
-                        'Select to display the first language based on your selection in Setup',
-                    waitDuration: Duration(seconds: 1),
-                    child: Checkbox(
-                      tristate: true,
-                      value: jsonSettings['display_lang1'],
-                      onChanged: (bool? newValue) {
-                        setState(() {
-                          jsonSettings['display_lang1'] = newValue ?? false;
-                          writeSettingsToFile(jsonSettings);
-                          print(
-                            "checkbox" +
-                                jsonSettings['display_lang1'].toString(),
-                          );
-                        });
-                      },
-                    ),
-                  ),
-                  Text(
-                    jsonSettings['lang1'] ?? "N/A",
-                    style: TextStyle(
-                      fontSize: 16,
-                    ), // Optional: Adjust the font size
-                  ),
+                    (isAdmin && adminUIEnabled)
+                        ? Tooltip(
+                          message:
+                              'Temporary A/B: intervals query using informative tokens',
+                          waitDuration: Duration(seconds: 1),
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  Theme.of(
+                                    context,
+                                  ).colorScheme.primaryContainer,
+                              foregroundColor:
+                                  Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimaryContainer,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              textStyle: TextStyle(fontSize: 14),
+                            ),
+                            onPressed: () {
+                              if (_searchController.text.trim().isEmpty) return;
+                              setState(() => _progressColor = Colors.teal);
+                              _startIntervalsTest();
+                            },
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.science_outlined),
+                                SizedBox(width: 6),
+                                Text('Intervals'),
+                              ],
+                            ),
+                          ),
+                        )
+                        : SizedBox.shrink(),
 
-                  Tooltip(
-                    message:
-                        'Select to display the second language based on your selection in Setup',
-                    waitDuration: Duration(seconds: 1),
-                    child: Checkbox(
-                      tristate: true,
-                      value: jsonSettings['display_lang2'],
-                      onChanged: (bool? newValue) {
-                        setState(() {
-                          jsonSettings['display_lang2'] = newValue ?? false;
-                          writeSettingsToFile(jsonSettings);
-                          print(
-                            "checkbox" +
-                                jsonSettings['display_lang2'].toString(),
-                          );
-                        });
-                      },
-                    ),
-                  ),
-                  Text(
-                    jsonSettings['lang2'] ?? "N/A",
-                    style: TextStyle(
-                      fontSize: 16,
-                    ), // Optional: Adjust the font size
-                  ),
+                    SizedBox(
+                      width: 170,
+                      child: TextFormField(
+                        controller: _controller3,
+                        //key: ValueKey(_searchController.text),
+                        decoration: InputDecoration(
+                          labelText: 'Filter Results',
+                          border: OutlineInputBorder(),
+                          filled: true,
+                          fillColor: _fillColor,
+                          suffixIcon:
+                              containsFilter.isNotEmpty
+                                  ? IconButton(
+                                    icon: Icon(Icons.clear),
+                                    tooltip: 'Clear filter',
+                                    onPressed: () {
+                                      setState(() {
+                                        containsFilter = "";
+                                        celexFilter = "";
+                                        _fillColor =
+                                            Theme.of(context).canvasColor;
+                                        _controller3.clear();
+                                      });
+                                    },
+                                  )
+                                  : Tooltip(
+                                    message:
+                                        'Enter text to filter results by content or CELEX ID. Press Enter to activate the filter (the field will turn orange).',
+                                    child: Icon(Icons.info_outline, size: 13),
+                                  ),
+                        ),
+                        onFieldSubmitted: (value) {
+                          _controller3.text = value;
+                          setState(() {
+                            containsFilter = value.trim();
+                            celexFilter =
+                                value
+                                    .trim(); // Also set celexFilter for combined filtering
 
-                  Tooltip(
-                    message:
-                        'Select to display the third language based on your selection in Setup',
-                    waitDuration: Duration(seconds: 1),
-                    child: Checkbox(
-                      tristate: true,
-                      value: jsonSettings['display_lang3'],
-                      onChanged: (bool? newValue) {
-                        setState(() {
-                          jsonSettings['display_lang3'] = newValue ?? false;
-                          writeSettingsToFile(jsonSettings);
-                          print(
-                            "checkbox" +
-                                jsonSettings['display_lang3'].toString(),
-                          );
-                        });
-                      },
-                    ),
-                  ),
-                  Text(
-                    jsonSettings['lang3'] ?? "N/A",
-                    style: TextStyle(
-                      fontSize: 16,
-                    ), // Optional: Adjust the font size
-                  ),
-                  Tooltip(
-                    message:
-                        'Only show paragraphs from documents with text blocks aligned across languages. Due to source inconsistencies, if documents are misaligned (the content in one language does not match the content of another working language), click Expand/Collapse Context to see the relevant text block (may be shifted a few positions up or down). ',
-                    waitDuration: Duration(seconds: 1),
-                    triggerMode:
-                        TooltipTriggerMode
-                            .longPress, // tap/longPress for mobile
-                    child: Checkbox(
-                      tristate: true,
-                      value: _matchedOnly,
-                      onChanged: (bool? newValue) {
-                        setState(() {
-                          _matchedOnly = newValue ?? false;
-                        });
-                      },
-                    ),
-                  ),
-                  Text(
-                    'Aligned',
-                    style: TextStyle(
-                      fontSize: 16,
-                    ), // Optional: Adjust the font size
-                  ),
-                  Tooltip(
-                    message: 'Show metadata column (CELEX, date, class...)',
-                    waitDuration: Duration(seconds: 1),
-                    child: Checkbox(
-                      tristate: true,
-                      value: jsonSettings['display_meta'],
-                      onChanged: (bool? newValue) {
-                        setState(() {
-                          jsonSettings['display_meta'] = newValue ?? false;
-                          writeSettingsToFile(jsonSettings);
-                        });
-                      },
-                    ),
-                  ),
-                  Text(
-                    'Meta',
-                    style: TextStyle(
-                      fontSize: 16,
-                    ), // Optional: Adjust the font size
-                  ),
+                            _fillColor =
+                                value.isNotEmpty
+                                    ? Colors.orangeAccent
+                                    : Theme.of(context).canvasColor;
+                          });
 
-                  Tooltip(
-                    message:
-                        'Select to enable automatic lookup when a segment is selected in Trados Studio (the LegisTracerEU plugin must be installed and running in Trados Studio)',
-                    waitDuration: Duration(seconds: 1),
-                    child: Checkbox(
-                      tristate: true,
-                      value: jsonSettings['auto_lookup'],
-                      onChanged: (bool? newValue) {
-                        setState(() {
-                          jsonSettings['auto_lookup'] = newValue ?? false;
-                          writeSettingsToFile(jsonSettings);
-                          print(
-                            "checkbox" + jsonSettings['auto_lookup'].toString(),
-                          );
-                        });
-                      },
+                          print(" Filter: $containsFilter");
+                        },
+                      ),
                     ),
-                  ),
-                  Text(
-                    "Auto",
-                    style: TextStyle(
-                      fontSize: 16,
-                    ), // Optional: Adjust the font size
-                  ),
-                ],
-              ),
 
-              /*    SizedBox(
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Tooltip(
+                          message:
+                              'Select to display the first language based on your selection in Setup',
+                          waitDuration: Duration(seconds: 1),
+                          child: Checkbox(
+                            tristate: true,
+                            visualDensity: VisualDensity.compact,
+                            value: jsonSettings['display_lang1'],
+                            onChanged: (bool? newValue) {
+                              setState(() {
+                                jsonSettings['display_lang1'] =
+                                    newValue ?? false;
+                                writeSettingsToFile(jsonSettings);
+                                print(
+                                  "checkbox" +
+                                      jsonSettings['display_lang1'].toString(),
+                                );
+                              });
+                            },
+                          ),
+                        ),
+                        Text(
+                          jsonSettings['lang1'] ?? "N/A",
+                          style: TextStyle(
+                            fontSize: 14,
+                          ),
+                        ),
+
+                        Tooltip(
+                          message:
+                              'Select to display the second language based on your selection in Setup',
+                          waitDuration: Duration(seconds: 1),
+                          child: Checkbox(
+                            tristate: true,
+                            visualDensity: VisualDensity.compact,
+                            value: jsonSettings['display_lang2'],
+                            onChanged: (bool? newValue) {
+                              setState(() {
+                                jsonSettings['display_lang2'] =
+                                    newValue ?? false;
+                                writeSettingsToFile(jsonSettings);
+                                print(
+                                  "checkbox" +
+                                      jsonSettings['display_lang2'].toString(),
+                                );
+                              });
+                            },
+                          ),
+                        ),
+                        Text(
+                          jsonSettings['lang2'] ?? "N/A",
+                          style: TextStyle(
+                            fontSize: 14,
+                          ),
+                        ),
+
+                        Tooltip(
+                          message:
+                              'Select to display the third language based on your selection in Setup',
+                          waitDuration: Duration(seconds: 1),
+                          child: Checkbox(
+                            tristate: true,
+                            visualDensity: VisualDensity.compact,
+                            value: jsonSettings['display_lang3'],
+                            onChanged: (bool? newValue) {
+                              setState(() {
+                                jsonSettings['display_lang3'] =
+                                    newValue ?? false;
+                                writeSettingsToFile(jsonSettings);
+                                print(
+                                  "checkbox" +
+                                      jsonSettings['display_lang3'].toString(),
+                                );
+                              });
+                            },
+                          ),
+                        ),
+                        Text(
+                          jsonSettings['lang3'] ?? "N/A",
+                          style: TextStyle(
+                            fontSize: 14,
+                          ),
+                        ),
+                        Tooltip(
+                          message:
+                              'Only show paragraphs from documents with text blocks aligned across languages. Due to source inconsistencies, if documents are misaligned (the content in one language does not match the content of another working language), click Expand/Collapse Context to see the relevant text block (may be shifted a few positions up or down). ',
+                          waitDuration: Duration(seconds: 1),
+                          triggerMode:
+                              TooltipTriggerMode
+                                  .longPress, // tap/longPress for mobile
+                          child: Checkbox(
+                            tristate: true,
+                            visualDensity: VisualDensity.compact,
+                            value: _matchedOnly,
+                            onChanged: (bool? newValue) {
+                              setState(() {
+                                _matchedOnly = newValue ?? false;
+                              });
+                            },
+                          ),
+                        ),
+                        Text(
+                          'Align',
+                          style: TextStyle(
+                            fontSize: 14,
+                          ),
+                        ),
+                        Tooltip(
+                          message:
+                              'Show metadata column (CELEX, date, class...)',
+                          waitDuration: Duration(seconds: 1),
+                          child: Checkbox(
+                            tristate: true,
+                            visualDensity: VisualDensity.compact,
+                            value: jsonSettings['display_meta'],
+                            onChanged: (bool? newValue) {
+                              setState(() {
+                                jsonSettings['display_meta'] =
+                                    newValue ?? false;
+                                writeSettingsToFile(jsonSettings);
+                              });
+                            },
+                          ),
+                        ),
+                        Text(
+                          'Meta',
+                          style: TextStyle(
+                            fontSize: 14,
+                          ),
+                        ),
+
+                        Tooltip(
+                          message:
+                              'Select to enable automatic lookup when a segment is selected in Trados Studio (the LegisTracerEU plugin must be installed and running in Trados Studio)',
+                          waitDuration: Duration(seconds: 1),
+                          child: Checkbox(
+                            tristate: true,
+                            visualDensity: VisualDensity.compact,
+                            value: jsonSettings['auto_lookup'],
+                            onChanged: (bool? newValue) {
+                              setState(() {
+                                jsonSettings['auto_lookup'] = newValue ?? false;
+                                writeSettingsToFile(jsonSettings);
+                                print(
+                                  "checkbox" +
+                                      jsonSettings['auto_lookup'].toString(),
+                                );
+                              });
+                            },
+                          ),
+                        ),
+                        Text(
+                          "Auto",
+                          style: TextStyle(
+                            fontSize: 14,
+                          ),
+                        ),
+                        Tooltip(
+                          message: 'Toggle IATE Terminology Panel',
+                          waitDuration: Duration(seconds: 1),
+                          child: Checkbox(
+                            tristate: true,
+                            visualDensity: VisualDensity.compact,
+                            value: _showIATEPanel,
+                            onChanged: (bool? newValue) {
+                              setState(() {
+                                _showIATEPanel = newValue ?? false;
+                              });
+                            },
+                          ),
+                        ),
+                        Text(
+                          'IATE',
+                          style: TextStyle(
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    /*    SizedBox(
                 width: 150,
                 child: TextFormField(
                   decoration: InputDecoration(
@@ -2502,304 +2560,310 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                   },
                 ),
               ),*/
-            ],
-          ),
-        ),
-        if (_isLoading)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: LinearProgressIndicator(
-              minHeight: 4,
-              valueColor: AlwaysStoppedAnimation<Color>(_progressColor),
-              //  backgroundColor: _progressColor.withOpacity(0.2),
-            ),
-          ),
+                  ],
+                ),
+              ),
+              if (_isLoading)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: LinearProgressIndicator(
+                    minHeight: 4,
+                    valueColor: AlwaysStoppedAnimation<Color>(_progressColor),
+                    //  backgroundColor: _progressColor.withOpacity(0.2),
+                  ),
+                ),
 
-        // Quick settings checkboxes
-        isAdmin
-            ? Container(
-              color: Theme.of(
-                context,
-              ).colorScheme.primary.withValues(alpha: 0.1),
-              child: ExpansionTile(
-                title:
-                    (celexFilter.isNotEmpty || containsFilter.isNotEmpty)
-                        ? Row(
-                          children: [
-                            Icon(Icons.filter_alt, color: Colors.orange),
-                            SizedBox(width: 8),
-                            isAdmin
-                                ? Text(
-                                  "Query Details: ${lang1Results.length} result(s)",
-                                )
-                                : SizedBox.shrink(),
-                            SizedBox(width: 8),
+              // Quick settings checkboxes
+              isAdmin
+                  ? Container(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.1),
+                    child: ExpansionTile(
+                      title:
+                          (celexFilter.isNotEmpty || containsFilter.isNotEmpty)
+                              ? Row(
+                                children: [
+                                  Icon(Icons.filter_alt, color: Colors.orange),
+                                  SizedBox(width: 8),
+                                  isAdmin
+                                      ? Text(
+                                        "Query Details: ${lang1Results.length} result(s)",
+                                      )
+                                      : SizedBox.shrink(),
+                                  SizedBox(width: 8),
 
-                            GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  celexFilter = "";
-                                  containsFilter = "";
-                                  _fillColor = Theme.of(context).canvasColor;
-                                  _controller3.clear();
-                                  //  _searchController.text =
-                                  ""; // <--- Set the text to an empty string
-                                  //  _searchKey = UniqueKey();
-                                });
+                                  GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        celexFilter = "";
+                                        containsFilter = "";
+                                        _fillColor =
+                                            Theme.of(context).canvasColor;
+                                        _controller3.clear();
+                                        //  _searchController.text =
+                                        ""; // <--- Set the text to an empty string
+                                        //  _searchKey = UniqueKey();
+                                      });
 
-                                setState(() {}); // handle click event here
-                              },
-                              child: Text(
-                                "Filtered Results Displayed, Click Here to Clear Filters",
-                                style: TextStyle(
-                                  color: Colors.orange,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                                      setState(
+                                        () {},
+                                      ); // handle click event here
+                                    },
+                                    child: Text(
+                                      "Filtered Results Displayed, Click Here to Clear Filters",
+                                      style: TextStyle(
+                                        color: Colors.orange,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                              : isAdmin
+                              ? Text(
+                                "Query Details: ${lang1Results.length} result(s)",
+                              )
+                              : SizedBox.shrink(),
+                      onExpansionChanged: (bool expanded) {
+                        if (expanded) {
+                          // Wrap the async call in an anonymous async function
+                          () {
+                            setState(() {});
+                            print('Tile -query details- was expanded');
+                          }(); // Immediately invoke the async function
+                        } else {
+                          print('Tile -query details- was collapsed');
+                        }
+                      },
+
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: CollapsibleText(
+                            text: 'Query at $activeIndex: $queryText',
+                            previewChars: 150,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
                             ),
-                          ],
-                        )
-                        : isAdmin
-                        ? Text(
-                          "Query Details: ${lang1Results.length} result(s)",
-                        )
-                        : SizedBox.shrink(),
-                onExpansionChanged: (bool expanded) {
-                  if (expanded) {
-                    // Wrap the async call in an anonymous async function
-                    () {
-                      setState(() {});
-                      print('Tile -query details- was expanded');
-                    }(); // Immediately invoke the async function
-                  } else {
-                    print('Tile -query details- was collapsed');
-                  }
-                },
-
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: CollapsibleText(
-                      text: 'Query at $activeIndex: $queryText',
-                      previewChars: 150,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      expandLabel: 'More',
-                      collapseLabel: 'Less',
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: CollapsibleSelectableText(
-                      text: 'Query Text: $queryPattern',
-                      previewChars: 150,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      expandLabel: 'More',
-                      collapseLabel: 'Less',
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: CollapsibleText(
-                      text: 'Query Result: $lang1Results',
-                      previewChars: 200,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      expandLabel: 'More',
-                      collapseLabel: 'Less',
-                    ),
-                  ),
-                  /*   Padding(
+                            expandLabel: 'More',
+                            collapseLabel: 'Less',
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: CollapsibleSelectableText(
+                            text: 'Query Text: $queryPattern',
+                            previewChars: 150,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            expandLabel: 'More',
+                            collapseLabel: 'Less',
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: CollapsibleText(
+                            text: 'Query Result: $lang1Results',
+                            previewChars: 200,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            expandLabel: 'More',
+                            collapseLabel: 'Less',
+                          ),
+                        ),
+                        /*   Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Text(
                   'Results Count: ${enResults.length}',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),*/
-                ],
-              ),
-            )
-            : SizedBox.shrink(),
-
-        SizedBox(height: 10),
-        Divider(color: Colors.grey[300], thickness: 3),
-        // Results list
-        Expanded(
-          child: ListView.builder(
-            itemCount: enHighlightedResults.length,
-            itemBuilder: (context, index) {
-              final TextSpan span =
-                  (enHighlightedResults.length > index)
-                      ? enHighlightedResults[index].span
-                      : const TextSpan();
-
-              final TextSpan spanLang1 =
-                  (lang1HighlightedResults.length > index)
-                      ? lang1HighlightedResults[index].span
-                      : const TextSpan();
-
-              final TextSpan spanLang2 =
-                  (lang2HighlightedResults.length > index)
-                      ? lang2HighlightedResults[index].span
-                      : const TextSpan();
-
-              final TextSpan spanLang3 =
-                  (lang3HighlightedResults.length > index)
-                      ? lang3HighlightedResults[index].span
-                      : const TextSpan();
-
-              // Build explicit filter booleans to avoid precedence issues
-              final String _containsLower = containsFilter.toLowerCase();
-              final String _celexLower = celexFilter.toLowerCase();
-
-              final bool _matchesContains =
-                  containsFilter == '' ||
-                  ((lang1Results.isNotEmpty &&
-                          index < lang1Results.length &&
-                          lang1Results[index].toLowerCase().contains(
-                            _containsLower,
-                          )) ||
-                      (lang2Results.isNotEmpty &&
-                          index < lang2Results.length &&
-                          lang2Results[index].toLowerCase().contains(
-                            _containsLower,
-                          )) ||
-                      (lang3Results.isNotEmpty &&
-                          index < lang3Results.length &&
-                          lang3Results[index].toLowerCase().contains(
-                            _containsLower,
-                          )));
-
-              final bool _matchesCelex =
-                  celexFilter == '' ||
-                  (metaCelex.isNotEmpty &&
-                      index < metaCelex.length &&
-                      metaCelex[index].toLowerCase().contains(_celexLower));
-
-              final bool _matchesAlignment =
-                  !_matchedOnly ||
-                  (parNotMatched.isNotEmpty &&
-                      index < parNotMatched.length &&
-                      parNotMatched[index] == 'false');
-
-              return ((_matchesContains || _matchesCelex) && _matchesAlignment)
-                  ? Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10.0,
-                      vertical: 5.0,
+                      ],
                     ),
+                  )
+                  : SizedBox.shrink(),
 
-                    child: Column(
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            jsonSettings['display_lang1']
-                                ? Expanded(
-                                  flex: 4, // Language columns are wider
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8.0,
-                                    ),
-                                    child: ValueListenableBuilder<double>(
-                                      valueListenable:
-                                          searchResultsFontScaleNotifier,
-                                      builder: (context, scale, __) {
-                                        return SelectableText.rich(
-                                          style: TextStyle(
-                                            fontSize: 18.0 * scale,
-                                          ),
-                                          spanLang1,
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                )
-                                : SizedBox.shrink(),
+              SizedBox(height: 10),
+              Divider(color: Colors.grey[300], thickness: 3),
+              // Results list
+              Expanded(
+                child: ListView.builder(
+                  itemCount: enHighlightedResults.length,
+                  itemBuilder: (context, index) {
+                    final TextSpan span =
+                        (enHighlightedResults.length > index)
+                            ? enHighlightedResults[index].span
+                            : const TextSpan();
 
-                            jsonSettings['display_lang2']
-                                ? Expanded(
-                                  flex: 4, // Language columns are wider
-                                  child: Container(
-                                    // color:
-                                    //     Colors
-                                    //        .grey[100], // Subtle shading for differentiation
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8.0,
-                                    ),
-                                    child: ValueListenableBuilder<double>(
-                                      valueListenable:
-                                          searchResultsFontScaleNotifier,
-                                      builder: (context, scale, __) {
-                                        return SelectableText.rich(
-                                          style: TextStyle(
-                                            fontSize: 18.0 * scale,
+                    final TextSpan spanLang1 =
+                        (lang1HighlightedResults.length > index)
+                            ? lang1HighlightedResults[index].span
+                            : const TextSpan();
+
+                    final TextSpan spanLang2 =
+                        (lang2HighlightedResults.length > index)
+                            ? lang2HighlightedResults[index].span
+                            : const TextSpan();
+
+                    final TextSpan spanLang3 =
+                        (lang3HighlightedResults.length > index)
+                            ? lang3HighlightedResults[index].span
+                            : const TextSpan();
+
+                    // Build explicit filter booleans to avoid precedence issues
+                    final String _containsLower = containsFilter.toLowerCase();
+                    final String _celexLower = celexFilter.toLowerCase();
+
+                    final bool _matchesContains =
+                        containsFilter == '' ||
+                        ((lang1Results.isNotEmpty &&
+                                index < lang1Results.length &&
+                                lang1Results[index].toLowerCase().contains(
+                                  _containsLower,
+                                )) ||
+                            (lang2Results.isNotEmpty &&
+                                index < lang2Results.length &&
+                                lang2Results[index].toLowerCase().contains(
+                                  _containsLower,
+                                )) ||
+                            (lang3Results.isNotEmpty &&
+                                index < lang3Results.length &&
+                                lang3Results[index].toLowerCase().contains(
+                                  _containsLower,
+                                )));
+
+                    final bool _matchesCelex =
+                        celexFilter == '' ||
+                        (metaCelex.isNotEmpty &&
+                            index < metaCelex.length &&
+                            metaCelex[index].toLowerCase().contains(
+                              _celexLower,
+                            ));
+
+                    final bool _matchesAlignment =
+                        !_matchedOnly ||
+                        (parNotMatched.isNotEmpty &&
+                            index < parNotMatched.length &&
+                            parNotMatched[index] == 'false');
+
+                    return ((_matchesContains || _matchesCelex) &&
+                            _matchesAlignment)
+                        ? Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10.0,
+                            vertical: 5.0,
+                          ),
+
+                          child: Column(
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  jsonSettings['display_lang1']
+                                      ? Expanded(
+                                        flex: 4, // Language columns are wider
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8.0,
                                           ),
-                                          spanLang2,
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                )
-                                : SizedBox.shrink(),
-                            jsonSettings['display_lang3']
-                                ? Expanded(
-                                  flex: 4, // Language columns are wider
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8.0,
-                                    ),
-                                    child: ValueListenableBuilder<double>(
-                                      valueListenable:
-                                          searchResultsFontScaleNotifier,
-                                      builder: (context, scale, __) {
-                                        return SelectableText.rich(
-                                          style: TextStyle(
-                                            fontSize: 18.0 * scale,
+                                          child: ValueListenableBuilder<double>(
+                                            valueListenable:
+                                                searchResultsFontScaleNotifier,
+                                            builder: (context, scale, __) {
+                                              return SelectableText.rich(
+                                                style: TextStyle(
+                                                  fontSize: 18.0 * scale,
+                                                ),
+                                                spanLang1,
+                                              );
+                                            },
                                           ),
-                                          spanLang3,
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                )
-                                : SizedBox.shrink(),
-                            jsonSettings['display_meta']
-                                ? SizedBox(
-                                  width:
-                                      240, // Constrain metadata width to prevent overflow
-                                  child: Container(
-                                    // Subtle shading for differentiation
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8.0,
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Text("Celex: "),
-                                            Expanded(
-                                              child: SelectableText(
-                                                metaCelex.length > index
-                                                    ? metaCelex[index]
-                                                    : '',
-                                                // Consider: set maxLines for single-line truncation
-                                                // maxLines: 1,
-                                              ),
-                                            ),
-                                          ],
                                         ),
-                                        // If you want to show czResults here as well, add another widget:
-                                        /* Row(
+                                      )
+                                      : SizedBox.shrink(),
+
+                                  jsonSettings['display_lang2']
+                                      ? Expanded(
+                                        flex: 4, // Language columns are wider
+                                        child: Container(
+                                          // color:
+                                          //     Colors
+                                          //        .grey[100], // Subtle shading for differentiation
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8.0,
+                                          ),
+                                          child: ValueListenableBuilder<double>(
+                                            valueListenable:
+                                                searchResultsFontScaleNotifier,
+                                            builder: (context, scale, __) {
+                                              return SelectableText.rich(
+                                                style: TextStyle(
+                                                  fontSize: 18.0 * scale,
+                                                ),
+                                                spanLang2,
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      )
+                                      : SizedBox.shrink(),
+                                  jsonSettings['display_lang3']
+                                      ? Expanded(
+                                        flex: 4, // Language columns are wider
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8.0,
+                                          ),
+                                          child: ValueListenableBuilder<double>(
+                                            valueListenable:
+                                                searchResultsFontScaleNotifier,
+                                            builder: (context, scale, __) {
+                                              return SelectableText.rich(
+                                                style: TextStyle(
+                                                  fontSize: 18.0 * scale,
+                                                ),
+                                                spanLang3,
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      )
+                                      : SizedBox.shrink(),
+                                  jsonSettings['display_meta']
+                                      ? SizedBox(
+                                        width:
+                                            240, // Constrain metadata width to prevent overflow
+                                        child: Container(
+                                          // Subtle shading for differentiation
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8.0,
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Text("Celex: "),
+                                                  Expanded(
+                                                    child: SelectableText(
+                                                      metaCelex.length > index
+                                                          ? metaCelex[index]
+                                                          : '',
+                                                      // Consider: set maxLines for single-line truncation
+                                                      // maxLines: 1,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              // If you want to show czResults here as well, add another widget:
+                                              /* Row(
                                           children: [
                                             Text("Cellar: "),
                                             Flexible(
@@ -2813,706 +2877,761 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                           ],
                                         ),
 */
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                              child: FutureBuilder<
-                                                Map<String, String>
-                                              >(
-                                                future:
-                                                    metaCelex.length > index
-                                                        ? fetchTitlesForCelex(
-                                                          metaCelex[index],
-                                                        )
-                                                        : Future.value({}),
-                                                builder: (context, snapshot) {
-                                                  if (snapshot
-                                                          .connectionState ==
-                                                      ConnectionState.waiting) {
-                                                    return Text('Loading...');
-                                                  }
-                                                  final titleMap =
-                                                      snapshot.data ?? {};
-                                                  // Filter to only show languages with checkboxes selected
-                                                  final selectedLangs = <
-                                                    String
-                                                  >{
-                                                    if (jsonSettings['display_lang1'] ==
-                                                            true &&
-                                                        lang1 != null)
-                                                      lang1!.toUpperCase(),
-                                                    if (jsonSettings['display_lang2'] ==
-                                                            true &&
-                                                        lang2 != null)
-                                                      lang2!.toUpperCase(),
-                                                    if (jsonSettings['display_lang3'] ==
-                                                            true &&
-                                                        lang3 != null)
-                                                      lang3!.toUpperCase(),
-                                                  };
-                                                  final filteredTitleMap =
-                                                      Map.fromEntries(
-                                                        titleMap.entries.where(
-                                                          (e) => selectedLangs
-                                                              .contains(
-                                                                e.key
-                                                                    .toUpperCase(),
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: FutureBuilder<
+                                                      Map<String, String>
+                                                    >(
+                                                      future:
+                                                          metaCelex.length >
+                                                                  index
+                                                              ? fetchTitlesForCelex(
+                                                                metaCelex[index],
+                                                              )
+                                                              : Future.value(
+                                                                {},
                                                               ),
-                                                        ),
-                                                      );
-                                                  // Prefer English, then any available title
-                                                  final fullTitle =
-                                                      filteredTitleMap['EN'] ??
-                                                      filteredTitleMap['en'] ??
-                                                      (filteredTitleMap
-                                                              .isNotEmpty
-                                                          ? filteredTitleMap
-                                                              .values
-                                                              .first
-                                                          : '');
-                                                  final shortTitle =
-                                                      fullTitle.length > 80
-                                                          ? '${fullTitle.substring(0, 80)}...'
-                                                          : fullTitle;
-                                                  return GestureDetector(
-                                                    onTap:
-                                                        fullTitle.isNotEmpty &&
-                                                                (fullTitle.length >
-                                                                        80 ||
-                                                                    filteredTitleMap
-                                                                            .length >
-                                                                        1)
-                                                            ? () => showDialog(
-                                                              context: context,
-                                                              builder:
-                                                                  (
-                                                                    _,
-                                                                  ) => AlertDialog(
-                                                                    title: Text(
-                                                                      'Document Titles',
+                                                      builder: (
+                                                        context,
+                                                        snapshot,
+                                                      ) {
+                                                        if (snapshot
+                                                                .connectionState ==
+                                                            ConnectionState
+                                                                .waiting) {
+                                                          return Text(
+                                                            'Loading...',
+                                                          );
+                                                        }
+                                                        final titleMap =
+                                                            snapshot.data ?? {};
+                                                        // Filter to only show languages with checkboxes selected
+                                                        final selectedLangs = <
+                                                          String
+                                                        >{
+                                                          if (jsonSettings['display_lang1'] ==
+                                                                  true &&
+                                                              lang1 != null)
+                                                            lang1!
+                                                                .toUpperCase(),
+                                                          if (jsonSettings['display_lang2'] ==
+                                                                  true &&
+                                                              lang2 != null)
+                                                            lang2!
+                                                                .toUpperCase(),
+                                                          if (jsonSettings['display_lang3'] ==
+                                                                  true &&
+                                                              lang3 != null)
+                                                            lang3!
+                                                                .toUpperCase(),
+                                                        };
+                                                        final filteredTitleMap =
+                                                            Map.fromEntries(
+                                                              titleMap.entries.where(
+                                                                (
+                                                                  e,
+                                                                ) => selectedLangs
+                                                                    .contains(
+                                                                      e.key
+                                                                          .toUpperCase(),
                                                                     ),
-                                                                    content: SingleChildScrollView(
-                                                                      child: Column(
-                                                                        crossAxisAlignment:
-                                                                            CrossAxisAlignment.start,
-                                                                        mainAxisSize:
-                                                                            MainAxisSize.min,
-                                                                        children:
-                                                                            filteredTitleMap.entries
-                                                                                .map(
-                                                                                  (
-                                                                                    e,
-                                                                                  ) => Padding(
-                                                                                    padding: EdgeInsets.only(
-                                                                                      bottom:
-                                                                                          12,
-                                                                                    ),
-                                                                                    child: Column(
-                                                                                      crossAxisAlignment:
-                                                                                          CrossAxisAlignment.start,
-                                                                                      children: [
-                                                                                        Text(
-                                                                                          e.key,
-                                                                                          style: TextStyle(
-                                                                                            fontWeight:
-                                                                                                FontWeight.bold,
-                                                                                            fontSize:
-                                                                                                14,
+                                                              ),
+                                                            );
+                                                        // Prefer English, then any available title
+                                                        final fullTitle =
+                                                            filteredTitleMap['EN'] ??
+                                                            filteredTitleMap['en'] ??
+                                                            (filteredTitleMap
+                                                                    .isNotEmpty
+                                                                ? filteredTitleMap
+                                                                    .values
+                                                                    .first
+                                                                : '');
+                                                        final shortTitle =
+                                                            fullTitle.length >
+                                                                    80
+                                                                ? '${fullTitle.substring(0, 80)}...'
+                                                                : fullTitle;
+                                                        return GestureDetector(
+                                                          onTap:
+                                                              fullTitle.isNotEmpty &&
+                                                                      (fullTitle.length >
+                                                                              80 ||
+                                                                          filteredTitleMap.length >
+                                                                              1)
+                                                                  ? () => showDialog(
+                                                                    context:
+                                                                        context,
+                                                                    builder:
+                                                                        (
+                                                                          _,
+                                                                        ) => AlertDialog(
+                                                                          title: Text(
+                                                                            'Document Titles',
+                                                                          ),
+                                                                          content: SingleChildScrollView(
+                                                                            child: Column(
+                                                                              crossAxisAlignment:
+                                                                                  CrossAxisAlignment.start,
+                                                                              mainAxisSize:
+                                                                                  MainAxisSize.min,
+                                                                              children:
+                                                                                  filteredTitleMap.entries
+                                                                                      .map(
+                                                                                        (
+                                                                                          e,
+                                                                                        ) => Padding(
+                                                                                          padding: EdgeInsets.only(
+                                                                                            bottom:
+                                                                                                12,
+                                                                                          ),
+                                                                                          child: Column(
+                                                                                            crossAxisAlignment:
+                                                                                                CrossAxisAlignment.start,
+                                                                                            children: [
+                                                                                              Text(
+                                                                                                e.key,
+                                                                                                style: TextStyle(
+                                                                                                  fontWeight:
+                                                                                                      FontWeight.bold,
+                                                                                                  fontSize:
+                                                                                                      14,
+                                                                                                ),
+                                                                                              ),
+                                                                                              SizedBox(
+                                                                                                height:
+                                                                                                    4,
+                                                                                              ),
+                                                                                              SelectableText(
+                                                                                                e.value,
+                                                                                              ),
+                                                                                            ],
                                                                                           ),
                                                                                         ),
-                                                                                        SizedBox(
-                                                                                          height:
-                                                                                              4,
-                                                                                        ),
-                                                                                        SelectableText(
-                                                                                          e.value,
-                                                                                        ),
-                                                                                      ],
-                                                                                    ),
-                                                                                  ),
-                                                                                )
-                                                                                .toList(),
-                                                                      ),
-                                                                    ),
-                                                                    actions: [
-                                                                      TextButton(
-                                                                        onPressed:
-                                                                            () =>
-                                                                                Navigator.of(
-                                                                                  context,
-                                                                                ).pop(),
-                                                                        child: Text(
-                                                                          'Close',
+                                                                                      )
+                                                                                      .toList(),
+                                                                            ),
+                                                                          ),
+                                                                          actions: [
+                                                                            TextButton(
+                                                                              onPressed:
+                                                                                  () =>
+                                                                                      Navigator.of(
+                                                                                        context,
+                                                                                      ).pop(),
+                                                                              child: Text(
+                                                                                'Close',
+                                                                              ),
+                                                                            ),
+                                                                          ],
                                                                         ),
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                            )
-                                                            : null,
-                                                    child: Tooltip(
-                                                      message: filteredTitleMap
-                                                          .entries
-                                                          .map(
-                                                            (e) =>
-                                                                '${e.key}: ${e.value}',
-                                                          )
-                                                          .join('\n\n'),
-                                                      waitDuration: Duration(
-                                                        seconds: 1,
-                                                      ),
-                                                      child: Text(
-                                                        shortTitle,
-                                                        style: TextStyle(
-                                                          color:
-                                                              (fullTitle.length >
-                                                                          80 ||
-                                                                      titleMap.length >
-                                                                          1)
-                                                                  ? Color(
-                                                                    0xFF0F2A44,
                                                                   )
                                                                   : null,
-                                                          decoration:
-                                                              (fullTitle.length >
-                                                                          80 ||
-                                                                      titleMap.length >
-                                                                          1)
-                                                                  ? TextDecoration
-                                                                      .underline
-                                                                  : null,
-                                                        ),
-                                                      ),
+                                                          child: Tooltip(
+                                                            message:
+                                                                filteredTitleMap
+                                                                    .entries
+                                                                    .map(
+                                                                      (e) =>
+                                                                          '${e.key}: ${e.value}',
+                                                                    )
+                                                                    .join(
+                                                                      '\n\n',
+                                                                    ),
+                                                            waitDuration:
+                                                                Duration(
+                                                                  seconds: 1,
+                                                                ),
+                                                            child: Text(
+                                                              shortTitle,
+                                                              style: TextStyle(
+                                                                color:
+                                                                    (fullTitle.length >
+                                                                                80 ||
+                                                                            titleMap.length >
+                                                                                1)
+                                                                        ? Color(
+                                                                          0xFF0F2A44,
+                                                                        )
+                                                                        : null,
+                                                                decoration:
+                                                                    (fullTitle.length >
+                                                                                80 ||
+                                                                            titleMap.length >
+                                                                                1)
+                                                                        ? TextDecoration
+                                                                            .underline
+                                                                        : null,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        );
+                                                      },
                                                     ),
-                                                  );
-                                                },
+                                                  ),
+                                                ],
                                               ),
-                                            ),
-                                          ],
-                                        ),
 
-                                        Row(
-                                          children: [
-                                            Text("Class: "),
-                                            Expanded(
-                                              child: SelectableText(
-                                                className.length > index
-                                                    ? className[index]
-                                                    : '',
-                                                // maxLines: 1,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-
-                                        Row(
-                                          children: [
-                                            Text("Sequence ID: "),
-                                            Expanded(
-                                              child: Row(
+                                              Row(
                                                 children: [
-                                                  Flexible(
+                                                  Text("Class: "),
+                                                  Expanded(
                                                     child: SelectableText(
-                                                      pointerPar.length > index
-                                                          ? pointerPar[index]
+                                                      className.length > index
+                                                          ? className[index]
                                                           : '',
                                                       // maxLines: 1,
                                                     ),
                                                   ),
-                                                  if (docDate.length > index &&
-                                                      docDate[index].isNotEmpty)
-                                                    Padding(
-                                                      padding: EdgeInsets.only(
-                                                        left: 8,
-                                                      ),
-                                                      child: Tooltip(
-                                                        message:
-                                                            "Date added to Collection",
-                                                        child: Text(
-                                                          '(${(() {
-                                                            final raw = docDate[index];
-                                                            final dt = DateTime.tryParse(raw);
-                                                            if (dt == null) return raw;
-                                                            return "${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}";
-                                                          })()})',
-                                                          style: TextStyle(
-                                                            fontSize: 12,
+                                                ],
+                                              ),
+
+                                              Row(
+                                                children: [
+                                                  Text("Sequence ID: "),
+                                                  Expanded(
+                                                    child: Row(
+                                                      children: [
+                                                        Flexible(
+                                                          child: SelectableText(
+                                                            pointerPar.length >
+                                                                    index
+                                                                ? pointerPar[index]
+                                                                : '',
+                                                            // maxLines: 1,
                                                           ),
                                                         ),
+                                                        if (docDate.length >
+                                                                index &&
+                                                            docDate[index]
+                                                                .isNotEmpty)
+                                                          Padding(
+                                                            padding:
+                                                                EdgeInsets.only(
+                                                                  left: 8,
+                                                                ),
+                                                            child: Tooltip(
+                                                              message:
+                                                                  "Date added to Collection",
+                                                              child: Text(
+                                                                '(${(() {
+                                                                  final raw = docDate[index];
+                                                                  final dt = DateTime.tryParse(raw);
+                                                                  if (dt == null) return raw;
+                                                                  return "${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}";
+                                                                })()})',
+                                                                style:
+                                                                    TextStyle(
+                                                                      fontSize:
+                                                                          12,
+                                                                    ),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  if (parNotMatched.length >
+                                                          index &&
+                                                      parNotMatched[index] ==
+                                                          "true")
+                                                    Tooltip(
+                                                      message:
+                                                          "Due to inconsistencies in source documents, texts may be misaligned, use Context feature to align sentences",
+                                                      child: Icon(
+                                                        Icons.warning_amber,
+                                                        color: Colors.orange,
+                                                        size: 18,
                                                       ),
                                                     ),
                                                 ],
                                               ),
-                                            ),
-                                            if (parNotMatched.length > index && parNotMatched[index] == "true")
-                                              Tooltip(
-                                                message:
-                                                    "Due to inconsistencies in source documents, texts may be misaligned, use Context feature to align sentences",
-                                                child: Icon(
-                                                  Icons.warning_amber,
-                                                  color: Colors.orange,
-                                                  size: 18,
-                                                ),
+
+                                              Row(
+                                                children: [
+                                                  Tooltip(
+                                                    message:
+                                                        "Click to display the full document on the Eur-lex site",
+                                                    waitDuration: Duration(
+                                                      seconds: 1,
+                                                    ),
+                                                    child: Text("Eur-Lex: "),
+                                                  ),
+                                                  GestureDetector(
+                                                    onTap: () {
+                                                      // Handle the tap event here, e.g. open the link in a browser
+                                                      launchUrl(
+                                                        Uri.parse(
+                                                          'http://eur-lex.europa.eu/legal-content/${lang1}-${lang2}/TXT/?uri=CELEX:${metaCelex[index]}',
+                                                        ),
+                                                      );
+                                                    },
+                                                    child: Text(
+                                                      '${lang1}-${lang2}',
+                                                      style: TextStyle(
+                                                        decoration:
+                                                            TextDecoration
+                                                                .underline,
+                                                        color: Colors.blue,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  SizedBox(width: 10),
+
+                                                  GestureDetector(
+                                                    onTap: () {
+                                                      // Handle the tap event here, e.g. open the link in a browser
+                                                      launchUrl(
+                                                        Uri.parse(
+                                                          'http://eur-lex.europa.eu/legal-content/${lang1}-${lang3}/TXT/?uri=CELEX:${metaCelex[index]}',
+                                                        ),
+                                                      );
+                                                    },
+                                                    child: Text(
+                                                      '${lang1}-${lang3}',
+                                                      style: TextStyle(
+                                                        decoration:
+                                                            TextDecoration
+                                                                .underline,
+                                                        color: Colors.blue,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
-                                          ],
+                                            ],
+                                          ),
                                         ),
+                                      )
+                                      : SizedBox.shrink(),
+                                ],
+                              ),
 
-                                        Row(
-                                          children: [
-                                            Tooltip(
-                                              message:
-                                                  "Click to display the full document on the Eur-lex site",
-                                              waitDuration: Duration(
-                                                seconds: 1,
-                                              ),
-                                              child: Text("Eur-Lex: "),
-                                            ),
-                                            GestureDetector(
-                                              onTap: () {
-                                                // Handle the tap event here, e.g. open the link in a browser
-                                                launchUrl(
-                                                  Uri.parse(
-                                                    'http://eur-lex.europa.eu/legal-content/${lang1}-${lang2}/TXT/?uri=CELEX:${metaCelex[index]}',
-                                                  ),
-                                                );
-                                              },
-                                              child: Text(
-                                                '${lang1}-${lang2}',
-                                                style: TextStyle(
-                                                  decoration:
-                                                      TextDecoration.underline,
-                                                  color: Colors.blue,
-                                                ),
-                                              ),
-                                            ),
-                                            SizedBox(width: 10),
+                              Container(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.primary.withValues(alpha: 0.1),
 
-                                            GestureDetector(
-                                              onTap: () {
-                                                // Handle the tap event here, e.g. open the link in a browser
-                                                launchUrl(
-                                                  Uri.parse(
-                                                    'http://eur-lex.europa.eu/legal-content/${lang1}-${lang3}/TXT/?uri=CELEX:${metaCelex[index]}',
-                                                  ),
-                                                );
-                                              },
-                                              child: Text(
-                                                '${lang1}-${lang3}',
-                                                style: TextStyle(
-                                                  decoration:
-                                                      TextDecoration.underline,
-                                                  color: Colors.blue,
-                                                ),
-                                              ),
+                                child: Theme(
+                                  data: Theme.of(context).copyWith(
+                                    listTileTheme: const ListTileThemeData(
+                                      minVerticalPadding: 0,
+                                      dense: true,
+                                      horizontalTitleGap: 8,
+                                    ),
+                                  ),
+                                  child: ExpansionTile(
+                                    shape: const Border(),
+                                    collapsedShape: const Border(),
+                                    tilePadding: const EdgeInsets.symmetric(
+                                      horizontal: 12.0,
+                                      vertical: 0.0,
+                                    ),
+                                    title: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            _isContentExpanded
+                                                ? 'Collapse Context'
+                                                : 'Expand Context',
+                                            style: const TextStyle(
+                                              fontSize: 12.0,
+                                              fontWeight: FontWeight.w600,
                                             ),
-                                          ],
+                                          ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.refresh,
+                                            size: 16,
+                                          ),
+                                          tooltip:
+                                              'Load more context (+10 segments)',
+                                          onPressed: () async {
+                                            setState(() {
+                                              _contextWindow += 10;
+                                            });
+
+                                            final result = await getContext(
+                                              metaCelex[index],
+                                              pointerPar[index],
+                                              resultIndices.length > index
+                                                  ? resultIndices[index]
+                                                  : activeIndex,
+                                              _contextWindow,
+                                              filename:
+                                                  metaFilename.length > index
+                                                      ? metaFilename[index]
+                                                      : null,
+                                              source:
+                                                  metaSource.length > index
+                                                      ? metaSource[index]
+                                                      : null,
+                                            );
+                                            if (!mounted) return;
+                                            setState(() {
+                                              contextEnSkCz = result;
+                                              // Find the position of the original search result in the expanded context
+                                              if (result != null &&
+                                                  result[3] != null) {
+                                                final originalSeqId =
+                                                    pointerPar[index];
+                                                _originalPointerPosition =
+                                                    (result[3] as List)
+                                                        .indexWhere(
+                                                          (id) =>
+                                                              id.toString() ==
+                                                              originalSeqId
+                                                                  .toString(),
+                                                        );
+                                              }
+                                            });
+                                          },
                                         ),
                                       ],
                                     ),
-                                  ),
-                                )
-                                : SizedBox.shrink(),
-                          ],
-                        ),
-
-                        Container(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.primary.withValues(alpha: 0.1),
-
-                          child: Theme(
-                            data: Theme.of(context).copyWith(
-                              listTileTheme: const ListTileThemeData(
-                                minVerticalPadding: 0,
-                                dense: true,
-                                horizontalTitleGap: 8,
-                              ),
-                            ),
-                            child: ExpansionTile(
-                              shape: const Border(),
-                              collapsedShape: const Border(),
-                              tilePadding: const EdgeInsets.symmetric(
-                                horizontal: 12.0,
-                                vertical: 0.0,
-                              ),
-                              title: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      _isContentExpanded
-                                          ? 'Collapse Context'
-                                          : 'Expand Context',
-                                      style: const TextStyle(
-                                        fontSize: 12.0,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.refresh, size: 16),
-                                    tooltip: 'Load more context (+10 segments)',
-                                    onPressed: () async {
+                                    onExpansionChanged: (bool expanded) {
                                       setState(() {
-                                        _contextWindow += 10;
+                                        _isContentExpanded = expanded;
                                       });
 
-                                      final result = await getContext(
-                                        metaCelex[index],
-                                        pointerPar[index],
-                                        resultIndices.length > index
-                                            ? resultIndices[index]
-                                            : activeIndex,
-                                        _contextWindow,
-                                        filename:
-                                            metaFilename.length > index
-                                                ? metaFilename[index]
-                                                : null,
-                                        source:
-                                            metaSource.length > index
-                                                ? metaSource[index]
-                                                : null,
-                                      );
-                                      if (!mounted) return;
-                                      setState(() {
-                                        contextEnSkCz = result;
-                                        // Find the position of the original search result in the expanded context
-                                        if (result != null &&
-                                            result[3] != null) {
-                                          final originalSeqId =
-                                              pointerPar[index];
-                                          _originalPointerPosition =
-                                              (result[3] as List).indexWhere(
-                                                (id) =>
-                                                    id.toString() ==
-                                                    originalSeqId.toString(),
-                                              );
-                                        }
-                                      });
-                                    },
-                                  ),
-                                ],
-                              ),
-                              onExpansionChanged: (bool expanded) {
-                                setState(() {
-                                  _isContentExpanded = expanded;
-                                });
-
-                                if (expanded) {
-                                  _contextWindow = 10;
-                                  // Wrap the async call in an anonymous async function
-                                  () async {
-                                    final result = await getContext(
-                                      metaCelex[index],
-                                      pointerPar[index],
-                                      resultIndices.length > index
-                                          ? resultIndices[index]
-                                          : activeIndex,
-                                      _contextWindow,
-                                      filename:
-                                          metaFilename.length > index
-                                              ? metaFilename[index]
-                                              : null,
-                                      source:
-                                          metaSource.length > index
-                                              ? metaSource[index]
-                                              : null,
-                                    );
-                                    setState(() {
-                                      contextEnSkCz = result;
-                                      // Find the position of the original search result in the context
-                                      if (result != null && result[3] != null) {
-                                        final originalSeqId = pointerPar[index];
-                                        _originalPointerPosition =
-                                            (result[3] as List).indexWhere(
-                                              (id) =>
-                                                  id.toString() ==
-                                                  originalSeqId.toString(),
-                                            );
+                                      if (expanded) {
+                                        _contextWindow = 10;
+                                        // Wrap the async call in an anonymous async function
+                                        () async {
+                                          final result = await getContext(
+                                            metaCelex[index],
+                                            pointerPar[index],
+                                            resultIndices.length > index
+                                                ? resultIndices[index]
+                                                : activeIndex,
+                                            _contextWindow,
+                                            filename:
+                                                metaFilename.length > index
+                                                    ? metaFilename[index]
+                                                    : null,
+                                            source:
+                                                metaSource.length > index
+                                                    ? metaSource[index]
+                                                    : null,
+                                          );
+                                          setState(() {
+                                            contextEnSkCz = result;
+                                            // Find the position of the original search result in the context
+                                            if (result != null &&
+                                                result[3] != null) {
+                                              final originalSeqId =
+                                                  pointerPar[index];
+                                              _originalPointerPosition =
+                                                  (result[3] as List)
+                                                      .indexWhere(
+                                                        (id) =>
+                                                            id.toString() ==
+                                                            originalSeqId
+                                                                .toString(),
+                                                      );
+                                            }
+                                          });
+                                        }(); // Immediately invoke the async function
                                       }
-                                    });
-                                  }(); // Immediately invoke the async function
-                                }
-                              },
+                                    },
 
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10.0,
-                                    vertical: 4.0,
-                                  ),
-                                  child: Row(
                                     children: [
-                                      jsonSettings['display_lang1'] == true
-                                          ? Expanded(
-                                            child: Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                IconButton(
-                                                  icon: const Icon(
-                                                    Icons.arrow_upward,
-                                                    size: 16,
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10.0,
+                                          vertical: 4.0,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            jsonSettings['display_lang1'] ==
+                                                    true
+                                                ? Expanded(
+                                                  child: Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
+                                                    children: [
+                                                      IconButton(
+                                                        icon: const Icon(
+                                                          Icons.arrow_upward,
+                                                          size: 16,
+                                                        ),
+                                                        padding:
+                                                            EdgeInsets.zero,
+                                                        constraints:
+                                                            const BoxConstraints(),
+                                                        tooltip:
+                                                            'Move ${lang1 ?? 'L1'} up',
+                                                        onPressed: () {
+                                                          setState(() {
+                                                            offsetlang1++;
+                                                          });
+                                                        },
+                                                      ),
+                                                      IconButton(
+                                                        icon: const Icon(
+                                                          Icons.arrow_downward,
+                                                          size: 16,
+                                                        ),
+                                                        padding:
+                                                            EdgeInsets.zero,
+                                                        constraints:
+                                                            const BoxConstraints(),
+                                                        tooltip:
+                                                            'Move ${lang1 ?? 'L1'} down',
+                                                        onPressed: () {
+                                                          setState(() {
+                                                            offsetlang1--;
+                                                          });
+                                                        },
+                                                      ),
+                                                    ],
                                                   ),
-                                                  padding: EdgeInsets.zero,
-                                                  constraints:
-                                                      const BoxConstraints(),
-                                                  tooltip:
-                                                      'Move ${lang1 ?? 'L1'} up',
-                                                  onPressed: () {
-                                                    setState(() {
-                                                      offsetlang1++;
-                                                    });
-                                                  },
-                                                ),
-                                                IconButton(
-                                                  icon: const Icon(
-                                                    Icons.arrow_downward,
-                                                    size: 16,
+                                                )
+                                                : const SizedBox.shrink(),
+                                            jsonSettings['display_lang2'] ==
+                                                    true
+                                                ? Expanded(
+                                                  child: Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
+                                                    children: [
+                                                      IconButton(
+                                                        icon: const Icon(
+                                                          Icons.arrow_upward,
+                                                          size: 16,
+                                                        ),
+                                                        padding:
+                                                            EdgeInsets.zero,
+                                                        constraints:
+                                                            const BoxConstraints(),
+                                                        tooltip:
+                                                            'Move ${lang2 ?? 'L2'} up',
+                                                        onPressed: () {
+                                                          setState(() {
+                                                            offsetlang2++;
+                                                          });
+                                                        },
+                                                      ),
+                                                      IconButton(
+                                                        icon: const Icon(
+                                                          Icons.arrow_downward,
+                                                          size: 16,
+                                                        ),
+                                                        padding:
+                                                            EdgeInsets.zero,
+                                                        constraints:
+                                                            const BoxConstraints(),
+                                                        tooltip:
+                                                            'Move ${lang2 ?? 'L2'} down',
+                                                        onPressed: () {
+                                                          setState(() {
+                                                            offsetlang2--;
+                                                          });
+                                                        },
+                                                      ),
+                                                    ],
                                                   ),
-                                                  padding: EdgeInsets.zero,
-                                                  constraints:
-                                                      const BoxConstraints(),
-                                                  tooltip:
-                                                      'Move ${lang1 ?? 'L1'} down',
-                                                  onPressed: () {
-                                                    setState(() {
-                                                      offsetlang1--;
-                                                    });
-                                                  },
-                                                ),
-                                              ],
-                                            ),
-                                          )
-                                          : const SizedBox.shrink(),
-                                      jsonSettings['display_lang2'] == true
-                                          ? Expanded(
-                                            child: Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                IconButton(
-                                                  icon: const Icon(
-                                                    Icons.arrow_upward,
-                                                    size: 16,
+                                                )
+                                                : const SizedBox.shrink(),
+                                            jsonSettings['display_lang3'] ==
+                                                    true
+                                                ? Expanded(
+                                                  child: Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
+                                                    children: [
+                                                      IconButton(
+                                                        icon: const Icon(
+                                                          Icons.arrow_upward,
+                                                          size: 16,
+                                                        ),
+                                                        padding:
+                                                            EdgeInsets.zero,
+                                                        constraints:
+                                                            const BoxConstraints(),
+                                                        tooltip:
+                                                            'Move ${lang3 ?? 'L3'} up',
+                                                        onPressed: () {
+                                                          setState(() {
+                                                            offsetlang3++;
+                                                          });
+                                                        },
+                                                      ),
+                                                      IconButton(
+                                                        icon: const Icon(
+                                                          Icons.arrow_downward,
+                                                          size: 16,
+                                                        ),
+                                                        padding:
+                                                            EdgeInsets.zero,
+                                                        constraints:
+                                                            const BoxConstraints(),
+                                                        tooltip:
+                                                            'Move ${lang3 ?? 'L3'} down',
+                                                        onPressed: () {
+                                                          setState(() {
+                                                            offsetlang3--;
+                                                          });
+                                                        },
+                                                      ),
+                                                    ],
                                                   ),
-                                                  padding: EdgeInsets.zero,
-                                                  constraints:
-                                                      const BoxConstraints(),
-                                                  tooltip:
-                                                      'Move ${lang2 ?? 'L2'} up',
-                                                  onPressed: () {
-                                                    setState(() {
-                                                      offsetlang2++;
-                                                    });
-                                                  },
-                                                ),
-                                                IconButton(
-                                                  icon: const Icon(
-                                                    Icons.arrow_downward,
-                                                    size: 16,
+                                                )
+                                                : const SizedBox.shrink(),
+                                          ],
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        height:
+                                            MediaQuery.of(context).size.height *
+                                            0.55,
+                                        child: ListView.builder(
+                                          itemCount:
+                                              (contextEnSkCz != null &&
+                                                      contextEnSkCz[0] != null)
+                                                  ? contextEnSkCz[0].length
+                                                  : 0,
+                                          itemBuilder: (context, index) {
+                                            return Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 10.0,
+                                                    vertical: 5.0,
                                                   ),
-                                                  padding: EdgeInsets.zero,
-                                                  constraints:
-                                                      const BoxConstraints(),
-                                                  tooltip:
-                                                      'Move ${lang2 ?? 'L2'} down',
-                                                  onPressed: () {
-                                                    setState(() {
-                                                      offsetlang2--;
-                                                    });
-                                                  },
-                                                ),
-                                              ],
-                                            ),
-                                          )
-                                          : const SizedBox.shrink(),
-                                      jsonSettings['display_lang3'] == true
-                                          ? Expanded(
-                                            child: Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                IconButton(
-                                                  icon: const Icon(
-                                                    Icons.arrow_upward,
-                                                    size: 16,
+                                              child: Column(
+                                                children: [
+                                                  Container(
+                                                    color:
+                                                        (index ==
+                                                                _originalPointerPosition)
+                                                            ? Colors.grey[200]
+                                                            : null,
+                                                    child: Row(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+
+                                                      children: [
+                                                        jsonSettings['display_lang1'] ==
+                                                                true
+                                                            ? Expanded(
+                                                              child:
+                                                                  (jsonSettings['display_lang1'] ==
+                                                                              true &&
+                                                                          index >=
+                                                                              0 &&
+                                                                          contextEnSkCz[3].length >
+                                                                              index &&
+                                                                          index +
+                                                                                  offsetlang1 >=
+                                                                              0 &&
+                                                                          contextEnSkCz[0].length >
+                                                                              index +
+                                                                                  offsetlang1)
+                                                                      ? SelectableText.rich(
+                                                                        TextSpan(
+                                                                          children: [
+                                                                            TextSpan(
+                                                                              text:
+                                                                                  contextEnSkCz[3][index],
+                                                                              style: TextStyle(
+                                                                                fontSize:
+                                                                                    12.0,
+                                                                                fontFeatures: [
+                                                                                  FontFeature.superscripts(),
+                                                                                ],
+                                                                              ),
+                                                                            ),
+                                                                            TextSpan(
+                                                                              text:
+                                                                                  " ",
+                                                                              style: TextStyle(
+                                                                                fontSize:
+                                                                                    18.0,
+                                                                              ),
+                                                                            ),
+                                                                            TextSpan(
+                                                                              text:
+                                                                                  contextEnSkCz[0][index +
+                                                                                      offsetlang1],
+                                                                              style: TextStyle(
+                                                                                fontSize:
+                                                                                    18.0,
+                                                                              ),
+                                                                            ),
+                                                                          ],
+                                                                        ),
+                                                                      )
+                                                                      : SelectableText(
+                                                                        '',
+                                                                      ),
+                                                            )
+                                                            : SizedBox.shrink(),
+                                                        jsonSettings['display_lang2'] ==
+                                                                true
+                                                            ? Expanded(
+                                                              child: SelectableText(
+                                                                style:
+                                                                    TextStyle(
+                                                                      fontSize:
+                                                                          18.0,
+                                                                    ),
+                                                                (jsonSettings['display_lang2'] ==
+                                                                            true &&
+                                                                        index +
+                                                                                offsetlang2 >=
+                                                                            0 &&
+                                                                        contextEnSkCz[1].length >
+                                                                            index +
+                                                                                offsetlang2)
+                                                                    ? contextEnSkCz[1][index +
+                                                                        offsetlang2]
+                                                                    : '',
+                                                              ),
+                                                            )
+                                                            : SizedBox.shrink(),
+                                                        jsonSettings['display_lang3'] ==
+                                                                true
+                                                            ? Expanded(
+                                                              child: SelectableText(
+                                                                style:
+                                                                    TextStyle(
+                                                                      fontSize:
+                                                                          18.0,
+                                                                    ),
+                                                                (jsonSettings['display_lang3'] ==
+                                                                            true &&
+                                                                        index +
+                                                                                offsetlang3 >=
+                                                                            0 &&
+                                                                        contextEnSkCz[2].length >
+                                                                            index +
+                                                                                offsetlang3)
+                                                                    ? contextEnSkCz[2][index +
+                                                                        offsetlang3]
+                                                                    : '',
+                                                              ),
+                                                            )
+                                                            : SizedBox.shrink(),
+                                                      ],
+                                                    ),
                                                   ),
-                                                  padding: EdgeInsets.zero,
-                                                  constraints:
-                                                      const BoxConstraints(),
-                                                  tooltip:
-                                                      'Move ${lang3 ?? 'L3'} up',
-                                                  onPressed: () {
-                                                    setState(() {
-                                                      offsetlang3++;
-                                                    });
-                                                  },
-                                                ),
-                                                IconButton(
-                                                  icon: const Icon(
-                                                    Icons.arrow_downward,
-                                                    size: 16,
-                                                  ),
-                                                  padding: EdgeInsets.zero,
-                                                  constraints:
-                                                      const BoxConstraints(),
-                                                  tooltip:
-                                                      'Move ${lang3 ?? 'L3'} down',
-                                                  onPressed: () {
-                                                    setState(() {
-                                                      offsetlang3--;
-                                                    });
-                                                  },
-                                                ),
-                                              ],
-                                            ),
-                                          )
-                                          : const SizedBox.shrink(),
+                                                ],
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
-                                SizedBox(
-                                  height:
-                                      MediaQuery.of(context).size.height * 0.55,
-                                  child: ListView.builder(
-                                    itemCount:
-                                        (contextEnSkCz != null &&
-                                                contextEnSkCz[0] != null)
-                                            ? contextEnSkCz[0].length
-                                            : 0,
-                                    itemBuilder: (context, index) {
-                                      return Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10.0,
-                                          vertical: 5.0,
-                                        ),
-                                        child: Column(
-                                          children: [
-                                            Container(
-                                              color:
-                                                  (index ==
-                                                          _originalPointerPosition)
-                                                      ? Colors.grey[200]
-                                                      : null,
-                                              child: Row(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-
-                                                children: [
-                                                  jsonSettings['display_lang1'] ==
-                                                          true
-                                                      ? Expanded(
-                                                        child:
-                                                            (jsonSettings['display_lang1'] ==
-                                                                        true &&
-                                                                    index >=
-                                                                        0 &&
-                                                                    contextEnSkCz[3]
-                                                                            .length >
-                                                                        index &&
-                                                                    index +
-                                                                            offsetlang1 >=
-                                                                        0 &&
-                                                                    contextEnSkCz[0]
-                                                                            .length >
-                                                                        index +
-                                                                            offsetlang1)
-                                                                ? SelectableText.rich(
-                                                                  TextSpan(
-                                                                    children: [
-                                                                      TextSpan(
-                                                                        text:
-                                                                            contextEnSkCz[3][index],
-                                                                        style: TextStyle(
-                                                                          fontSize:
-                                                                              12.0,
-                                                                          fontFeatures: [
-                                                                            FontFeature.superscripts(),
-                                                                          ],
-                                                                        ),
-                                                                      ),
-                                                                      TextSpan(
-                                                                        text:
-                                                                            " ",
-                                                                        style: TextStyle(
-                                                                          fontSize:
-                                                                              18.0,
-                                                                        ),
-                                                                      ),
-                                                                      TextSpan(
-                                                                        text:
-                                                                            contextEnSkCz[0][index +
-                                                                                offsetlang1],
-                                                                        style: TextStyle(
-                                                                          fontSize:
-                                                                              18.0,
-                                                                        ),
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                                )
-                                                                : SelectableText(
-                                                                  '',
-                                                                ),
-                                                      )
-                                                      : SizedBox.shrink(),
-                                                  jsonSettings['display_lang2'] ==
-                                                          true
-                                                      ? Expanded(
-                                                        child: SelectableText(
-                                                          style: TextStyle(
-                                                            fontSize: 18.0,
-                                                          ),
-                                                          (jsonSettings['display_lang2'] ==
-                                                                      true &&
-                                                                  index +
-                                                                          offsetlang2 >=
-                                                                      0 &&
-                                                                  contextEnSkCz[1]
-                                                                          .length >
-                                                                      index +
-                                                                          offsetlang2)
-                                                              ? contextEnSkCz[1][index +
-                                                                  offsetlang2]
-                                                              : '',
-                                                        ),
-                                                      )
-                                                      : SizedBox.shrink(),
-                                                  jsonSettings['display_lang3'] ==
-                                                          true
-                                                      ? Expanded(
-                                                        child: SelectableText(
-                                                          style: TextStyle(
-                                                            fontSize: 18.0,
-                                                          ),
-                                                          (jsonSettings['display_lang3'] ==
-                                                                      true &&
-                                                                  index +
-                                                                          offsetlang3 >=
-                                                                      0 &&
-                                                                  contextEnSkCz[2]
-                                                                          .length >
-                                                                      index +
-                                                                          offsetlang3)
-                                                              ? contextEnSkCz[2][index +
-                                                                  offsetlang3]
-                                                              : '',
-                                                        ),
-                                                      )
-                                                      : SizedBox.shrink(),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          // Bottom buttons
-                          /* Padding(
+                                // Bottom buttons
+                                /* Padding(
                           padding: const EdgeInsets.symmetric(vertical: 8.0),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -3524,13 +3643,146 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                             }),
                           ),
                         ),*/
+                              ),
+                            ],
+                          ),
+                        )
+                        : SizedBox.shrink();
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        // IATE Terminology Side Panel
+        AnimatedContainer(
+          duration: Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          width: _showIATEPanel ? _iatePanelWidth : 0,
+          child:
+              _showIATEPanel
+                  ? Container(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      border: Border(
+                        left: BorderSide(
+                          color: Theme.of(context).dividerColor,
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        // Panel Header
+                        Container(
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primary.withValues(alpha: 0.1),
+                            border: Border(
+                              bottom: BorderSide(
+                                color: Theme.of(context).dividerColor,
+                              ),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.book,
+                                size: 20,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'IATE Terminology',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.close, size: 20),
+                                onPressed: () {
+                                  setState(() {
+                                    _showIATEPanel = false;
+                                  });
+                                },
+                                tooltip: 'Close Panel',
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Panel Content
+                        Expanded(
+                          child: SingleChildScrollView(
+                            padding: EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'IATE terminology results will appear here.',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                SizedBox(height: 16),
+                                // Placeholder for IATE results
+                                // TODO: Integrate actual IATE search results
+                                if (iateResults != null &&
+                                    iateResults is List &&
+                                    (iateResults as List).isNotEmpty)
+                                  ...(iateResults as List).map((result) {
+                                    return Card(
+                                      margin: EdgeInsets.only(bottom: 12),
+                                      child: Padding(
+                                        padding: EdgeInsets.all(12),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              result.toString(),
+                                              style: TextStyle(fontSize: 13),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  }).toList()
+                                else
+                                  Center(
+                                    child: Padding(
+                                      padding: EdgeInsets.all(24),
+                                      child: Column(
+                                        children: [
+                                          Icon(
+                                            Icons.search_off,
+                                            size: 48,
+                                            color: Colors.grey[400],
+                                          ),
+                                          SizedBox(height: 12),
+                                          Text(
+                                            'No IATE results available',
+                                            style: TextStyle(
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   )
-                  : SizedBox.shrink();
-            },
-          ),
+                  : SizedBox.shrink(),
         ),
       ],
     );
