@@ -981,7 +981,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
 
   // IATE side panel state
   bool _showIATEPanel = false;
-  double _iatePanelWidth = 400;
+  double _iatePanelWidth = 300;
 
   Widget _buildIndexArrowHint() {
     return Tooltip(
@@ -1220,8 +1220,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     if (_httpIateEnabled == true) {
       iateResults = await searchIateCustom(
         _httpSource,
-        lang1 ?? 'en',
-        lang2 ?? 'sk',
+        displayedLangs,
       );
       print("IATE search completed, results: $iateResults");
     } else {
@@ -1795,6 +1794,15 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     };
 
     processQueryNew(queryFormed, _searchController.text, activeIndex);
+
+    // IATE search if panel is enabled
+    if (_showIATEPanel) {
+      iateResults = await searchIateCustom(
+        _searchController.text,
+        displayedLangs,
+      );
+      if (mounted) setState(() {});
+    }
   }
 
   void _startSearch2() async {
@@ -1843,6 +1851,15 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     };
 
     processQueryNew(queryFormed, _searchController.text, activeIndex);
+
+    // IATE search if panel is enabled
+    if (_showIATEPanel) {
+      iateResults = await searchIateCustom(
+        _searchController.text,
+        displayedLangs,
+      );
+      if (mounted) setState(() {});
+    }
   }
 
   void _startSearch3() async {
@@ -1897,6 +1914,15 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     };
 
     processQueryNew(queryFormed, _searchController.text, activeIndex);
+
+    // IATE search if panel is enabled
+    if (_showIATEPanel) {
+      iateResults = await searchIateCustom(
+        _searchController.text,
+        displayedLangs,
+      );
+      if (mounted) setState(() {});
+    }
   }
 
   void _startIntervalsTest() async {
@@ -1930,6 +1956,15 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
 
     setState(() => _progressColor = Colors.teal);
     processQueryNew(queryFormed, _searchController.text, activeIndex);
+
+    // IATE search if panel is enabled
+    if (_showIATEPanel) {
+      iateResults = await searchIateCustom(
+        _searchController.text,
+        displayedLangs,
+      );
+      if (mounted) setState(() {});
+    }
   }
 
   void _startSearchPhraseAll() async {
@@ -1973,6 +2008,15 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     };
 
     processQueryNew(queryFormed, _searchController.text, "*");
+
+    // IATE search if panel is enabled
+    if (_showIATEPanel) {
+      iateResults = await searchIateCustom(
+        _searchController.text,
+        displayedLangs,
+      );
+      if (mounted) setState(() {});
+    }
   }
 
   Color backgroundColor = Colors.white12;
@@ -2390,9 +2434,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                         ),
                         Text(
                           jsonSettings['lang1'] ?? "N/A",
-                          style: TextStyle(
-                            fontSize: 14,
-                          ),
+                          style: TextStyle(fontSize: 14),
                         ),
 
                         Tooltip(
@@ -2418,9 +2460,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                         ),
                         Text(
                           jsonSettings['lang2'] ?? "N/A",
-                          style: TextStyle(
-                            fontSize: 14,
-                          ),
+                          style: TextStyle(fontSize: 14),
                         ),
 
                         Tooltip(
@@ -2446,9 +2486,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                         ),
                         Text(
                           jsonSettings['lang3'] ?? "N/A",
-                          style: TextStyle(
-                            fontSize: 14,
-                          ),
+                          style: TextStyle(fontSize: 14),
                         ),
                         Tooltip(
                           message:
@@ -2468,12 +2506,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                             },
                           ),
                         ),
-                        Text(
-                          'Align',
-                          style: TextStyle(
-                            fontSize: 14,
-                          ),
-                        ),
+                        Text('Align', style: TextStyle(fontSize: 14)),
                         Tooltip(
                           message:
                               'Show metadata column (CELEX, date, class...)',
@@ -2491,12 +2524,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                             },
                           ),
                         ),
-                        Text(
-                          'Meta',
-                          style: TextStyle(
-                            fontSize: 14,
-                          ),
-                        ),
+                        Text('Meta', style: TextStyle(fontSize: 14)),
 
                         Tooltip(
                           message:
@@ -2518,12 +2546,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                             },
                           ),
                         ),
-                        Text(
-                          "Auto",
-                          style: TextStyle(
-                            fontSize: 14,
-                          ),
-                        ),
+                        Text("Auto", style: TextStyle(fontSize: 14)),
                         Tooltip(
                           message: 'Toggle IATE Terminology Panel',
                           waitDuration: Duration(seconds: 1),
@@ -2538,12 +2561,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                             },
                           ),
                         ),
-                        Text(
-                          'IATE',
-                          style: TextStyle(
-                            fontSize: 14,
-                          ),
-                        ),
+                        Text('IATE', style: TextStyle(fontSize: 14)),
                       ],
                     ),
 
@@ -3663,7 +3681,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
               _showIATEPanel
                   ? Container(
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
+                      color: Color(0xFFF5F7FA),
                       border: Border(
                         left: BorderSide(
                           color: Theme.of(context).dividerColor,
@@ -3722,20 +3740,16 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'IATE terminology results will appear here.',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                                SizedBox(height: 16),
-                                // Placeholder for IATE results
-                                // TODO: Integrate actual IATE search results
+                                // Display IATE results
                                 if (iateResults != null &&
-                                    iateResults is List &&
-                                    (iateResults as List).isNotEmpty)
-                                  ...(iateResults as List).map((result) {
+                                    iateResults is Map &&
+                                    (iateResults as Map)['success'] == true &&
+                                    (iateResults as Map)['results'] != null &&
+                                    ((iateResults as Map)['results'] as List)
+                                        .isNotEmpty)
+                                  ...((iateResults as Map)['results'] as List)
+                                      .map((doc) {
+                                    final displayedLangs = _getDisplayedLangs();
                                     return Card(
                                       margin: EdgeInsets.only(bottom: 12),
                                       child: Padding(
@@ -3744,15 +3758,109 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
-                                            Text(
-                                              result.toString(),
-                                              style: TextStyle(fontSize: 13),
-                                            ),
+                                            if (doc['concept_id'] != null)
+                                              Tooltip(
+                                                message:
+                                                    'Open in IATE for full details',
+                                                child: InkWell(
+                                                  onTap: () {
+                                                    final langPart =
+                                                        displayedLangs
+                                                            .join('-')
+                                                            .toLowerCase();
+                                                    final url =
+                                                        'https://iate.europa.eu/entry/result/${doc['concept_id']}/$langPart';
+                                                    launchUrl(Uri.parse(url));
+                                                  },
+                                                  child: Text(
+                                                    'ID: ${doc['concept_id']}',
+                                                    style: TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: Colors.blue,
+                                                      decoration: TextDecoration
+                                                          .underline,
+                                                      fontSize: 13,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            if (doc['subject_field'] != null)
+                                              Padding(
+                                                padding: const EdgeInsets.only(
+                                                  top: 4.0,
+                                                ),
+                                                child: Text(
+                                                  'Subject: ${doc['subject_field']}',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: Colors.grey[700],
+                                                  ),
+                                                ),
+                                              ),
+                                            SizedBox(height: 8),
+                                            // Display terms for each language
+                                            for (var lang in displayedLangs)
+                                              if (doc['${lang.toLowerCase()}_text'] !=
+                                                  null)
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                    top: 4.0,
+                                                  ),
+                                                  child: Row(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        '${lang.toUpperCase()}: ',
+                                                        style: TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontSize: 13,
+                                                        ),
+                                                      ),
+                                                      Expanded(
+                                                        child: SelectableText(
+                                                          doc['${lang.toLowerCase()}_text'],
+                                                          style: TextStyle(
+                                                            fontSize: 13,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
                                           ],
                                         ),
                                       ),
                                     );
                                   }).toList()
+                                else if (iateResults != null &&
+                                    iateResults is Map &&
+                                    (iateResults as Map)['success'] == false)
+                                  Center(
+                                    child: Padding(
+                                      padding: EdgeInsets.all(24),
+                                      child: Column(
+                                        children: [
+                                          Icon(
+                                            Icons.error_outline,
+                                            size: 48,
+                                            color: Colors.orange[400],
+                                          ),
+                                          SizedBox(height: 12),
+                                          Text(
+                                            'IATE search error: ${(iateResults as Map)['error'] ?? 'Unknown'}',
+                                            style: TextStyle(
+                                              color: Colors.grey[600],
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  )
                                 else
                                   Center(
                                     child: Padding(
@@ -3760,16 +3868,17 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                       child: Column(
                                         children: [
                                           Icon(
-                                            Icons.search_off,
+                                            Icons.book_outlined,
                                             size: 48,
                                             color: Colors.grey[400],
                                           ),
                                           SizedBox(height: 12),
                                           Text(
-                                            'No IATE results available',
+                                            'Perform a search to see IATE terminology',
                                             style: TextStyle(
                                               color: Colors.grey[600],
                                             ),
+                                            textAlign: TextAlign.center,
                                           ),
                                         ],
                                       ),

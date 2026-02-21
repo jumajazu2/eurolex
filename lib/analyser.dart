@@ -159,19 +159,20 @@ Future<Map<String, String>> searchNGrams(
   return results;
 }
 
-/// Search IATE terminology with custom source and target languages.
+/// Search IATE terminology with custom working languages.
 /// Returns a map containing results that can be sent as HTTP payload to Trados.
 /// Does not affect global state variables.
 Future<Map<String, dynamic>> searchIateCustom(
   String searchTerm,
-  String sourceLang,
-  String targetLang,
+  List<String> workingLangs,
 ) async {
   if (searchTerm.trim().isEmpty) {
     return {'success': false, 'error': 'Empty search term', 'results': []};
   }
 
-  List<String> workingLangs = [sourceLang, targetLang];
+  if (workingLangs.isEmpty) {
+    workingLangs = ['en', 'sk', 'cz'];
+  }
 
   // SECURE: Use /search endpoint with Pattern 7 for IATE
   final url = Uri.parse('$server/search');
@@ -223,8 +224,7 @@ Future<Map<String, dynamic>> searchIateCustom(
         'success': true,
         'results': results,
         'searchTerm': searchTerm,
-        'sourceLang': sourceLang,
-        'targetLang': targetLang,
+        'workingLangs': workingLangs,
       };
     } else {
       return {
