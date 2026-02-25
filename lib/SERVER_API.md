@@ -65,13 +65,73 @@ Admin users have access to:
 
 ## Rate Limiting
 
-Daily quota system tracks requests per IP address:
+The server implements a robust daily quota system with **hybrid storage** for reliability:
 
-- **Paid users**: Daily quota as specified in API key registry
-- **Trial users**: Combined email + IP tracking
-- **Exceeded quota**: Returns 429 status code
+### Storage Architecture
 
-Rate limit information is logged with each request.
+**Dual-Layer Approach:**
+1. **In-Memory Map** (`ipRequestCounts`): Fast request handling with zero latency
+2. **OpenSearch Index** (`.quota_usage_v1`): Persistent storage, survives server restarts
+
+**Synchronization:**
+- **Background sync**: Every 60 seconds, quota data syncs to OpenSearch
+- **Startup recovery**: Server loads today's quota data from OpenSearch on restart
+- **Automatic index creation**: `.quota_usage_v1` index auto-created with proper mapping
+
+### Quota Tracking
+
+**Paid Users:**
+- Daily quota as specified in `api-keys.json` (e.g., 10,000 searches/day)
+- Tracked by IP address
+- Quota resets at midnight UTC
+
+**Trial Users:**
+- Fixed quota: 7 searches/day
+- **Dual tracking**: Both email AND IP address must stay within limits
+- Prevents abuse through fake email addresses
+- Requires valid email in `x-email` header
+
+**Admin Users:**
+- No quota restrictions
+- Identified by email: `juraj.kuban.sk@gmail.com`
+
+### Quota Persistence Details
+
+**OpenSearch Document Structure:**
+```json
+{
+  "id": "2026-02-24_192.168.1.100",
+  "date": "2026-02-24",
+  "key": "192.168.1.100",
+  "count": 45,
+  "email": "user@example.com",
+  "lastUpdated": "2026-02-24T14:30:00Z"
+}
+```
+
+**Benefits:**
+- ✅ **Survives server restarts** - no data loss
+- ✅ **Fast request handling** - in-memory lookups (no latency)
+- ✅ **Historical analysis** - query past usage via OpenSearch
+- ✅ **Automatic cleanup** - old documents removed by date
+- ✅ **No external dependencies** - uses existing OpenSearch
+
+### Quota Exceeded Response
+
+When quota is exceeded, server returns:
+
+**Status:** `429 Too Many Requests`
+
+**Response Body:**
+```json
+{
+  "error": "Too Many Requests: You have exceeded the daily query limit."
+}
+```
+
+### Reset Endpoint
+
+See [GET /reset-rate-limit](#get-reset-rate-limit) for manual quota reset (localhost only).
 
 ---
 
@@ -316,7 +376,7 @@ Admin endpoints bypass quota checks and are only accessible to users with admin 
 
 ### GET /api/users/list
 
-List all registered users with their quota and usage statistics.
+List all registered users with their quota and usage statistics, including historical data from OpenSearch.
 
 **Headers:**
 ```http
@@ -335,21 +395,65 @@ x-admin-key: 7239
       "quotaUsed": 523,
       "quotaRemaining": 9477,
       "allowPrefixes": ["eu_7239_"],
-      "blocked": false
+      "blocked": false,
+      "expiresAt": "2027-01-15",
+      "isExpired": false,
+      "searchesWithResults": 8542,
+      "searchesNoResults": 1203,
+      "totalSearches": 9745,
+      "totalSearches30Days": 1250,
+      "last7DaysTotal": 406,
+      "activeDaysCount": 18,
+      "avgSearchesPerDay": 69,
+      "daysSinceLastActive": 0,
+      "daysSinceFirstUse": 45,
+      "firstSeen": "2026-01-10",
+      "lastSeen": "2026-02-24"
     }
   ]
 }
 ```
 
 **User Fields:**
+
+*Basic Info:*
 - `key`: User's passkey
 - `email`: Registered email address
-- `userType`: paid | trial | free
+- `userType`: paid | trial | grace
 - `dailyQuota`: Maximum daily requests
+- `blocked`: Whether user is blocked
+- `expiresAt`: Subscription expiration date (null if no expiration)
+- `isExpired`: Whether subscription has expired
+
+*Today's Usage:*
 - `quotaUsed`: Requests used today
 - `quotaRemaining`: Remaining requests today
+
+*All-Time Statistics:*
+- `searchesWithResults`: Total searches that returned results
+- `searchesNoResults`: Total searches with no results
+- `totalSearches`: Total all-time searches
+
+*Historical Statistics (Last 30 Days from OpenSearch):*
+- `totalSearches30Days`: Total searches in last 30 days
+- `last7DaysTotal`: Total searches in last 7 days
+- `activeDaysCount`: Number of days with activity
+- `avgSearchesPerDay`: Average searches per active day
+- `daysSinceLastActive`: Days since last activity (0 = today)
+- `daysSinceFirstUse`: Days since first recorded use
+- `firstSeen`: First activity date (YYYY-MM-DD)
+- `lastSeen`: Last activity date (YYYY-MM-DD)
+
+*Access Control:*
 - `allowPrefixes`: Index prefixes user can access
-- `blocked`: Whether user is blocked
+
+**Trial Account Monitoring:**
+
+The endpoint provides rich analytics for trial accounts:
+- **Conversion Potential**: High `avgSearchesPerDay` (>3) + low `daysSinceLastActive` (<7)
+- **Inactive Users**: `daysSinceLastActive` > 30
+- **Dormant Users**: `daysSinceLastActive` > 7 and < 30
+- **Engagement**: `activeDaysCount` vs `daysSinceFirstUse` ratio
 
 **Authentication:** Admin only  
 **Rate Limited:** No (skips quota middleware)
@@ -565,7 +669,9 @@ x-admin-key: 7239
     "activeToday": 8,
     "totalSearchesToday": 1523,
     "totalQuotaAllocated": 150000,
-    "totalQuotaUsed": 45230
+    "totalQuotaUsed": 45230,
+    "expiredAccounts": 2,
+    "blockedAccounts": 1
   }
 }
 ```
@@ -576,6 +682,78 @@ x-admin-key: 7239
 - `totalSearchesToday`: Total search requests today across all users
 - `totalQuotaAllocated`: Sum of all users' daily quotas
 - `totalQuotaUsed`: Sum of all users' usage today
+- `expiredAccounts`: Number of users with expired subscriptions
+- `blockedAccounts`: Number of blocked user accounts
+
+**Authentication:** Admin only  
+**Rate Limited:** No
+
+---
+
+### GET /api/users/historical-stats
+
+Get historical usage statistics from OpenSearch for all users.
+
+**Query Parameters:**
+- `days` (optional): Number of days to analyze (default: 30)
+
+**Headers:**
+```http
+x-admin-key: 7239
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "period": {
+    "start": "2026-01-25",
+    "end": "2026-02-24",
+    "days": 30
+  },
+  "stats": {
+    "user@example.com": {
+      "userKey": "7239",
+      "email": "user@example.com",
+      "totalSearches": 1250,
+      "activeDays": 18,
+      "avgSearchesPerDay": 69,
+      "daysSinceFirstUse": 45,
+      "daysSinceLastActive": 0,
+      "firstSeen": "2026-01-10",
+      "lastSeen": "2026-02-24",
+      "peakDay": "2026-02-15",
+      "peakDayCount": 285,
+      "last7DaysTrend": [45, 67, 89, 23, 12, 78, 92],
+      "last7DaysTotal": 406,
+      "dailyCounts": {
+        "2026-02-24": 92,
+        "2026-02-23": 78
+      }
+    }
+  }
+}
+```
+
+**Statistics Fields:**
+- `totalSearches`: Total searches in period
+- `activeDays`: Number of days with activity
+- `avgSearchesPerDay`: Average searches per active day
+- `daysSinceFirstUse`: Days since first recorded use
+- `daysSinceLastActive`: Days since last activity
+- `firstSeen`/`lastSeen`: First and last activity dates
+- `peakDay`: Date with highest usage
+- `peakDayCount`: Search count on peak day
+- `last7DaysTrend`: Array of daily counts for last 7 days
+- `last7DaysTotal`: Total searches in last 7 days
+- `dailyCounts`: Daily breakdown for period
+
+**Use Cases:**
+- Trial account conversion analysis
+- User engagement monitoring
+- Identify dormant accounts (daysSinceLastActive > 30)
+- Spot high-value users (high avgSearchesPerDay)
+- Usage trend analysis
 
 **Authentication:** Admin only  
 **Rate Limited:** No
@@ -635,13 +813,37 @@ Developer endpoint to dump API key registry and usage counters to JSON file.
 
 ---
 
-### POST /reset-rate-limit
+### GET /reset-rate-limit
 
-Development endpoint to reset rate limit counters.
+**⚠️ DEVELOPMENT ONLY** - Reset all quota counters (in-memory and OpenSearch).
 
-**Warning:** Should be removed or secured in production.
+**Security:**
+- Only accessible from localhost (`127.0.0.1`, `::1`, `::ffff:127.0.0.1`)
+- Attempts from other IPs are logged and rejected with 403 status
 
-**Authentication:** None required  
+**Functionality:**
+1. Clears all in-memory quota counters (`ipRequestCounts.clear()`)
+2. Deletes today's quota documents from OpenSearch (`.quota_usage_v1` index)
+3. Allows immediate quota reset for testing/development
+
+**Example:**
+```bash
+curl http://localhost:3000/reset-rate-limit
+```
+
+**Success Response:**
+```
+All rate limit counters (in-memory and OpenSearch) have been reset.
+```
+
+**Error Response (non-localhost):**
+```
+Rate limit reset can only be performed from localhost
+```
+
+**Warning:** This endpoint should be removed or secured in production environments. Consider using admin authentication or environment-specific disabling.
+
+**Authentication:** None required (localhost only)  
 **Rate Limited:** No
 
 ---

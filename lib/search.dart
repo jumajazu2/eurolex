@@ -1218,10 +1218,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
     );
 
     if (_httpIateEnabled == true) {
-      iateResults = await searchIateCustom(
-        _httpSource,
-        displayedLangs,
-      );
+      iateResults = await searchIateCustom(_httpSource, displayedLangs);
       print("IATE search completed, results: $iateResults");
     } else {
       iateResults = null;
@@ -3747,8 +3744,9 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                     (iateResults as Map)['results'] != null &&
                                     ((iateResults as Map)['results'] as List)
                                         .isNotEmpty)
-                                  ...((iateResults as Map)['results'] as List)
-                                      .map((doc) {
+                                  ...((iateResults as Map)['results'] as List).map((
+                                    doc,
+                                  ) {
                                     final displayedLangs = _getDisplayedLangs();
                                     return Card(
                                       margin: EdgeInsets.only(bottom: 12),
@@ -3778,8 +3776,9 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                                       fontWeight:
                                                           FontWeight.bold,
                                                       color: Colors.blue,
-                                                      decoration: TextDecoration
-                                                          .underline,
+                                                      decoration:
+                                                          TextDecoration
+                                                              .underline,
                                                       fontSize: 13,
                                                     ),
                                                   ),
@@ -3806,11 +3805,12 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                                 Padding(
                                                   padding:
                                                       const EdgeInsets.only(
-                                                    top: 4.0,
-                                                  ),
+                                                        top: 4.0,
+                                                      ),
                                                   child: Row(
                                                     crossAxisAlignment:
-                                                        CrossAxisAlignment.start,
+                                                        CrossAxisAlignment
+                                                            .start,
                                                     children: [
                                                       Text(
                                                         '${lang.toUpperCase()}: ',

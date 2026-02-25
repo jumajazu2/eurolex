@@ -271,7 +271,13 @@ async function doSearch(mode) {
     const headers = {
       'Content-Type': 'application/json',
       'x-api-key': localPasskey,
-      'x-email': localEmail || ''
+      'x-email': localEmail || '',
+      'x-client-context': JSON.stringify({
+        client: 'web',
+        ip: userIP,
+        fingerprint: userFingerprint,
+        timestamp: new Date().toISOString()
+      })
     };
     
     const resp = await fetch(url, { 
@@ -294,6 +300,60 @@ async function doSearch(mode) {
     renderResults(data, q);
   } catch (err) {
     resultsDiv.innerHTML = `<div class="search-error">Error: ${escapeHtml(String(err))}</div>`;
+  }
+}
+
+// Fetch document titles from Europa SPARQL endpoint (similar to Flutter FutureBuilder approach)
+async function fetchTitlesForCelex(celex) {
+  const celexStr = String(celex || '').trim();
+  if (!celexStr) return {};
+
+  const query = `
+prefix cdm: <http://publications.europa.eu/ontology/cdm#>
+prefix purl: <http://purl.org/dc/elements/1.1/>
+prefix xsd: <http://www.w3.org/2001/XMLSchema#>
+
+select distinct ?langCode ?title
+where {
+  VALUES ?celex { "${celexStr}"^^xsd:string }
+  ?work cdm:resource_legal_id_celex ?celex .
+  ?expr cdm:expression_belongs_to_work ?work ;
+        cdm:expression_uses_language ?lang ;
+        cdm:expression_title ?title .
+  ?lang purl:identifier ?langCode .
+}
+`;
+
+  try {
+    // Use same base URL as search endpoint to proxy through Node.js backend
+    const response = await fetch(`${OPENSEARCH_URL}/api/sparql-proxy`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query }),
+      signal: AbortSignal.timeout(12000)
+    });
+
+    if (!response.ok) return {};
+    
+    const data = await response.json();
+    const titleMap = {};
+    
+    if (data?.results?.bindings) {
+      for (const binding of data.results.bindings) {
+        const langCode = binding.langCode?.value;
+        const title = binding.title?.value;
+        if (langCode && title) {
+          titleMap[langCode.toUpperCase()] = title;
+        }
+      }
+    }
+    
+    return titleMap;
+  } catch (error) {
+    console.error('Error fetching titles for CELEX:', celexStr, error);
+    return {};
   }
 }
 
@@ -340,10 +400,18 @@ function renderResults(data, query) {
     }).join('') + 
     '</tr></thead><tbody>';
 
+  // Store row index for async title updates
+  let rowIndex = 0;
+
 
   for (const h of hits) {
     const src = h._source || {};
-    html += '<tr>' + fields.map(f => {
+    const currentRowIndex = rowIndex++;
+    // Strip CELEX: prefix for SPARQL queries
+    const celexRaw = String(src.celex || '').trim();
+    const celex = celexRaw.replace(/^CELEX:/i, '');
+    
+    html += `<tr id="result-row-${currentRowIndex}">` + fields.map(f => {
       // EUR-Lex link for celex
       if (f === "celex") {
         const val = String(src[f] || '').trim();
@@ -375,10 +443,74 @@ function renderResults(data, query) {
       const shouldHighlight = document.getElementById('highlightToggle')?.checked;
       return `<td>${shouldHighlight ? highlight(cellText, query) : escapeHtml(cellText)}</td>`;
     }).join('') + '</tr>';
+    
+    // Add title row below result (for non-IATE results)
+    if (!isIate && celex) {
+      html += `<tr id="title-row-${currentRowIndex}" style="background-color:#f9f9f9;">`;
+      html += `<td colspan="${fields.length}" style="padding:8px 12px;font-size:0.85em;color:#555;">`;
+      html += `<div id="title-content-${currentRowIndex}" data-celex="${celex}" data-source-lang="${sourceLang}" data-target-lang="${targetLang}"><em style="color:#999;">Loading document title...</em></div>`;
+      html += `</td></tr>`;
+    }
   }
 
   html += '</tbody></table></div>';
   resultsDiv.innerHTML = html;
+  
+  // Now fetch titles asynchronously after DOM is ready
+  for (let i = 0; i < rowIndex; i++) {
+    const titleContentDiv = document.getElementById(`title-content-${i}`);
+    if (!titleContentDiv) continue;
+    
+    const celex = titleContentDiv.getAttribute('data-celex');
+    const sourceLang = titleContentDiv.getAttribute('data-source-lang');
+    const targetLang = titleContentDiv.getAttribute('data-target-lang');
+    
+    if (!celex) continue;
+    
+    (async () => {
+      try {
+        console.log('Fetching titles for CELEX:', celex);
+        const titleMap = await fetchTitlesForCelex(celex);
+        console.log('Received title map:', titleMap);
+        
+        // Map 2-letter ISO 639-1 codes to 3-letter ISO 639-2 codes used by Europa
+        const langCodeMap = {
+          'en': 'ENG', 'sk': 'SLK', 'cs': 'CES', 'de': 'DEU', 'fr': 'FRA', 
+          'es': 'SPA', 'it': 'ITA', 'pl': 'POL', 'nl': 'NLD', 'pt': 'POR',
+          'el': 'ELL', 'hu': 'HUN', 'ro': 'RON', 'bg': 'BUL', 'hr': 'HRV',
+          'sv': 'SWE', 'da': 'DAN', 'fi': 'FIN', 'et': 'EST', 'lt': 'LIT',
+          'lv': 'LAV', 'sl': 'SLV', 'mt': 'MLT', 'ga': 'GLE'
+        };
+        
+        // Get titles in the two selected working languages
+        const sourceCode3 = langCodeMap[sourceLang.toLowerCase()] || sourceLang.toUpperCase();
+        const targetCode3 = langCodeMap[targetLang.toLowerCase()] || targetLang.toUpperCase();
+        
+        const sourceTitle = titleMap[sourceCode3];
+        const targetTitle = titleMap[targetCode3];
+        
+        if (sourceTitle || targetTitle) {
+          let titleHtml = '<strong>Document Title:</strong> ';
+          const titles = [];
+          
+          if (sourceTitle) {
+            titles.push(`<span style="color:#0F2A44;"><strong>${sourceLang.toUpperCase()}:</strong> ${escapeHtml(sourceTitle)}</span>`);
+          }
+          if (targetTitle && targetTitle !== sourceTitle) {
+            titles.push(`<span style="color:#0F2A44;"><strong>${targetLang.toUpperCase()}:</strong> ${escapeHtml(targetTitle)}</span>`);
+          }
+          
+          titleHtml += titles.join(' | ');
+          titleContentDiv.innerHTML = titleHtml;
+        } else {
+          titleContentDiv.innerHTML = '<em style="color:#999;">No title available in selected languages</em>';
+        }
+      } catch (error) {
+        console.error('Error loading title:', error);
+        titleContentDiv.innerHTML = '<em style="color:#999;">Error loading title</em>';
+      }
+    })();
+  }
 }
 
 function showQuotaExceeded(errorMessage) {

@@ -314,6 +314,7 @@
 
       // Prepare the client context for logging and quota management
       const clientContext = {
+        client: 'web',
         ip: userIP,
         fingerprint: userFingerprint,
         timestamp: new Date().toISOString(),

@@ -154,6 +154,10 @@ class _UserAccessWidgetState extends State<UserAccessWidget> {
             'totalSearchesToday': 0,
             'expiredAccounts': 0,
             'blockedAccounts': 0,
+            'webSearchesToday': 0,
+            'appSearchesToday': 0,
+            'tradosSearchesToday': 0,
+            'unknownSearchesToday': 0,
           };
         });
       }
@@ -866,6 +870,24 @@ class _UserAccessWidgetState extends State<UserAccessWidget> {
                     ),
                     const SizedBox(width: 8),
                     _StatCard(
+                      'Web',
+                      statistics!['webSearchesToday']?.toString() ?? '0',
+                      color: Colors.blue.shade700,
+                    ),
+                    const SizedBox(width: 8),
+                    _StatCard(
+                      'App',
+                      statistics!['appSearchesToday']?.toString() ?? '0',
+                      color: Colors.green.shade700,
+                    ),
+                    const SizedBox(width: 8),
+                    _StatCard(
+                      'Trados',
+                      statistics!['tradosSearchesToday']?.toString() ?? '0',
+                      color: Colors.purple.shade700,
+                    ),
+                    const SizedBox(width: 8),
+                    _StatCard(
                       'Expired',
                       statistics!['expiredAccounts'].toString(),
                       color: Colors.orange,
@@ -996,6 +1018,16 @@ class _UserAccessWidgetState extends State<UserAccessWidget> {
                       final isExpired = user['isExpired'] ?? false;
                       final totalSearches = user['totalSearches'] ?? 0;
                       final searchesToday = user['quotaUsed'] ?? 0;
+                      final isTrial = user['userType'] == 'trial';
+
+                      // Historical stats
+                      final totalSearches30Days =
+                          user['totalSearches30Days'] ?? 0;
+                      final last7DaysTotal = user['last7DaysTotal'] ?? 0;
+                      final activeDaysCount = user['activeDaysCount'] ?? 0;
+                      final avgSearchesPerDay = user['avgSearchesPerDay'] ?? 0;
+                      final daysSinceLastActive = user['daysSinceLastActive'];
+                      final daysSinceFirstUse = user['daysSinceFirstUse'];
 
                       return Card(
                         margin: const EdgeInsets.symmetric(
@@ -1007,198 +1039,428 @@ class _UserAccessWidgetState extends State<UserAccessWidget> {
                                 ? Colors.red.withOpacity(0.1)
                                 : isExpired
                                 ? Colors.orange.withOpacity(0.1)
+                                : isTrial
+                                ? Colors.orange.withOpacity(0.05)
                                 : null,
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
                             vertical: 8,
                           ),
-                          child: Row(
+                          child: Column(
                             children: [
-                              // Status Icon
-                              Container(
-                                width: 32,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  color:
-                                      blocked
-                                          ? Colors.red
-                                          : isExpired
-                                          ? Colors.orange
-                                          : user['userType'] == 'paid'
-                                          ? Colors.green
-                                          : user['userType'] == 'trial'
-                                          ? Colors.orange
-                                          : user['userType'] == 'grace'
-                                          ? Colors.purple
-                                          : Colors.blue,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  blocked
-                                      ? Icons.block
-                                      : isExpired
-                                      ? Icons.access_time
-                                      : user['userType'] == 'paid'
-                                      ? Icons.verified
-                                      : user['userType'] == 'trial'
-                                      ? Icons.timer
-                                      : user['userType'] == 'grace'
-                                      ? Icons.card_giftcard
-                                      : Icons.person,
-                                  color: Colors.white,
-                                  size: 18,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              // Email and basic info
-                              Expanded(
-                                flex: 3,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      user['email'] ?? 'no-email',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                        decoration:
-                                            blocked
-                                                ? TextDecoration.lineThrough
-                                                : null,
-                                      ),
-                                    ),
-                                    Text(
-                                      'Key: ${user['key']} • ${user['userType']}',
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              // Search statistics
-                              Expanded(
-                                flex: 2,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Total: $totalSearches',
-                                      style: const TextStyle(fontSize: 13),
-                                    ),
-                                    Text(
-                                      'Today: $searchesToday',
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.blue,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              // Quota info
-                              Expanded(
-                                flex: 2,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Quota: ${user['quotaUsed']}/${user['dailyQuota']}',
-                                      style: const TextStyle(fontSize: 13),
-                                    ),
-                                    if (expiresAt != null)
-                                      Text(
-                                        'Exp: $expiresAt',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color:
-                                              isExpired
-                                                  ? Colors.red
-                                                  : Colors.grey,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                              // Action buttons
+                              // Main row with primary info
                               Row(
-                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.numbers, size: 18),
-                                    tooltip: 'Change Quota',
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                    color: Colors.blue,
-                                    onPressed:
-                                        () => _updateQuota(
-                                          user['key'],
-                                          user['dailyQuota'],
-                                        ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  IconButton(
-                                    icon: const Icon(Icons.category, size: 18),
-                                    tooltip: 'Change Status (Paid/Trial/Grace)',
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                    color: Colors.purple,
-                                    onPressed:
-                                        () => _changeUserType(
-                                          user['key'],
-                                          user['userType'] ?? 'paid',
-                                        ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  IconButton(
-                                    icon: const Icon(Icons.refresh, size: 18),
-                                    tooltip: 'Reset Daily Usage',
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                    color: Colors.teal,
-                                    onPressed:
-                                        () => _resetDailyUsage(
-                                          user['key'],
-                                          user['email'] ?? 'no-email',
-                                        ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  IconButton(
-                                    icon: Icon(
+                                  // Status Icon
+                                  Container(
+                                    width: 32,
+                                    height: 32,
+                                    decoration: BoxDecoration(
+                                      color:
+                                          blocked
+                                              ? Colors.red
+                                              : isExpired
+                                              ? Colors.orange
+                                              : user['userType'] == 'paid'
+                                              ? Colors.green
+                                              : user['userType'] == 'trial'
+                                              ? Colors.orange
+                                              : user['userType'] == 'grace'
+                                              ? Colors.purple
+                                              : Colors.blue,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
                                       blocked
-                                          ? Icons.check_circle
-                                          : Icons.block,
+                                          ? Icons.block
+                                          : isExpired
+                                          ? Icons.access_time
+                                          : user['userType'] == 'paid'
+                                          ? Icons.verified
+                                          : user['userType'] == 'trial'
+                                          ? Icons.timer
+                                          : user['userType'] == 'grace'
+                                          ? Icons.card_giftcard
+                                          : Icons.person,
+                                      color: Colors.white,
                                       size: 18,
                                     ),
-                                    tooltip: blocked ? 'Unblock' : 'Block',
-                                    color:
-                                        blocked ? Colors.green : Colors.orange,
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                    onPressed:
-                                        () => _toggleBlock(
-                                          user['key'],
-                                          blocked,
-                                          user['email'],
-                                        ),
                                   ),
-                                  const SizedBox(width: 4),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete, size: 18),
-                                    tooltip: 'Delete User',
-                                    color: Colors.red,
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                    onPressed:
-                                        () => _deleteUser(
-                                          user['key'],
-                                          user['email'],
+                                  const SizedBox(width: 12),
+                                  // Email and basic info
+                                  Expanded(
+                                    flex: 3,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          user['email'] ?? 'no-email',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                            decoration:
+                                                blocked
+                                                    ? TextDecoration.lineThrough
+                                                    : null,
+                                          ),
                                         ),
+                                        Text(
+                                          'Key: ${user['key']} • ${user['userType']}',
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  // Search statistics
+                                  Expanded(
+                                    flex: 2,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Today: $searchesToday',
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.blue,
+                                          ),
+                                        ),
+                                        Text(
+                                          'Last 7d: $last7DaysTotal',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                        Text(
+                                          '30d: $totalSearches30Days',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                        // Client type breakdown (30 days)
+                                        if ((user['webSearches'] ?? 0) > 0 ||
+                                            (user['appSearches'] ?? 0) > 0 ||
+                                            (user['tradosSearches'] ?? 0) > 0)
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                              top: 2,
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                if ((user['webSearches'] ?? 0) >
+                                                    0) ...[
+                                                  Icon(
+                                                    Icons.web,
+                                                    size: 10,
+                                                    color: Colors.blue.shade700,
+                                                  ),
+                                                  const SizedBox(width: 2),
+                                                  Text(
+                                                    '${user['webSearches']}',
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      color:
+                                                          Colors.blue.shade700,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                ],
+                                                if ((user['appSearches'] ?? 0) >
+                                                    0) ...[
+                                                  Icon(
+                                                    Icons.phone_android,
+                                                    size: 10,
+                                                    color:
+                                                        Colors.green.shade700,
+                                                  ),
+                                                  const SizedBox(width: 2),
+                                                  Text(
+                                                    '${user['appSearches']}',
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      color:
+                                                          Colors.green.shade700,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                ],
+                                                if ((user['tradosSearches'] ??
+                                                        0) >
+                                                    0) ...[
+                                                  Icon(
+                                                    Icons.translate,
+                                                    size: 10,
+                                                    color:
+                                                        Colors.purple.shade700,
+                                                  ),
+                                                  const SizedBox(width: 2),
+                                                  Text(
+                                                    '${user['tradosSearches']}',
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      color:
+                                                          Colors
+                                                              .purple
+                                                              .shade700,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ],
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  // Activity info
+                                  Expanded(
+                                    flex: 2,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Quota: ${user['quotaUsed']}/${user['dailyQuota']}',
+                                          style: const TextStyle(fontSize: 13),
+                                        ),
+                                        if (daysSinceLastActive != null)
+                                          Text(
+                                            daysSinceLastActive == 0
+                                                ? 'Active today'
+                                                : 'Last: ${daysSinceLastActive}d ago',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color:
+                                                  daysSinceLastActive > 7
+                                                      ? Colors.orange
+                                                      : Colors.grey,
+                                            ),
+                                          ),
+                                        if (avgSearchesPerDay > 0)
+                                          Text(
+                                            'Avg: $avgSearchesPerDay/day',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  // Expiration
+                                  Expanded(
+                                    flex: 2,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        if (expiresAt != null)
+                                          Text(
+                                            'Exp: $expiresAt',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color:
+                                                  isExpired
+                                                      ? Colors.red
+                                                      : Colors.grey,
+                                            ),
+                                          )
+                                        else
+                                          const Text(
+                                            'No expiration',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                        if (activeDaysCount > 0)
+                                          Text(
+                                            'Active: $activeDaysCount days',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  // Action buttons
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.numbers,
+                                          size: 18,
+                                        ),
+                                        tooltip: 'Change Quota',
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        color: Colors.blue,
+                                        onPressed:
+                                            () => _updateQuota(
+                                              user['key'],
+                                              user['dailyQuota'],
+                                            ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.category,
+                                          size: 18,
+                                        ),
+                                        tooltip:
+                                            'Change Status (Paid/Trial/Grace)',
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        color: Colors.purple,
+                                        onPressed:
+                                            () => _changeUserType(
+                                              user['key'],
+                                              user['userType'] ?? 'paid',
+                                            ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.refresh,
+                                          size: 18,
+                                        ),
+                                        tooltip: 'Reset Daily Usage',
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        color: Colors.teal,
+                                        onPressed:
+                                            () => _resetDailyUsage(
+                                              user['key'],
+                                              user['email'] ?? 'no-email',
+                                            ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      IconButton(
+                                        icon: Icon(
+                                          blocked
+                                              ? Icons.check_circle
+                                              : Icons.block,
+                                          size: 18,
+                                        ),
+                                        tooltip: blocked ? 'Unblock' : 'Block',
+                                        color:
+                                            blocked
+                                                ? Colors.green
+                                                : Colors.orange,
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        onPressed:
+                                            () => _toggleBlock(
+                                              user['key'],
+                                              blocked,
+                                              user['email'],
+                                            ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.delete,
+                                          size: 18,
+                                        ),
+                                        tooltip: 'Delete User',
+                                        color: Colors.red,
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        onPressed:
+                                            () => _deleteUser(
+                                              user['key'],
+                                              user['email'],
+                                            ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
+                              // Additional row for trial account monitoring
+                              if (isTrial && daysSinceFirstUse != null)
+                                Container(
+                                  margin: const EdgeInsets.only(top: 8),
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.analytics,
+                                        size: 16,
+                                        color: Colors.orange,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'Trial Account: ${daysSinceFirstUse}d old • ${activeDaysCount} active days • ${avgSearchesPerDay} avg searches/day',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                      ),
+                                      if (daysSinceLastActive != null &&
+                                          daysSinceLastActive > 7)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.orange,
+                                            borderRadius: BorderRadius.circular(
+                                              3,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            daysSinceLastActive > 30
+                                                ? 'INACTIVE'
+                                                : 'DORMANT',
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      if (daysSinceLastActive != null &&
+                                          daysSinceLastActive <= 7 &&
+                                          avgSearchesPerDay >= 3)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.green,
+                                            borderRadius: BorderRadius.circular(
+                                              3,
+                                            ),
+                                          ),
+                                          child: const Text(
+                                            'CONVERT POTENTIAL',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
                             ],
                           ),
                         ),
