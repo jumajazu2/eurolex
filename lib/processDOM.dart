@@ -536,12 +536,103 @@ Future<int> openSearchUpload(json, indexName) async {
 
 // Function to send the NDJSON data to OpenSearch
 Future<String> sendToOpenSearch(String url, List<String> bulkData) async {
+  // OpenSearch circuit breaker limit is ~102 MB for coordinating operations.
+  // Split large bulk payloads into chunks of ~80 MB to stay safely below the limit.
+  // Bulk NDJSON lines come in pairs (action line + document line), so we
+  // must split on even boundaries.
+  //
+  // NOTE: sendToOpenSearch is also used for search/_search queries which pass a
+  // single-element list. Those must NOT be pair-chunked — they are sent as-is.
+  const int maxChunkBytes = 80 * 1024 * 1024; // 80 MB
+
+  // If fewer than 2 lines, or the total body is within limit, send directly.
+  final totalBytes = utf8.encode(bulkData.join("\n") + "\n").length;
+  if (bulkData.length < 2 || totalBytes <= maxChunkBytes) {
+    return _sendChunkToOpenSearch(url, bulkData, 1, 1);
+  }
+
+  // Bulk upload path: lines are action+doc pairs — must split on even boundaries.
+  if (bulkData.length % 2 != 0) {
+    print(
+      "🔍 Cellar Debug: WARNING — bulkData has odd line count (${bulkData.length}). Last unpaired line will be dropped.",
+    );
+  }
+  final int pairCount = bulkData.length ~/ 2;
+
+  // Build list of chunks, each under maxChunkBytes
+  final List<List<String>> chunks = [];
+  List<String> currentChunk = [];
+  int currentBytes = 0;
+  for (int i = 0; i < pairCount; i++) {
+    final actionLine = bulkData[i * 2];
+    final docLine = bulkData[i * 2 + 1];
+    final pairBytes = utf8.encode(actionLine + "\n" + docLine + "\n").length;
+    if (currentChunk.isNotEmpty && currentBytes + pairBytes > maxChunkBytes) {
+      chunks.add(currentChunk);
+      currentChunk = [];
+      currentBytes = 0;
+    }
+    currentChunk.add(actionLine);
+    currentChunk.add(docLine);
+    currentBytes += pairBytes;
+  }
+  if (currentChunk.isNotEmpty) chunks.add(currentChunk);
+
+  print(
+    "🔍 Cellar Debug: Splitting into ${chunks.length} chunks to stay below OpenSearch circuit breaker limit",
+  );
+
+  // Send all chunks; accumulate merged response for caller's error inspection.
+  // The caller (sendBulkToOpenSearch) parses `items` from the JSON response to
+  // detect per-document errors. We merge all `items` arrays into a single
+  // synthetic response so the caller can see errors from every chunk.
+  final List<dynamic> allItems = [];
+  bool anyErrors = false;
+  String lastRawBody = "";
+
+  for (int chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
+    final result = await _sendChunkToOpenSearch(
+      url,
+      chunks[chunkIndex],
+      chunkIndex + 1,
+      chunks.length,
+    );
+    if (result.startsWith("HTTP_ERROR_") ||
+        result.startsWith("SocketException") ||
+        result.startsWith("ClientException") ||
+        result.startsWith("Error with")) {
+      return result;
+    }
+    lastRawBody = result;
+    try {
+      final decoded = jsonDecode(result) as Map<String, dynamic>;
+      if (decoded['errors'] == true) anyErrors = true;
+      final items = decoded['items'];
+      if (items is List) allItems.addAll(items);
+    } catch (_) {
+      // Non-JSON response (e.g. plain 200 OK) — keep lastRawBody for caller
+    }
+  }
+
+  // If we collected items from multiple chunks, return a merged JSON response.
+  if (chunks.length > 1 && allItems.isNotEmpty) {
+    return jsonEncode({"errors": anyErrors, "items": allItems});
+  }
+  return lastRawBody;
+}
+
+Future<String> _sendChunkToOpenSearch(
+  String url,
+  List<String> bulkData,
+  int chunkNum,
+  int totalChunks,
+) async {
   try {
     final ndjsonBody = bulkData.join("\n") + "\n";
     final bodySize = utf8.encode(ndjsonBody).length;
 
     print(
-      "🔍 Cellar Debug: Sending ${bulkData.length} lines, ${bodySize} bytes to OpenSearch",
+      "🔍 Cellar Debug: Sending chunk $chunkNum/$totalChunks — ${bulkData.length} lines, $bodySize bytes to OpenSearch",
     );
 
     final response = await http
@@ -574,14 +665,21 @@ Future<String> sendToOpenSearch(String url, List<String> bulkData) async {
       );
       try {
         final lgr = LogManager(fileName: '${fileSafeStamp}_bulk_ok.log');
-        lgr.log('200 OK at $url');
+        lgr.log('200 OK chunk $chunkNum/$totalChunks at $url');
       } catch (_) {}
       return response.body;
     } else {
       print("Error: ${response.statusCode} - ${response.headers}");
-      if (response.statusCode == 401 || response.statusCode == 429) {
+      // 429 from OpenSearch can be either a circuit breaker (payload too large)
+      // or a rate-limit. Show subscription dialog only for auth-related 401.
+      if (response.statusCode == 401) {
         print("Showing subscription dialog for status ${response.statusCode}");
         showSubscriptionDialog(response.statusCode);
+      } else if (response.statusCode == 429) {
+        // Circuit breaker or rate-limit — log but do not show subscription dialog
+        print(
+          "🔍 Cellar Debug: 429 rejected_execution (circuit breaker or rate limit) — chunk $chunkNum/$totalChunks, $bodySize bytes",
+        );
       } else if (response.statusCode == 413) {
         print(
           "Showing payload too large dialog for status ${response.statusCode}",
@@ -594,7 +692,10 @@ Future<String> sendToOpenSearch(String url, List<String> bulkData) async {
             response.body.length > 512
                 ? response.body.substring(0, 512)
                 : response.body;
-        lgr.log('HTTP ${response.statusCode} at $url body: ' + bodyPrefix);
+        lgr.log(
+          'HTTP ${response.statusCode} chunk $chunkNum/$totalChunks at $url body: ' +
+              bodyPrefix,
+        );
       } catch (_) {}
       return "HTTP_ERROR_${response.statusCode}";
     }

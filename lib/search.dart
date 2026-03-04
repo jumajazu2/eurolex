@@ -3104,7 +3104,7 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
 
                                               Row(
                                                 children: [
-                                                  Text("Sequence ID: "),
+                                                  Text("ID: "),
                                                   Expanded(
                                                     child: Row(
                                                       children: [

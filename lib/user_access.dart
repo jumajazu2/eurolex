@@ -1036,11 +1036,11 @@ class _UserAccessWidgetState extends State<UserAccessWidget> {
                         ),
                         color:
                             blocked
-                                ? Colors.red.withOpacity(0.1)
+                                ? Colors.blueGrey.withOpacity(0.99)
                                 : isExpired
-                                ? Colors.orange.withOpacity(0.1)
+                                ? Colors.orange.withOpacity(0.12)
                                 : isTrial
-                                ? Colors.orange.withOpacity(0.05)
+                                ? Colors.white.withOpacity(0.90)
                                 : null,
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
@@ -1104,13 +1104,24 @@ class _UserAccessWidgetState extends State<UserAccessWidget> {
                                                 blocked
                                                     ? TextDecoration.lineThrough
                                                     : null,
+                                            color:
+                                                blocked
+                                                    ? Colors.white
+                                                    : isTrial
+                                                    ? Colors.deepOrange.shade900
+                                                    : null,
                                           ),
                                         ),
                                         Text(
                                           'Key: ${user['key']} • ${user['userType']}',
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 13,
-                                            color: Colors.grey,
+                                            color:
+                                                blocked
+                                                    ? Colors.white70
+                                                    : isTrial
+                                                    ? Colors.deepOrange.shade900
+                                                    : Colors.grey,
                                           ),
                                         ),
                                       ],

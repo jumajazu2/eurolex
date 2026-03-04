@@ -28,4 +28,13 @@ x-email: juraj.kuban.sk@gmail.com
 }
 
 
+### OpenSearch Query Test
+POST https://search.pts-translation.sk/.quota_usage_v1/_search
+Content-Type: application/json
+x-api-key: 7239
+x-email: juraj.kuban.sk@gmail.com
 
+{
+  "query": { "match_all": {} },
+  "size": 100
+}

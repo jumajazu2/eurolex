@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <title>How to Install and Use the LegisTracerEU Plugin</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="icon" href="app_icon.ico" type="image/x-icon" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: #f8f9fa; color: #222; }
+    header, footer { background: #003366; color: #fff; padding: 18px 0; text-align: center; }
+    main { max-width: 800px; margin: 32px auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 12px #0001; padding: 32px; }
+    h1, h2 { color: #003366; }
+    ol, ul { margin-left: 1.5em; }
+    .step { margin-bottom: 2em; }
+    .important { background: #ffe0e0; border-left: 4px solid #d32f2f; padding: 12px; margin: 18px 0; border-radius: 6px; }
+    .screenshot { display: block; margin: 16px auto; max-width: 100%; border: 1px solid #ccc; border-radius: 6px; }
+    a { color: #003366; text-decoration: underline; }
+    .button { background: #003366; color: #fff; padding: 10px 22px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block; margin: 10px 0; }
+    .button:hover { background: #0055aa; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>LegisTracerEU</h1>
+    <nav>
+      <a href="index.html" style="color:#fff;margin:0 18px;">Home</a>
+      <a href="how-to-install-plugin.html" style="color:#fff;margin:0 18px;font-weight:bold;">How to Install and Use the Plugin</a>
+      <a href="#pricing" style="color:#fff;margin:0 18px;">Pricing</a>
+      <a href="#faq" style="color:#fff;margin:0 18px;">FAQ</a>
+    </nav>
+  </header>
+  <main>
+    <h2>How to Install and Use the LegisTracerEU Plugin for Trados Studio 2022 or Newer</h2>
+    <div class="step">
+      <h3>1. Download the Plugin</h3>
+      <ol>
+        <li>Download the plugin file here: <a href="https://1drv.ms/u/c/c09c406c86826974/IQACGV1TZ6eOSLjRpONDPq6xAROTQwUWy5sshwywTDOKYgs?e=IbddDI" target="_blank"><b>LegisTracerEU.sdlplugin</b></a></li>
+        <li>Close Trados Studio if it is running.</li>
+        <li>Double-click the downloaded <code>.sdlplugin</code> file <b>OR</b> right-click the file and choose <b>Install</b> (see screenshot below).</li>
+      </ol>
+      <img class="screenshot" src="assets/plugin-guide/plugin-install.png" alt="Plugin install screenshot" />
+    </div>
+    <div class="step">
+      <h3>2. Manual Installation (if needed)</h3>
+      <ol>
+        <li>Make sure hidden files/folders are visible in Windows Explorer (View &rarr; Hidden Items).</li>
+        <li>Copy the downloaded plugin file to:<br>
+          <code>C:\Users\USER_NAME\AppData\Roaming\Trados\Trados Studio\17\Plugins\Packages</code><br>
+          (Replace <b>USER_NAME</b> with your Windows account name. "17" is the Studio version and may differ for Studio 2024 or later.)</li>
+        <li>The plugin only works in Studio 2022 and later versions.</li>
+      </ol>
+    </div>
+    <div class="step">
+      <h3>3. Open Trados Studio and Check Plugin Loading</h3>
+      <ol>
+        <li>Start Trados Studio.</li>
+        <li>If you see a message about an unsigned plugin, <b>this should NOT appear</b> (the plugin is signed by RWS). If it does, you are using an outdated version—please download the latest from the link above.</li>
+      </ol>
+      <img class="screenshot" src="assets/plugin-guide/unsigned-warning.png" alt="Unsigned plugin warning screenshot" />
+    </div>
+    <div class="step">
+      <h3>4. Check for LegisTracerEU Button</h3>
+      <ol>
+        <li>Open any translation file in Trados Studio.</li>
+        <li>Go to the <b>Add-ins</b> tab and check if the <b>LegisTracerEU</b> button is visible.</li>
+      </ol>
+      <img class="screenshot" src="assets/plugin-guide/addins-tab.png" alt="Add-ins tab screenshot" />
+    </div>
+    <div class="step">
+      <h3>5. If Button Not Visible</h3>
+      <ol>
+        <li>Click <b>Plug-in</b> and verify that the LegisTracerEU plugin checkbox is selected.</li>
+        <li>If not, select it and click OK, then restart Studio.</li>
+      </ol>
+      <img class="screenshot" src="assets/plugin-guide/plugin-checkbox.png" alt="Plugin checkbox screenshot" />
+    </div>
+    <div class="step">
+      <h3>6. Open the LegisTracerEU Results Panel</h3>
+      <ol>
+        <li>Go to <b>View</b> and click <b>LegisTracerEU Results</b>.</li>
+      </ol>
+      <img class="screenshot" src="assets/plugin-guide/results-panel.png" alt="Results panel screenshot" />
+    </div>
+    <div class="step">
+      <h3>7. Confirm the LegisTracerEU Panel is Visible</h3>
+      <ol>
+        <li>The panel can be attached to various locations in the Studio UI.</li>
+        <li>If you see the panel (even if no results are displayed yet), the plugin is loaded correctly.</li>
+      </ol>
+      <img class="screenshot" src="assets/plugin-guide/panel-visible.png" alt="Panel visible screenshot" />
+    </div>
+    <div class="step">
+      <h3>8. Search in the Panel</h3>
+      <ol>
+        <li>In the LegisTracerEU panel, enter a phrase (e.g., <b>resolution tools and powers</b>) in the search field and click <b>Search</b>.</li>
+        <li>Relevant results should be displayed in the panel.</li>
+      </ol>
+    </div>
+    <div class="step">
+      <h3>9. Search from the Editor</h3>
+      <ol>
+        <li>In any source segment of the open document, select text and right-click <b>LegisTracerEU Search</b>.</li>
+        <li>The relevant results will be displayed in the results panel.</li>
+      </ol>
+      <img class="screenshot" src="assets/plugin-guide/right-click-search.png" alt="Right-click search screenshot" />
+    </div>
+    <div class="step">
+      <h3>10. Set a Keyboard Shortcut (Recommended)</h3>
+      <ol>
+        <li>Go to <b>File &rarr; Options &rarr; Keyboard Shortcuts</b> in Studio.</li>
+        <li>Locate <b>LegisTracerEU</b> in the list and assign a shortcut (e.g., <b>ALT+Down Arrow</b>).</li>
+        <li>Now you can select text and use the shortcut to search, instead of using the right-click menu.</li>
+      </ol>
+      <img class="screenshot" src="assets/plugin-guide/keyboard-shortcut.png" alt="Keyboard shortcut screenshot" />
+    </div>
+    <div class="important">
+      <b>Note:</b> The plugin is for Trados Studio 2022 and newer. If you have issues, please check you are using the latest version and follow the manual installation steps if needed. For support, contact <a href="mailto:juraj.kuban.sk@gmail.com">juraj.kuban.sk@gmail.com</a>.
+    </div>
+  </main>
+  <footer>
+    <div>© 2026 LegisTracerEU | <a href="mailto:juraj.kuban.sk@gmail.com" style="color:#fff;">Contact</a></div>
+  </footer>
+</body>
+</html>
