@@ -5,30 +5,38 @@
   <title>How to Install and Use the LegisTracerEU Plugin</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="icon" href="app_icon.ico" type="image/x-icon" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="styles.css" />
   <style>
-    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: #f8f9fa; color: #222; }
-    header, footer { background: #003366; color: #fff; padding: 18px 0; text-align: center; }
-    main { max-width: 800px; margin: 32px auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 12px #0001; padding: 32px; }
-    h1, h2 { color: #003366; }
+    body { margin: 0; background: #F5F7FA; color: #0F2A44; }
+    header, footer { background: #0F2A44; color: #fff; padding: 18px 0; text-align: center; }
+    main { max-width: 800px; margin: 32px auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); padding: 32px; }
+    h1, h2 { color: #0F2A44; }
     ol, ul { margin-left: 1.5em; }
     .step { margin-bottom: 2em; }
-    .important { background: #ffe0e0; border-left: 4px solid #d32f2f; padding: 12px; margin: 18px 0; border-radius: 6px; }
-    .screenshot { display: block; margin: 16px auto; max-width: 100%; border: 1px solid #ccc; border-radius: 6px; }
-    a { color: #003366; text-decoration: underline; }
-    .button { background: #003366; color: #fff; padding: 10px 22px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block; margin: 10px 0; }
-    .button:hover { background: #0055aa; }
+    .important { background: #fff5e6; border-left: 4px solid #F28C28; padding: 12px; margin: 18px 0; border-radius: 6px; }
+    .screenshot { display: block; margin: 16px auto; max-width: 100%; border: 1px solid #D1D5DB; border-radius: 6px; }
+    a { color: #277BBB; text-decoration: underline; }
+    .button { background: #277BBB; color: #fff; padding: 10px 22px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block; margin: 10px 0; }
+    .button:hover { background: #0F2A44; }
   </style>
 </head>
 <body>
-  <header>
-    <h1>LegisTracerEU</h1>
-    <nav>
-      <a href="index.html" style="color:#fff;margin:0 18px;">Home</a>
-      <a href="how-to-install-plugin.html" style="color:#fff;margin:0 18px;font-weight:bold;">How to Install and Use the Plugin</a>
-      <a href="#pricing" style="color:#fff;margin:0 18px;">Pricing</a>
-      <a href="#faq" style="color:#fff;margin:0 18px;">FAQ</a>
-    </nav>
+  <header class="site-header">
+    <div class="container flex between center-v gap-m">
+      <a class="brand" href="/"><img src="app_icon.ico" alt="LegisTracerEU icon" width="32" height="32" /><span class="brand__text">LegisTracerEU</span></a>
+      <nav class="primary-nav" aria-label="Main navigation">
+        <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="navMenu">
+          <span class="nav-toggle__bar"></span><span class="sr-only">Toggle menu</span>
+        </button>
+        <ul id="navMenu" class="nav-list">
+          <li><a href="/">Home</a></li>
+          <li><a href="search.html">Search EU Law</a></li>
+          <li><a href="how-to-install-app.html">App Guide</a></li>
+          <li><a href="how-to-install-plugin.html">Trados Plugin</a></li>
+          <li><a href="/#pricing">Pricing</a></li>
+        </ul>
+      </nav>
+    </div>
   </header>
   <main>
     <h2>How to Install and Use the LegisTracerEU Plugin for Trados Studio 2022 or Newer</h2>
@@ -121,5 +129,6 @@
   <footer>
     <div>© 2026 LegisTracerEU | <a href="mailto:juraj.kuban.sk@gmail.com" style="color:#fff;">Contact</a></div>
   </footer>
+<script src="script.js?v=20251216b"></script>
 </body>
 </html>

@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <title>How LegisTracerEU Works — Workflow Guide for Legal Translators</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="How LegisTracerEU supports EU legal translators: EC reference document sets, instant law search, Trados Studio integration, IATE terminology, and verbatim quote retrieval." />
+  <link rel="icon" href="app_icon.ico" type="image/x-icon" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      background: #F5F7FA;
+      color: #0F2A44;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    /* ── Hero ── */
+    .page-hero {
+      background: linear-gradient(160deg, #0F2A44 0%, #277BBB 100%);
+      color: #fff;
+      padding: 60px 24px 48px;
+      text-align: center;
+    }
+    .page-hero h1 {
+      font-size: 2.1em;
+      margin: 0 0 0.45em;
+      font-weight: 900;
+      line-height: 1.15;
+    }
+    .page-hero .subtitle {
+      font-size: 1.08em;
+      color: #b8d4ee;
+      max-width: 700px;
+      margin: 0 auto;
+      line-height: 1.65;
+    }
+    .accent { color: #F28C28; }
+
+    /* ── Sections ── */
+    .section {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 52px 24px;
+    }
+    .bg-white { background: #fff; }
+    .bg-light  { background: #f8f9fa; }
+
+    h2.section-title {
+      font-size: 1.5em;
+      color: #0F2A44;
+      margin: 0 0 0.7em;
+      font-weight: 700;
+      border-left: 5px solid #F28C28;
+      padding-left: 14px;
+      line-height: 1.25;
+    }
+    h3.sub {
+      color: #0F2A44;
+      margin: 1.4em 0 0.4em;
+      font-size: 1.05em;
+      font-weight: 700;
+    }
+    .intro-text {
+      font-size: 1.02em;
+      color: #3a3a4a;
+      max-width: 780px;
+      margin: 0 0 24px;
+      line-height: 1.75;
+    }
+
+    /* ── Callout boxes ── */
+    .callout {
+      background: #e8f0fb;
+      border-left: 5px solid #0F2A44;
+      border-radius: 0 8px 8px 0;
+      padding: 18px 22px;
+      margin: 28px 0;
+      font-size: 0.97em;
+      color: #222;
+    }
+    .callout.orange {
+      background: #fff5e6;
+      border-left-color: #F28C28;
+    }
+    .callout strong { color: #0F2A44; }
+    .callout.orange strong { color: #b85800; }
+
+    /* ── Step cards ── */
+    .step-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 22px;
+      margin-top: 32px;
+    }
+    .step-card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 26px 22px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      border-top: 4px solid #0F2A44;
+    }
+    .step-card .step-num {
+      font-size: 2.2em;
+      font-weight: 900;
+      color: #F28C28;
+      line-height: 1;
+      margin-bottom: 10px;
+    }
+    .step-card h3 {
+      margin: 0 0 10px;
+      font-size: 1.02em;
+      color: #0F2A44;
+      font-weight: 700;
+    }
+    .step-card p {
+      margin: 0;
+      font-size: 0.91em;
+      color: #444;
+      line-height: 1.6;
+    }
+
+    /* ── Check list ── */
+    .check-list {
+      list-style: none;
+      padding: 0;
+      margin: 14px 0 0;
+    }
+    .check-list li {
+      padding: 5px 0 5px 26px;
+      position: relative;
+      font-size: 0.95em;
+      color: #333;
+    }
+    .check-list li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: #F28C28;
+      font-weight: bold;
+    }
+
+    /* ── Two-column grid ── */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 26px;
+      margin-top: 26px;
+    }
+    @media (max-width: 640px) {
+      .two-col { grid-template-columns: 1fr; }
+      .page-hero h1 { font-size: 1.55em; }
+    }
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 24px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+    }
+    .card h3 {
+      margin: 0 0 12px;
+      font-size: 1.03em;
+      color: #0F2A44;
+      font-weight: 700;
+    }
+    .card p {
+      margin: 0 0 14px;
+      font-size: 0.93em;
+      color: #444;
+      line-height: 1.6;
+    }
+
+    /* ── Sources grid ── */
+    .sources-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(195px, 1fr));
+      gap: 16px;
+      margin-top: 26px;
+    }
+    .source-card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 18px 18px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+      border-left: 4px solid #0F2A44;
+    }
+    .source-card .sicon {
+      font-size: 1.35em;
+      margin-bottom: 6px;
+    }
+    .source-card h4 {
+      margin: 0 0 6px;
+      font-size: 0.95em;
+      color: #0F2A44;
+      font-weight: 700;
+    }
+    .source-card p {
+      margin: 0;
+      font-size: 0.83em;
+      color: #555;
+      line-height: 1.5;
+    }
+
+    /* ── Badge ── */
+    .badge-soon {
+      display: inline-block;
+      background: #F28C28;
+      color: #fff;
+      font-size: 0.65em;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      vertical-align: middle;
+      margin-left: 8px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    /* ── CTA ── */
+    .cta-section {
+      background: #0F2A44;
+      color: #fff;
+      text-align: center;
+      padding: 60px 24px;
+    }
+    .cta-section h2 {
+      margin: 0 0 14px;
+      font-size: 1.75em;
+      font-weight: 900;
+    }
+    .cta-section p {
+      color: #a8c4e0;
+      margin: 0 0 32px;
+      font-size: 1.05em;
+    }
+    .btn {
+      display: inline-block;
+      padding: 14px 30px;
+      border-radius: 6px;
+      font-weight: 700;
+      text-decoration: none;
+      margin: 6px;
+      font-size: 1em;
+      transition: background 0.15s, color 0.15s;
+    }
+    .btn-primary { background: #F28C28; color: #fff; }
+    .btn-primary:hover { background: #c96e10; }
+    .btn-outline { background: transparent; color: #fff; border: 2px solid rgba(255,255,255,0.7); }
+    .btn-outline:hover { background: rgba(255,255,255,0.1); border-color: #fff; }
+
+    /* ── Footer ── */
+    footer {
+      background: #0F2A44;
+      color: #7a9ab8;
+      text-align: center;
+      padding: 24px;
+      font-size: 0.9em;
+    }
+    footer a { color: #a8c4e0; text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    /* ── Misc ── */
+    hr.divider {
+      border: none;
+      border-top: 1px solid #e0e4ea;
+      margin: 0;
+    }
+    code {
+      font-family: 'Consolas', 'Courier New', monospace;
+      background: #eef2f7;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 0.9em;
+    }
+    a { color: #277BBB; }
+    a:hover { color: #0F2A44; }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container flex between center-v gap-m">
+    <a class="brand" href="/"><img src="app_icon.ico" alt="LegisTracerEU icon" width="32" height="32" /><span class="brand__text">LegisTracerEU</span></a>
+    <nav class="primary-nav" aria-label="Main navigation">
+      <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="navMenu">
+        <span class="nav-toggle__bar"></span><span class="sr-only">Toggle menu</span>
+      </button>
+      <ul id="navMenu" class="nav-list">
+        <li><a href="/">Home</a></li>
+        <li><a href="search.html">Search EU Law</a></li>
+        <li><a href="how-to-install-app.html">App Guide</a></li>
+        <li><a href="how-to-install-plugin.html">Trados Plugin</a></li>
+        <li><a href="/#pricing">Pricing</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<!-- HERO -->
+<div class="page-hero">
+  <h1>How <span class="accent">LegisTracerEU</span> Works</h1>
+  <p class="subtitle">From EC reference lists to verified verbatim quotations in seconds — a practical guide to integrating EU law search into your legal translation workflow.</p>
+</div>
+
+<!-- THE CORE REQUIREMENT -->
+<div class="bg-white">
+<div class="section">
+  <h2 class="section-title">The Core Requirement: Verbatim Precision</h2>
+  <p class="intro-text">
+    Translating for EU institutions is not like general translation. When the European Commission assigns a project, it provides a <strong>mandatory list of reference documents</strong> — specific legislative acts identified by their Celex numbers — that must be consulted throughout the translation. Quotations from legal acts must match the official published text <strong>word for word</strong>. Paraphrase is a quality defect.
+  </p>
+  <div class="callout">
+    <strong>What this means in practice:</strong> During a typical assignment, a translator may need to locate and verify dozens of precise citations across multiple legal acts — often under time pressure. Each search costs time. Each misquote costs quality score points. The only way to maintain both accuracy and speed is fast, scoped, full-text search directly in the required reference corpus.
+  </div>
+  <p class="intro-text">
+    LegisTracerEU is built specifically for this use case: give it the EC reference list, and it searches inside it — instantly, in any EU language combination.
+  </p>
+</div>
+</div>
+
+<hr class="divider" />
+
+<!-- STEP BY STEP WORKFLOW -->
+<div class="bg-light">
+<div class="section">
+  <h2 class="section-title">The Workflow, Step by Step</h2>
+  <div class="step-grid">
+    <div class="step-card">
+      <div class="step-num">1</div>
+      <h3>Load Your Reference Set</h3>
+      <p>Enter the Celex numbers from the EC reference list in the <em>Upload References</em> tab. The app fetches and indexes those acts under a named <strong>Custom Collection</strong>. All searches are then scoped to exactly those documents.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">2</div>
+      <h3>Search in Seconds</h3>
+      <p>Enter a phrase — a term, a sentence fragment, or a partial quote. The app searches the full text of all reference documents and returns results <strong>immediately</strong>, ranked by relevance, highlighted in context.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">3</div>
+      <h3>Copy the Verbatim Text</h3>
+      <p>Each result shows the surrounding passage in the official language version. Confirm it is the right reference, copy the exact wording, and insert it into your translation. EUR-Lex link included for verification.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">4</div>
+      <h3>Trados Works With You</h3>
+      <p>The Trados Studio plugin fires a search automatically when you open a segment. Results appear beside your translation without any manual action — keeping pace as you work through the file.</p>
+    </div>
+  </div>
+</div>
+</div>
+
+<hr class="divider" />
+
+<!-- SEARCH SPEED & MODES -->
+<div class="bg-white">
+<div class="section">
+  <h2 class="section-title">Search Speed and Modes</h2>
+  <p class="intro-text">
+    The difference between 20 seconds and 3 minutes per citation compounds across hundreds of segments. LegisTracerEU returns results in under a second from tens of thousands of EU legal documents, full-text across all official languages.
+  </p>
+
+  <div class="two-col">
+    <div class="card">
+      <h3>Phrase Search</h3>
+      <p>Finds exact or near-exact matches for your phrase within the full text of EU legal acts. Ideal when you know the phrasing exists verbatim somewhere in the reference corpus and need to locate it fast.</p>
+      <ul class="check-list">
+        <li>Exact sentence and clause retrieval</li>
+        <li>Results displayed with surrounding legal context</li>
+        <li>Works in any EU official language</li>
+        <li>Results ranked by match quality</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Fuzzy Search</h3>
+      <p>Handles minor variations, typos, and partially recalled phrases. Searches across both source and target language in parallel — useful when the formulation is uncertain or when exploring terminology options.</p>
+      <ul class="check-list">
+        <li>Tolerates minor text variation</li>
+        <li>Cross-lingual parallel matching</li>
+        <li>Good for terminology discovery</li>
+        <li>Adjustable match threshold</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout orange" style="margin-top:30px;">
+    <strong>Search allowance:</strong> Free trial — 7 searches per day via web or Windows app. Regular subscription (€60/year, single user) — 2,000 searches per day, well above practical individual needs.
+  </div>
+</div>
+</div>
+
+<hr class="divider" />
+
+<!-- DATA SOURCES -->
+<div class="bg-light">
+<div class="section">
+  <h2 class="section-title">Sources: What the App Searches</h2>
+  <p class="intro-text">
+    LegisTracerEU indexes the full corpus available from <strong>EUR-Lex</strong> — the authoritative EU law database — and the <strong>IATE</strong> interinstitutional terminology database. All data is reused under the European Commission's official reuse policy (Decision 2011/833/EU).
+  </p>
+
+  <div class="sources-grid">
+    <div class="source-card">
+      <div class="sicon">📋</div>
+      <h4>Regulations</h4>
+      <p>Directly binding acts applicable in all Member States — the most-cited document type in EC translation work.</p>
+    </div>
+    <div class="source-card">
+      <div class="sicon">📋</div>
+      <h4>Directives</h4>
+      <p>EU legislation requiring transposition into national law. Frequently referenced in legal and institutional contexts.</p>
+    </div>
+    <div class="source-card">
+      <div class="sicon">📋</div>
+      <h4>Decisions</h4>
+      <p>Binding acts addressed to Member States, institutions, or individuals. Highly specific in language and citation.</p>
+    </div>
+    <div class="source-card">
+      <div class="sicon">⚖️</div>
+      <h4>Case-law</h4>
+      <p>Judgments and orders from the Court of Justice of the EU and the General Court, in all official languages.</p>
+    </div>
+    <div class="source-card">
+      <div class="sicon">📜</div>
+      <h4>Treaties and Protocols</h4>
+      <p>The Treaty on European Union, TFEU, and associated protocols — the founding texts of the EU legal order.</p>
+    </div>
+    <div class="source-card">
+      <div class="sicon">🌐</div>
+      <h4>International Agreements</h4>
+      <p>Agreements between the EU and third countries or international organisations, published on EUR-Lex.</p>
+    </div>
+    <div class="source-card">
+      <div class="sicon">📄</div>
+      <h4>Preparatory Acts</h4>
+      <p>Legislative proposals, Commission communications, and other pre-legislative documents.</p>
+    </div>
+    <div class="source-card">
+      <div class="sicon">📖</div>
+      <h4>IATE Terminology</h4>
+      <p>The EU's interinstitutional terminology database — domain classifications, definitions, and usage notes in all 24 official languages.</p>
+    </div>
+  </div>
+
+  <div class="callout" style="margin-top:30px;">
+    <strong>All 24 EU official languages supported</strong> in any source–target combination. Search with a Slovak phrase, find in English. Search in German, find in French and Romanian simultaneously. The entire database is multilingual throughout.
+  </div>
+</div>
+</div>
+
+<hr class="divider" />
+
+<!-- CUSTOM COLLECTIONS -->
+<div class="bg-white">
+<div class="section">
+  <h2 class="section-title">Custom Collections: The EC Reference List Workflow</h2>
+  <p class="intro-text">
+    Every EC translation contract comes with a reference list: specific legislative acts, identified by <strong>Celex numbers</strong>, which the translator is required to follow. Quotations drawn from these acts must appear verbatim in the translation. Custom Collections in LegisTracerEU are designed precisely for this scenario.
+  </p>
+
+  <div class="callout">
+    <strong>How it works:</strong> In the <em>Upload References</em> tab, enter the Celex numbers from the EC reference list (comma-separated). Give the collection a name — for example <em>Assignment_2025_271</em>. The app downloads and indexes those acts. Thereafter, all searches run against exactly that corpus, returning only results relevant to your current project.
+  </div>
+
+  <ul class="check-list" style="font-size:1em; margin-top:20px;">
+    <li>Create up to three named collections per account</li>
+    <li>Switch between collections or the full EU corpus with one click</li>
+    <li>Add new documents to a collection at any time as the assignment evolves</li>
+    <li>Results are limited to your project corpus — no noise from unrelated legislation</li>
+    <li>Each collection is private to your account, accessible from desktop app or Trados plugin</li>
+  </ul>
+
+  <div class="callout orange" style="margin-top:24px;">
+    <strong>Why this matters:</strong> Searching the full body of EU law for a common phrase returns thousands of hits. Searching your project-specific reference set — the 30 or 40 acts the EC actually requires — returns the handful that apply. Faster to review, faster to cite, easier to audit against EC requirements.
+  </div>
+</div>
+</div>
+
+<hr class="divider" />
+
+<!-- TRADOS INTEGRATION -->
+<div class="bg-light">
+<div class="section">
+  <h2 class="section-title">Deep Integration with Trados Studio</h2>
+  <p class="intro-text">
+    The LegisTracerEU plugin for Trados Studio 2022 and later is <strong>signed by RWS</strong> (the Trados publisher) and installs in one step. It becomes part of your translation environment — not a separate tool requiring window-switching.
+  </p>
+
+  <div class="two-col">
+    <div class="card">
+      <h3>Automatic Segment Search</h3>
+      <p>When you navigate to a segment in Trados Studio, the plugin reads the segment content and immediately fires a search against your active Custom Collection or the full corpus. Results appear in the LegisTracerEU panel — no keystrokes required.</p>
+      <ul class="check-list">
+        <li>Zero extra clicks for search per segment</li>
+        <li>Results keep pace as you move through the file</li>
+        <li>Panel can be docked anywhere in the Studio layout</li>
+        <li>Works with both source and target segment content</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Manual Search Options</h3>
+      <p>Select any text in the source segment, right-click and choose <em>LegisTracerEU Search</em>, or assign a keyboard shortcut (e.g. <code>Alt+Down Arrow</code>) in Trados Studio options. Useful for searching specific sub-phrases or individual terms without triggering a full segment search.</p>
+      <ul class="check-list">
+        <li>Right-click context menu in the editor</li>
+        <li>Configurable keyboard shortcut</li>
+        <li>Type any phrase directly in the results panel</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Results in Context</h3>
+      <p>Every result shows the surrounding passage in the official language version — not just the matching sentence. You see what comes before and after, enough to confirm the citation is correct and the formulation is the one that belongs in your translation.</p>
+      <ul class="check-list">
+        <li>Contextual passage shown around each hit</li>
+        <li>Match text highlighted for instant scanning</li>
+        <li>Direct link to the full document on EUR-Lex</li>
+        <li>Expandable context view for longer passages</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>autoAnalyst <span class="badge-soon">Coming Soon</span></h3>
+      <p>The next-generation plugin feature will proactively analyse each segment's content and suggest possible matches from EU law and IATE terminology automatically — before you start typing the translation. Built to surface the most relevant references without any manual search step.</p>
+      <ul class="check-list">
+        <li>Automatic content analysis per segment</li>
+        <li>Suggested EU law matches and IATE terms</li>
+        <li>Reduces manual search effort to near zero</li>
+        <li>Based on contextual relevance, not exact match only</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout" style="margin-top:32px;">
+    <strong>Installation:</strong> Download the <code>.sdlplugin</code> file, double-click to install, restart Trados Studio. The process takes under two minutes. The plugin is available for <strong>Trados Studio 2022 and later</strong>. See the full <a href="how-to-install-plugin.html">plugin installation guide →</a>
+  </div>
+</div>
+</div>
+
+<hr class="divider" />
+
+<!-- IATE TERMINOLOGY -->
+<div class="bg-white">
+<div class="section">
+  <h2 class="section-title">IATE: EU Official Terminology</h2>
+  <p class="intro-text">
+    <strong>IATE</strong> (Interactive Terminology for Europe) is the interinstitutional terminology database of the European Union — used by the Commission, Parliament, Council and other EU bodies as the authoritative source of approved terminology. LegisTracerEU integrates IATE search directly alongside EUR-Lex law search.
+  </p>
+
+  <ul class="check-list" style="font-size:1em;">
+    <li>All 24 EU official languages — same session, same interface</li>
+    <li>Domain-classified entries: legal, financial, technical, environmental, agricultural, institutional and more</li>
+    <li>Definitions, usage notes, and reliability indicators where available</li>
+    <li>Consistent with terminology decisions used by EC translators and revisers</li>
+    <li>Search IATE for a term, then switch to EUR-Lex to find it used in context — in the same workflow</li>
+  </ul>
+</div>
+</div>
+
+<hr class="divider" />
+
+<!-- PRIVACY -->
+<div class="bg-light">
+<div class="section">
+  <h2 class="section-title">Privacy and NDA Compliance</h2>
+  <p class="intro-text">
+    EU translation contracts regularly include strict non-disclosure obligations. LegisTracerEU is designed with legal confidentiality in mind — no part of your source documents or translation content ever leaves your machine or reaches a third-party service.
+  </p>
+
+  <ul class="check-list" style="font-size:1em;">
+    <li>Search queries are processed on the server and immediately discarded — no query logging</li>
+    <li>Source documents and translation content are never uploaded or transmitted anywhere</li>
+    <li>No public AI systems, no external cloud services involved in any search operation</li>
+    <li>All results come exclusively from publicly available EU data (EUR-Lex, IATE)</li>
+    <li>Suitable for NDA-governed and confidential translation projects</li>
+  </ul>
+</div>
+</div>
+
+<hr class="divider" />
+
+<!-- GET STARTED -->
+<div class="cta-section">
+  <h2>Try It in Your Workflow</h2>
+  <p>Windows desktop app available from the Microsoft Store. Free trial — no registration required to start.</p>
+  <a href="https://apps.microsoft.com/detail/9NKNVGXJFSW5" class="btn btn-primary" target="_blank" rel="noopener noreferrer">Download from Microsoft Store</a>
+  <a href="search.html" class="btn btn-outline">Try the Web Search</a>
+  <a href="index.html#pricing" class="btn btn-outline">View Pricing</a>
+</div>
+
+<footer>
+  <div>
+    © 2026 LegisTracerEU &nbsp;|&nbsp;
+    <a href="https://www.pts-translation.sk">www.pts-translation.sk</a> &nbsp;|&nbsp;
+    <a href="mailto:juraj.kuban.sk@gmail.com">Contact</a> &nbsp;|&nbsp;
+    <a href="privacy.html">Privacy Policy</a> &nbsp;|&nbsp;
+    <a href="how-to-install-plugin.html">Trados Plugin Guide</a> &nbsp;|&nbsp;
+    <a href="how-to-install-app.html">App Installation Guide</a>
+  </div>
+</footer>
+
+<script src="script.js?v=20251216b"></script>
+</body>
+</html>
