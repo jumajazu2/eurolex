@@ -7,38 +7,43 @@
   <link rel="icon" href="app_icon.ico" type="image/x-icon" />
   <link rel="stylesheet" href="styles.css" />
   <style>
-    body { margin: 0; background: #F5F7FA; color: #0F2A44; }
-    header, footer { background: #0F2A44; color: #fff; padding: 18px 0; text-align: center; }
     main { max-width: 800px; margin: 32px auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); padding: 32px; }
-    h1, h2 { color: #0F2A44; }
     ol, ul { margin-left: 1.5em; }
     .step { margin-bottom: 2em; }
     .important { background: #fff5e6; border-left: 4px solid #F28C28; padding: 12px; margin: 18px 0; border-radius: 6px; }
     .screenshot { display: block; margin: 16px auto; max-width: 100%; border: 1px solid #D1D5DB; border-radius: 6px; }
-    a { color: #277BBB; text-decoration: underline; }
     .button { background: #277BBB; color: #fff; padding: 10px 22px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block; margin: 10px 0; }
     .button:hover { background: #0F2A44; }
   </style>
 </head>
 <body>
+  <a class="skip-link" href="#main">Skip to main content</a>
   <header class="site-header">
     <div class="container flex between center-v gap-m">
-      <a class="brand" href="/"><img src="app_icon.ico" alt="LegisTracerEU icon" width="32" height="32" /><span class="brand__text">LegisTracerEU</span></a>
+      <a class="brand" href="/">
+        <span class="" aria-hidden="true"><img src="app_icon.ico" alt="LegisTracerEU logo" style="height:3.5em;vertical-align:middle;" /></span>
+        <span class="brand__text">LegisTracerEU</span>
+      </a>
       <nav class="primary-nav" aria-label="Main navigation">
         <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="navMenu">
-          <span class="nav-toggle__bar"></span><span class="sr-only">Toggle menu</span>
+          <span class="nav-toggle__bar"></span>
+          <span class="sr-only">Toggle menu</span>
         </button>
         <ul id="navMenu" class="nav-list">
-          <li><a href="/">Home</a></li>
+          <li><a href="index.html">Home</a></li>
           <li><a href="search.html">Search EU Law</a></li>
+          <li><a href="workflow.html">How It Works</a></li>
           <li><a href="how-to-install-app.html">App Guide</a></li>
           <li><a href="how-to-install-plugin.html">Trados Plugin</a></li>
-          <li><a href="/#pricing">Pricing</a></li>
+          <li><a href="index.html#pricing">Pricing</a></li>
         </ul>
       </nav>
+      <div class="header-cta">
+        <a class="btn primary small" href="index.html#pricing">Subscribe</a>
+      </div>
     </div>
   </header>
-  <main>
+  <main id="main">
     <h2>How to Install and Use the LegisTracerEU Plugin for Trados Studio 2022 or Newer</h2>
     <div class="step">
       <h3>1. Download the Plugin</h3>
@@ -47,7 +52,7 @@
         <li>Close Trados Studio if it is running.</li>
         <li>Double-click the downloaded <code>.sdlplugin</code> file <b>OR</b> right-click the file and choose <b>Install</b> (see screenshot below).</li>
       </ol>
-      <img class="screenshot" src="assets/plugin-guide/plugin-install.png" alt="Plugin install screenshot" />
+      <img class="screenshot" src="assets/plugin1.png" alt="Plugin install screenshot" />
     </div>
     <div class="step">
       <h3>2. Manual Installation (if needed)</h3>
@@ -65,7 +70,7 @@
         <li>Start Trados Studio.</li>
         <li>If you see a message about an unsigned plugin, <b>this should NOT appear</b> (the plugin is signed by RWS). If it does, you are using an outdated version—please download the latest from the link above.</li>
       </ol>
-      <img class="screenshot" src="assets/plugin-guide/unsigned-warning.png" alt="Unsigned plugin warning screenshot" />
+      <img class="screenshot" src="assets/plugin2.png" alt="Unsigned plugin warning screenshot" />
     </div>
     <div class="step">
       <h3>4. Check for LegisTracerEU Button</h3>
@@ -73,7 +78,7 @@
         <li>Open any translation file in Trados Studio.</li>
         <li>Go to the <b>Add-ins</b> tab and check if the <b>LegisTracerEU</b> button is visible.</li>
       </ol>
-      <img class="screenshot" src="assets/plugin-guide/addins-tab.png" alt="Add-ins tab screenshot" />
+      <img class="screenshot" src="assets/plugin3.png" alt="Add-ins tab screenshot" />
     </div>
     <div class="step">
       <h3>5. If Button Not Visible</h3>
@@ -81,14 +86,14 @@
         <li>Click <b>Plug-in</b> and verify that the LegisTracerEU plugin checkbox is selected.</li>
         <li>If not, select it and click OK, then restart Studio.</li>
       </ol>
-      <img class="screenshot" src="assets/plugin-guide/plugin-checkbox.png" alt="Plugin checkbox screenshot" />
+      <img class="screenshot" src="assets/plugin4.png" alt="Plugin checkbox screenshot" />
     </div>
     <div class="step">
       <h3>6. Open the LegisTracerEU Results Panel</h3>
       <ol>
         <li>Go to <b>View</b> and click <b>LegisTracerEU Results</b>.</li>
       </ol>
-      <img class="screenshot" src="assets/plugin-guide/results-panel.png" alt="Results panel screenshot" />
+      <img class="screenshot" src="assets/plugin5.png" alt="Results panel screenshot" />
     </div>
     <div class="step">
       <h3>7. Confirm the LegisTracerEU Panel is Visible</h3>
@@ -96,7 +101,7 @@
         <li>The panel can be attached to various locations in the Studio UI.</li>
         <li>If you see the panel (even if no results are displayed yet), the plugin is loaded correctly.</li>
       </ol>
-      <img class="screenshot" src="assets/plugin-guide/panel-visible.png" alt="Panel visible screenshot" />
+      <img class="screenshot" src="assets/plugin6.png" alt="Panel visible screenshot" />
     </div>
     <div class="step">
       <h3>8. Search in the Panel</h3>
@@ -111,7 +116,7 @@
         <li>In any source segment of the open document, select text and right-click <b>LegisTracerEU Search</b>.</li>
         <li>The relevant results will be displayed in the results panel.</li>
       </ol>
-      <img class="screenshot" src="assets/plugin-guide/right-click-search.png" alt="Right-click search screenshot" />
+      <img class="screenshot" src="assets/plugin7.png" alt="Right-click search screenshot" />
     </div>
     <div class="step">
       <h3>10. Set a Keyboard Shortcut (Recommended)</h3>
@@ -120,15 +125,61 @@
         <li>Locate <b>LegisTracerEU</b> in the list and assign a shortcut (e.g., <b>ALT+Down Arrow</b>).</li>
         <li>Now you can select text and use the shortcut to search, instead of using the right-click menu.</li>
       </ol>
-      <img class="screenshot" src="assets/plugin-guide/keyboard-shortcut.png" alt="Keyboard shortcut screenshot" />
+      <img class="screenshot" src="assets/plugin8.png" alt="Keyboard shortcut screenshot" />
     </div>
     <div class="important">
-      <b>Note:</b> The plugin is for Trados Studio 2022 and newer. If you have issues, please check you are using the latest version and follow the manual installation steps if needed. For support, contact <a href="mailto:juraj.kuban.sk@gmail.com">juraj.kuban.sk@gmail.com</a>.
+      <b>Note:</b> The plugin is for Trados Studio 2022 and newer. If you have issues, please check you are using the latest version and follow the manual installation steps if needed. If you need assistance with the installation contact support using the floating Support icon on the bottom right.
     </div>
   </main>
-  <footer>
-    <div>© 2026 LegisTracerEU | <a href="mailto:juraj.kuban.sk@gmail.com" style="color:#fff;">Contact</a></div>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="footer-brand">
+        <div class="brand small">
+          <span class="" aria-hidden="true"><img src="app_icon.ico" alt="LegisTracerEU logo" style="height:3.5em;vertical-align:middle;" /></span>
+          <span class="brand__text">LegisTracerEU</span>
+        </div>
+        <p class="foot-note">EU Law Toolbox for linguists, translators, and legal professionals.</p>
+        <p class="foot-copy">© <span id="year"></span> LegisTracerEU. All rights reserved.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="index.html#features">Features</a></li>
+          <li><a href="index.html#pricing">Pricing</a></li>
+          <li><a href="index.html#demo">Try Demo</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Resources</h4>
+        <ul>
+          <li><a href="index.html#data-sources-faq">Data Sources</a></li>
+          <li><a href="support.html">Support</a></li>
+          <li><a href="privacy.html">Privacy Policy</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Pages</h4>
+        <ul>
+          <li><a href="workflow.html">How It Works</a></li>
+          <li><a href="how-to-install-app.html">App Guide</a></li>
+          <li><a href="search.html">EU Law Search</a></li>
+        </ul>
+      </div>
+    </div>
   </footer>
+
+  <div id="cookieNotice" class="cookie-notice">
+    <div class="cookie-content">
+      <span class="cookie-text">By clicking Accept, Search or Buy, you agree with the use of cookies according to the <a href="privacy.html" class="cookie-link">Privacy Policy</a></span>
+      <div class="cookie-actions">
+        <button id="acceptCookies" class="cookie-btn">Accept</button>
+      </div>
+    </div>
+  </div>
+<a href="support.html" class="support-fab" title="Contact support">
+  <svg xmlns="http://www.w3.org/2000/svg" height="22" viewBox="0 0 24 24" width="22" fill="#fff"><path d="M0 0h24v24H0z" fill="none"/><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></svg>
+</a>
 <script src="script.js?v=20251216b"></script>
 </body>
 </html>

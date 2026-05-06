@@ -5,8 +5,21 @@
   <title>LegisTracerEU – Support</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="description" content="Support page for LegisTracerEU. Get help with technical issues and contact support." />
+  <link rel="icon" href="app_icon.ico" type="image/x-icon" />
   <link rel="stylesheet" href="styles.css" />
   <script defer src="script.js"></script>
+  <style>
+    .support-form-card { max-width: 600px; margin: 0 auto; }
+    .support-form-card .form-group { margin-bottom: 1.2em; }
+    .support-form-card label { display: block; font-weight: 600; margin-bottom: 4px; color: #0F2A44; }
+    .support-form-card input,
+    .support-form-card textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 1em; font-family: inherit; }
+    .support-form-card input:focus,
+    .support-form-card textarea:focus { outline: 2px solid #F28C28; border-color: #F28C28; }
+    #supportStatus { padding: 10px 14px; border-radius: 6px; font-weight: 600; }
+    #supportStatus.success { background: #e6f9ee; color: #1a7a3c; border: 1px solid #a8dbb7; }
+    #supportStatus.error { background: #fde8e8; color: #b91c1c; border: 1px solid #f5a0a0; }
+  </style>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to main content</a>
@@ -14,7 +27,7 @@
   <header class="site-header">
     <div class="container flex between center-v gap-m">
       <a class="brand" href="/">
-        <span class="brand__logo" aria-hidden="true">⚖️</span>
+        <span class="" aria-hidden="true"><img src="app_icon.ico" alt="LegisTracerEU logo" style="height:3.5em;vertical-align:middle;" /></span>
         <span class="brand__text">LegisTracerEU</span>
       </a>
       <nav class="primary-nav" aria-label="Main navigation">
@@ -44,26 +57,29 @@
       <div class="container">
         <header class="section-header center narrow">
           <h2>Support</h2>
-          <p class="section-lead">We're here to help. If you encounter technical issues or features not working as expected, please contact us.</p>
+          <p class="section-lead">We're here to help. Please describe your issue and we'll respond to your email.</p>
         </header>
 
         <div class="data-sources-content">
-          <div class="data-source-card">
-            <h3>How to Reach Us</h3>
-            <p>
-              In case of technical issues with the service or features not working as expected, send us an email with a description of the issue.
-              Please include the email address you use for access in your message, along with any steps to reproduce and screenshots (if possible).
-            </p>
-            <p>
-              You can start with this preformatted message and customize it before sending:
-            </p>
-            <p>
-              <a
-                class="btn primary"
-                href="mailto:juraj.kuban.sk@gmail.com?subject=Support%20request%20for%20LegisTracerEU&body=Hello%20Support%2C%0A%0AIssue%20description%3A%20%5Bdescribe%20the%20problem%5D%0AUser%20email%20used%20for%20access%3A%20%5Byour%20email%5D%0ASteps%20to%20reproduce%3A%0A1.%20%5Bstep%5D%0A2.%20%5Bstep%5D%0A%0AExpected%20result%3A%20%5B...%5D%0AActual%20result%3A%20%5B...%5D%0A%0AAdditional%20notes%3A%20%5Boptional%5D%0A%0AThank%20you%2C%0A%5Byour%20name%5D">
-                Email Support
-              </a>
-            </p>
+          <div class="data-source-card support-form-card">
+            <h3>Contact Support</h3>
+            <p>Please include the email address you use for access, a brief subject, and a description of the issue. We respond to all requests.</p>
+            <form id="supportForm" novalidate>
+              <div class="form-group">
+                <label for="supportEmail">Your Email *</label>
+                <input type="email" id="supportEmail" name="email" required placeholder="you@example.com" autocomplete="email" />
+              </div>
+              <div class="form-group">
+                <label for="supportSubject">Subject *</label>
+                <input type="text" id="supportSubject" name="subject" required placeholder="Brief description of the issue" />
+              </div>
+              <div class="form-group">
+                <label for="supportMessage">Message *</label>
+                <textarea id="supportMessage" name="message" required rows="8" placeholder="Describe the issue in detail. Include steps to reproduce and any relevant information."></textarea>
+              </div>
+              <button class="btn primary" type="submit" id="supportSubmitBtn">Submit Support Request</button>
+              <p id="supportStatus" style="margin-top:14px; display:none;"></p>
+            </form>
           </div>
         </div>
       </div>
@@ -74,7 +90,7 @@
     <div class="container footer-grid">
       <div class="footer-brand">
         <div class="brand small">
-          <span class="brand__logo">⚖️</span>
+          <span class="" aria-hidden="true"><img src="app_icon.ico" alt="LegisTracerEU logo" style="height:3.5em;vertical-align:middle;" /></span>
           <span class="brand__text">LegisTracerEU</span>
         </div>
         <p class="foot-note">EU Law Toolbox for linguists, translators, and legal professionals.</p>
@@ -126,5 +142,47 @@
       </div>
     </div>
   </div>
+
+  <script>
+    document.getElementById('supportForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const btn = document.getElementById('supportSubmitBtn');
+      const status = document.getElementById('supportStatus');
+      const email = document.getElementById('supportEmail').value.trim();
+      const subject = document.getElementById('supportSubject').value.trim();
+      const message = document.getElementById('supportMessage').value.trim();
+      if (!email || !subject || !message) {
+        status.textContent = 'Please fill in all fields.';
+        status.className = 'error';
+        status.style.display = 'block';
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = 'Sending…';
+      status.style.display = 'none';
+      try {
+        const res = await fetch('https://search.pts-translation.sk/support', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, subject, message })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          status.textContent = 'Your support request was submitted successfully. We will respond to your email.';
+          status.className = 'success';
+          document.getElementById('supportForm').reset();
+        } else {
+          status.textContent = 'Error: ' + (data.message || 'Could not submit. Please try again.');
+          status.className = 'error';
+        }
+      } catch (err) {
+        status.textContent = 'Network error. Please check your connection and try again.';
+        status.className = 'error';
+      }
+      status.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Submit Support Request';
+    });
+  </script>
 </body>
 </html>

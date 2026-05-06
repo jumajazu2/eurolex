@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <title>How to Use LegisTracerEU — Web, App & Trados Plugin</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="Three ways to use LegisTracerEU: web browser access, the Windows desktop app, and the Trados Studio plugin. EU law search for legal translators." />
+  <link rel="icon" href="app_icon.ico" type="image/x-icon" />
+  <link rel="stylesheet" href="styles.css" />
+  <script defer src="script.js?v=20251216b"></script>
+  <style>
+    /* ── Hero ── */
+    .page-hero {
+      background: linear-gradient(160deg, #0F2A44 0%, #277BBB 100%);
+      color: #fff;
+      padding: 60px 24px 48px;
+      text-align: center;
+    }
+    .page-hero h1 {
+      font-size: 2.1em;
+      margin: 0 0 0.45em;
+      font-weight: 900;
+      line-height: 1.15;
+    }
+    .page-hero .subtitle {
+      font-size: 1.08em;
+      color: #b8d4ee;
+      max-width: 700px;
+      margin: 0 auto;
+      line-height: 1.65;
+    }
+    .accent { color: #F28C28; }
+
+    /* ── Tab navigation ── */
+    .tab-nav {
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      background: #fff;
+      border-bottom: 2px solid #e0e4ea;
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .tab-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 18px 36px;
+      font-size: 1em;
+      font-weight: 700;
+      color: #4A5A6A;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+      letter-spacing: 0.01em;
+      font-family: inherit;
+      margin-bottom: -2px;
+    }
+    .tab-btn .tab-icon {
+      font-size: 1.35em;
+      line-height: 1;
+    }
+    .tab-btn:hover {
+      color: #0F2A44;
+      background: #F5F7FA;
+    }
+    .tab-btn.active {
+      color: #0F2A44;
+      border-bottom-color: #F28C28;
+      background: #fff;
+    }
+    @media (max-width: 640px) {
+      .tab-btn { padding: 14px 16px; font-size: 0.88em; gap: 6px; }
+      .tab-btn .tab-icon { font-size: 1.1em; }
+    }
+
+    /* ── Tab panels ── */
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Sections ── */
+    .section {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 52px 24px;
+    }
+    .bg-white { background: #fff; }
+    .bg-light  { background: #f8f9fa; }
+
+    h2.section-title {
+      font-size: 1.5em;
+      color: #0F2A44;
+      margin: 0 0 0.7em;
+      font-weight: 700;
+      border-left: 5px solid #F28C28;
+      padding-left: 14px;
+      line-height: 1.25;
+    }
+    h3.sub {
+      color: #0F2A44;
+      margin: 1.4em 0 0.4em;
+      font-size: 1.05em;
+      font-weight: 700;
+    }
+    .intro-text {
+      font-size: 1.02em;
+      color: #3a3a4a;
+      max-width: 780px;
+      margin: 0 0 24px;
+      line-height: 1.75;
+    }
+
+    /* ── Callout boxes ── */
+    .callout {
+      background: #e8f0fb;
+      border-left: 5px solid #0F2A44;
+      border-radius: 0 8px 8px 0;
+      padding: 18px 22px;
+      margin: 28px 0;
+      font-size: 0.97em;
+      color: #222;
+    }
+    .callout.orange {
+      background: #fff5e6;
+      border-left-color: #F28C28;
+    }
+    .callout strong { color: #0F2A44; }
+    .callout.orange strong { color: #b85800; }
+
+    /* ── Step cards ── */
+    .step-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 22px;
+      margin-top: 32px;
+    }
+    .step-card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 26px 22px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      border-top: 4px solid #0F2A44;
+    }
+    .step-card .step-num {
+      font-size: 2.2em;
+      font-weight: 900;
+      color: #F28C28;
+      line-height: 1;
+      margin-bottom: 10px;
+    }
+    .step-card h3 {
+      margin: 0 0 10px;
+      font-size: 1.02em;
+      color: #0F2A44;
+      font-weight: 700;
+    }
+    .step-card p {
+      margin: 0;
+      font-size: 0.91em;
+      color: #444;
+      line-height: 1.6;
+    }
+
+    /* ── Check list ── */
+    .check-list {
+      list-style: none;
+      padding: 0;
+      margin: 14px 0 0;
+    }
+    .check-list li {
+      padding: 5px 0 5px 26px;
+      position: relative;
+      font-size: 0.95em;
+      color: #333;
+    }
+    .check-list li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: #F28C28;
+      font-weight: bold;
+    }
+
+    /* ── Two-column grid ── */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 26px;
+      margin-top: 26px;
+    }
+    @media (max-width: 640px) {
+      .two-col { grid-template-columns: 1fr; }
+      .page-hero h1 { font-size: 1.55em; }
+    }
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 24px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+    }
+    .card h3 {
+      margin: 0 0 12px;
+      font-size: 1.03em;
+      color: #0F2A44;
+      font-weight: 700;
+    }
+    .card p {
+      margin: 0 0 14px;
+      font-size: 0.93em;
+      color: #444;
+      line-height: 1.6;
+    }
+
+    /* ── Screenshots ── */
+    .screenshot-grid {
+      display: grid;
+      gap: 24px;
+      margin-top: 32px;
+    }
+    .screenshot-grid.two { grid-template-columns: 1fr 1fr; }
+    .screenshot-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+    @media (max-width: 800px) {
+      .screenshot-grid.two,
+      .screenshot-grid.three { grid-template-columns: 1fr; }
+    }
+    .screenshot-item {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.09);
+      overflow: hidden;
+      border: 1px solid #e0e4ea;
+    }
+    .screenshot-item img {
+      width: 100%;
+      display: block;
+      border-bottom: 1px solid #e8eaed;
+    }
+    .screenshot-item .screenshot-caption {
+      padding: 12px 16px;
+      font-size: 0.88em;
+      color: #4A5A6A;
+      line-height: 1.5;
+      background: #f8f9fa;
+    }
+    .screenshot-item .screenshot-caption strong {
+      color: #0F2A44;
+      display: block;
+      margin-bottom: 2px;
+      font-size: 0.97em;
+    }
+    .screenshot-full {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.09);
+      overflow: hidden;
+      border: 1px solid #e0e4ea;
+      margin-top: 32px;
+    }
+    .screenshot-full img {
+      width: 100%;
+      display: block;
+      border-bottom: 1px solid #e8eaed;
+    }
+    .screenshot-full .screenshot-caption {
+      padding: 14px 18px;
+      font-size: 0.89em;
+      color: #4A5A6A;
+      background: #f8f9fa;
+      line-height: 1.5;
+    }
+    .screenshot-full .screenshot-caption strong {
+      color: #0F2A44;
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    /* ── Badge ── */
+    .badge-soon {
+      display: inline-block;
+      background: #F28C28;
+      color: #fff;
+      font-size: 0.65em;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      vertical-align: middle;
+      margin-left: 8px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    /* ── CTA ── */
+    .cta-section {
+      background: #0F2A44;
+      color: #fff;
+      text-align: center;
+      padding: 60px 24px;
+    }
+    .cta-section h2 {
+      margin: 0 0 14px;
+      font-size: 1.75em;
+      font-weight: 900;
+    }
+    .cta-section p {
+      color: #a8c4e0;
+      margin: 0 0 32px;
+      font-size: 1.05em;
+    }
+    .btn-cta {
+      display: inline-block;
+      padding: 14px 30px;
+      border-radius: 6px;
+      font-weight: 700;
+      text-decoration: none;
+      margin: 6px;
+      font-size: 1em;
+      transition: background 0.15s, color 0.15s;
+    }
+    .btn-cta.primary { background: #F28C28; color: #fff; }
+    .btn-cta.primary:hover { background: #c96e10; }
+    .btn-cta.outline { background: transparent; color: #fff; border: 2px solid rgba(255,255,255,0.7); }
+    .btn-cta.outline:hover { background: rgba(255,255,255,0.1); border-color: #fff; }
+
+    /* ── Misc ── */
+    hr.divider {
+      border: none;
+      border-top: 1px solid #e0e4ea;
+      margin: 0;
+    }
+    code {
+      font-family: 'Consolas', 'Courier New', monospace;
+      background: #eef2f7;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 0.9em;
+    }
+
+    /* ── Links ── */
+    a { color: #F28C28; }
+    a:hover { color: #c96e10; }
+  </style>
+</head>
+<body>
+
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="container flex between center-v gap-m">
+      <a class="brand" href="/">
+        <span class="" aria-hidden="true"><img src="app_icon.ico" alt="LegisTracerEU logo" style="height:3.5em;vertical-align:middle;" /></span>
+        <span class="brand__text">LegisTracerEU</span>
+      </a>
+      <nav class="primary-nav" aria-label="Main navigation">
+        <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="navMenu">
+          <span class="nav-toggle__bar"></span>
+          <span class="sr-only">Toggle menu</span>
+        </button>
+        <ul id="navMenu" class="nav-list">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="search.html">Search EU Law</a></li>
+          <li><a href="workflow.html">How It Works</a></li>
+          <li><a href="how-to-install-app.html">App Guide</a></li>
+          <li><a href="how-to-install-plugin.html">Trados Plugin</a></li>
+          <li><a href="index.html#pricing">Pricing</a></li>
+        </ul>
+      </nav>
+      <div class="header-cta">
+        <a class="btn primary small" href="index.html#pricing">Subscribe</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <div class="page-hero">
+    <h1>Three Ways to Use <span class="accent">LegisTracerEU</span></h1>
+    <p class="subtitle">Whether you work in a browser, prefer a desktop app, or stay inside Trados Studio — LegisTracerEU fits into your workflow.</p>
+  </div>
+
+  <!-- CORE REQUIREMENT -->
+  <div class="bg-white">
+    <div class="section">
+      <h2 class="section-title">The Core Requirement: Verbatim Precision</h2>
+      <p class="intro-text">
+        Translating for EU institutions is not like general translation. When the European Commission assigns a project, it provides a <strong>mandatory list of reference documents</strong> — specific legislative acts identified by their Celex numbers — that must be consulted throughout the translation. Quotations from legal acts must match the official published text <strong>word for word</strong>. Paraphrase is a quality defect.
+      </p>
+      <div class="callout">
+        <strong>What this means in practice:</strong> During a typical assignment, a translator may need to locate and verify dozens of precise citations across multiple legal acts — often under time pressure. Each search costs time. Each misquote costs quality score points. The only way to maintain both accuracy and speed is fast, scoped, full-text search directly in the required reference corpus.
+      </div>
+      <p class="intro-text">
+        LegisTracerEU is built specifically for this use case: give it a list of reference documents, and it searches inside it — instantly, in any EU language combination.
+      </p>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- TAB NAV -->
+  <nav class="tab-nav" role="tablist" aria-label="Usage modes">
+    <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="tab-web" id="btn-web" onclick="switchTab('web')">
+      <span class="tab-icon">🌐</span> Web Access
+    </button>
+    <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-app" id="btn-app" onclick="switchTab('app')">
+      <span class="tab-icon">🖥️</span> Windows App
+    </button>
+    <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-trados" id="btn-trados" onclick="switchTab('trados')">
+      <span class="tab-icon">🔌</span> Trados Studio Plugin
+    </button>
+  </nav>
+
+  <main id="main">
+
+    <!-- ══════════════════════════════════════
+         TAB 1: WEB ACCESS
+    ══════════════════════════════════════ -->
+    <div id="tab-web" class="tab-panel active" role="tabpanel" aria-labelledby="btn-web">
+
+      <div class="bg-white">
+        <div class="section">
+          <h2 class="section-title">Search EU Law Directly in Your Browser</h2>
+          <p class="intro-text">
+            The web interface is the fastest way to get started — no download, no installation. Open the <a href="https://www.pts-translation.sk/search.html" target="_blank" rel="noopener noreferrer">search page</a> in any browser, select your source and target languages, and enter a phrase or sentence to look up. LegisTracerEU will search the full body of EU law and return highlighted matches and direct links to the source documents on EUR-Lex, where you can see the results in wider context.
+          </p>
+          <div class="callout orange">
+            <strong>Best for:</strong> Quick lookups, occasional searches, trying out the service, or any situation where you cannot install software.
+          </div>
+
+          <div class="step-grid" style="grid-template-columns: 1fr; gap: 32px;">
+            <div class="step-card" style="display:flex; flex-direction:column; gap:18px;">
+              <div style="display:flex; align-items:center; gap:16px;">
+                <div class="step-num" style="margin-bottom:0; min-width:52px;">1</div>
+                <h3 style="margin:0;">Select Working Languages</h3>
+              </div>
+              <p style="margin:0;">Click to open the <a href="https://www.pts-translation.sk" target="_blank" rel="noopener noreferrer" style="color:#F28C28; font-weight:700;">Search page</a> and choose your source and target language from all 24 official EU languages.</p>
+              <img src="webscreens/web2.png" alt="Language selector on the LegisTracerEU web interface" loading="lazy" style="width:55%; border-radius:8px; box-shadow:0 2px 12px rgba(0,0,0,0.10);" />
+            </div>
+            <div class="step-card" style="display:flex; flex-direction:column; gap:18px;">
+              <div style="display:flex; align-items:center; gap:16px;">
+                <div class="step-num" style="margin-bottom:0; min-width:52px;">2</div>
+                <h3 style="margin:0;">Enter Search Phrase and Click Search</h3>
+              </div>
+              <p style="margin:0;">Type or paste any word, phrase, or sentence fragment into the search box. Start with <span style="color:#F28C28; font-weight:700;">Fuzzy Search</span> to see more results or use <span style="color:#F28C28; font-weight:700;">Phrase Search</span> for exact matches.</p>
+              <img src="webscreens/web4.png" alt="Search input field on the LegisTracerEU web interface" loading="lazy" style="width:100%; border-radius:8px; box-shadow:0 2px 12px rgba(0,0,0,0.10);" />
+            </div>
+            <div class="step-card" style="display:flex; flex-direction:column; gap:18px;">
+              <div style="display:flex; align-items:center; gap:16px;">
+                <div class="step-num" style="margin-bottom:0; min-width:52px;">3</div>
+                <h3 style="margin:0;">View Results</h3>
+              </div>
+              <p style="margin:0;">Each result shows the matching passage in both languages with your search terms highlighted in context. Click the EUR-Lex link for the full document.</p>
+              <img src="webscreens/web5.png" alt="Search results with highlighted matches and EUR-Lex links" loading="lazy" style="width:100%; border-radius:8px; box-shadow:0 2px 12px rgba(0,0,0,0.10);" />
+            </div>
+            <div class="step-card" style="display:flex; flex-direction:column; gap:18px;">
+              <div style="display:flex; align-items:center; gap:16px;">
+                <div class="step-num" style="margin-bottom:0; min-width:52px;">4</div>
+                <h3 style="margin:0;">IATE Terminology</h3>
+              </div>
+              <p style="margin:0;">To search for official EU terminology, click <strong>Search IATE</strong>. Look up approved terms with definitions, domain classifications, and multilingual equivalents.</p>
+              <img src="webscreens/web6.png" alt="IATE terminology search on the LegisTracerEU web interface" loading="lazy" style="width:100%; border-radius:8px; box-shadow:0 2px 12px rgba(0,0,0,0.10);" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cta-section">
+        <h2>Try the Web Search Now</h2>
+        <p>Simple email registration for the free trial — get 7 searches per day.</p>
+        <a href="search.html" class="btn-cta primary">Open Web Search</a>
+        <a href="index.html#pricing" class="btn-cta outline">View Pricing</a>
+      </div>
+
+    </div><!-- /tab-web -->
+
+    <!-- ══════════════════════════════════════
+         TAB 2: WINDOWS APP
+    ══════════════════════════════════════ -->
+    <div id="tab-app" class="tab-panel" role="tabpanel" aria-labelledby="btn-app">
+
+      <div class="bg-white">
+        <div class="section">
+          <h2 class="section-title">Full Power, No Browser Required</h2>
+          <p class="intro-text">
+            The LegisTracerEU Windows desktop application provides all the features of the service in a fast, dedicated interface — no browser needed. It is available for free download from the <a href="https://apps.microsoft.com/detail/9NKNVGXJFSW5" target="_blank" rel="noopener noreferrer">Microsoft Store</a> and works immediately in trial mode. After entering your subscription email and passkey in the Setup tab, the full feature set unlocks.
+          </p>
+          <p class="intro-text">
+            The app is organised into four main tabs: <strong>Search</strong>, <strong>IATE Terminology</strong>, <strong>Setup</strong>, and <strong>Upload References</strong>. Search results are displayed in a multi-column, multi-language layout with up to three language columns side by side, plus an integrated IATE sidebar for immediate access to the official EU terminology.
+          </p>
+
+          <div class="callout orange">
+            <strong>Best for:</strong> Professional daily use. Higher search volume, custom collections, multi-language result columns, IATE integrated alongside law results — all in one window.
+          </div>
+
+          <div class="card" style="margin-bottom: 32px;">
+              <h3>Search Modes</h3>
+              <ul class="check-list">
+                <li><strong>Smart Search</strong> — combines phrase and fuzzy matching automatically; this is the preferred search option</li>
+              </ul>
+              <p style="margin: 10px 0 6px; font-size:0.93em; color:#444;">If it does not give suitable results, try other search strategies using:</p>
+              <ul class="check-list">
+                <li><strong>Flexible Search</strong> — tolerant multi-word matching</li>
+                <li><strong>Phrase Search</strong> — exact or near-exact phrase search</li>
+              </ul>
+              <p style="margin: 10px 0 6px; font-size:0.93em; color:#444;">These three options search in the Collection selected in the <strong>Search Collection</strong> dropdown for assignment-specific, most relevant results.</p>
+              <ul class="check-list">
+                <li><strong>Global EU Law Search</strong> — broadest search across the entire EUR-Lex database</li>
+              </ul>
+              <img src="webscreens/app4.png" alt="Search modes toolbar in the LegisTracerEU Windows app" loading="lazy" style="width:100%; border-radius:8px; box-shadow:0 2px 12px rgba(0,0,0,0.10); margin-top:18px;" />
+            </div>
+
+          <div class="callout orange" style="margin-bottom: 28px;">
+            <strong>Key feature:</strong> The most relevant results come from searching within a Custom Collection scoped to your current assignment — not the entire EUR-Lex database.
+          </div>
+
+          <div class="card">
+              <h2 class="section-title" style="font-size:1.2em; margin-bottom:0.6em;">Use Custom Collections for the Most Relevant Results</h2>
+              <p style="font-size:0.97em; color:#3a3a4a; line-height:1.75; margin: 0 0 16px;">Go to the <strong>Upload References</strong> tab and create your own Custom Collection.</p>
+              <img src="webscreens/app5.png" alt="Upload References tab in the LegisTracerEU Windows app" loading="lazy" style="width:100%; border-radius:8px; box-shadow:0 2px 12px rgba(0,0,0,0.10); margin-bottom:22px;" />
+              <h3 style="margin: 0 0 8px; color:#0F2A44;">Example</h3>
+              <p style="font-size:0.95em; color:#3a3a4a; line-height:1.75; margin: 0 0 14px;">Let's say you are working on an assignment concerning anti-dumping duties on glass fibre fabrics. To get the most relevant results, create a Custom Collection containing these documents — enter the Celex numbers under <strong>Upload References</strong>:</p>
+              <ul style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px;">
+                <li style="background:#f8f9fa; border-left:4px solid #F28C28; border-radius:0 6px 6px 0; padding:12px 16px;">
+                  <code style="font-size:0.95em; color:#0F2A44;">32016R1036</code><br />
+                  <span style="font-size:0.9em; color:#444;">Regulation (EU) 2016/1036 on protection against dumped imports from countries not members of the European Union</span>
+                </li>
+                <li style="background:#f8f9fa; border-left:4px solid #F28C28; border-radius:0 6px 6px 0; padding:12px 16px;">
+                  <code style="font-size:0.95em; color:#0F2A44;">32016R1037</code><br />
+                  <span style="font-size:0.9em; color:#444;">Regulation (EU) 2016/1037 on protection against subsidised imports from countries not members of the European Union</span>
+                </li>
+                <li style="background:#f8f9fa; border-left:4px solid #F28C28; border-radius:0 6px 6px 0; padding:12px 16px;">
+                  <code style="font-size:0.95em; color:#0F2A44;">32020R0492</code><br />
+                  <span style="font-size:0.9em; color:#444;">Commission Implementing Regulation (EU) 2020/492 imposing definitive anti-dumping duties on imports of certain woven and/or stitched glass fibre fabrics originating in the People's Republic of China and Egypt</span>
+                </li>
+              </ul>
+              <p style="font-size:0.97em; color:#3a3a4a; line-height:1.75; margin: 22px 0 14px;">Click one of the Search buttons and get the most relevant results based on the documents in your Custom Collection.</p>
+              <img src="webscreens/app6.png" alt="Search results scoped to a Custom Collection in LegisTracerEU" loading="lazy" style="width:100%; border-radius:8px; box-shadow:0 2px 12px rgba(0,0,0,0.10);" />
+            </div>
+        </div>
+      </div>
+
+      <div class="cta-section">
+        <h2>Download the Windows App</h2>
+        <p>Free trial — just enter your email to start. Available in the Microsoft Store.</p>
+        <a href="https://apps.microsoft.com/detail/9NKNVGXJFSW5" class="btn-cta primary" target="_blank" rel="noopener noreferrer">Download from Microsoft Store</a>
+        <a href="how-to-install-app.html" class="btn-cta outline">Installation Guide</a>
+      </div>
+
+    </div><!-- /tab-app -->
+
+    <!-- ══════════════════════════════════════
+         TAB 3: TRADOS STUDIO PLUGIN
+    ══════════════════════════════════════ -->
+    <div id="tab-trados" class="tab-panel" role="tabpanel" aria-labelledby="btn-trados">
+
+      <div class="bg-white">
+        <div class="section">
+          <h2 class="section-title">EU Law Search Inside Your CAT Tool</h2>
+          <p class="intro-text">
+            The LegisTracerEU plugin for Trados Studio 2022 and later brings EU law and IATE terminology search directly into your translation environment. The plugin panel docks anywhere in the Studio layout and operates without switching windows or applications. It is signed by RWS and can be installed easily by <a href="how-to-install-plugin.html" style="color:#F28C28; font-weight:700;">following this guide</a>.
+          </p>
+          <p class="intro-text">
+            As you navigate through segments in Trados Studio, the plugin can automatically fire a search for the current segment content. You can also select any text, right-click, and choose <strong>LegisTracerEU Search</strong>, or assign a keyboard shortcut (e.g. <code>Alt+Down Arrow</code>) for instant access without leaving the keyboard. Results from EUR-Lex and IATE appear in the results panel.
+          </p>
+
+          <div class="callout orange">
+            <strong>Best for:</strong> Professional translators working in Trados Studio who need EU law references without interrupting their translation workflow. Zero extra keystrokes per segment when automatic search is enabled.
+          </div>
+
+          <div class="callout">
+            <strong>Prerequisite:</strong> The <a href="how-to-install-app.html">LegisTracerEU Windows App</a> must be installed and running for the Trados Studio plugin to work.
+          </div>
+
+          <div class="two-col">
+            <div class="card">
+              <h3>Automatic Segment Search</h3>
+              <ul class="check-list">
+                <li>Fires a search each time you navigate to a new segment</li>
+                <li>Results appear in the panel without any manual action</li>
+                <li>Works with your active Custom Collection or full corpus</li>
+                <li>Panel can be docked, floating, or pinned in Studio</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>Manual Search Options</h3>
+              <ul class="check-list">
+                <li>Select any text → right-click → <em>LegisTracerEU Search</em></li>
+                <li>Configurable keyboard shortcut (recommended: <code>Alt+↓</code>)</li>
+                <li>Type any phrase directly in the results panel</li>
+                <li>Switch between EUR-Lex search, IATE, or Custom Collection</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-light">
+        <div class="section">
+          <img src="webscreens/trados1.png" alt="Trados Studio with LegisTracerEU plugin panel showing EU law and IATE results" loading="lazy" style="width:100%; border-radius:8px; box-shadow:0 2px 12px rgba(0,0,0,0.10);" />
+        </div>
+      </div>
+
+      <div class="cta-section">
+        <h2>Install the Trados Plugin</h2>
+        <p>Signed by RWS. Compatible with Trados Studio 2022 and later.</p>
+        <a href="how-to-install-plugin.html" class="btn-cta primary">Plugin Installation Guide</a>
+        <a href="index.html#pricing" class="btn-cta outline">View Pricing</a>
+      </div>
+
+    </div><!-- /tab-trados -->
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="footer-brand">
+        <div class="brand small">
+          <span class="" aria-hidden="true"><img src="app_icon.ico" alt="LegisTracerEU logo" style="height:3.5em;vertical-align:middle;" /></span>
+          <span class="brand__text">LegisTracerEU</span>
+        </div>
+        <p class="foot-note">EU Law Toolbox for linguists, translators, and legal professionals.</p>
+        <p class="foot-copy">© <span id="year"></span> LegisTracerEU. All rights reserved.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="index.html#features">Features</a></li>
+          <li><a href="index.html#pricing">Pricing</a></li>
+          <li><a href="index.html#demo">Try Demo</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Resources</h4>
+        <ul>
+          <li><a href="index.html#data-sources-faq">Data Sources</a></li>
+          <li><a href="support.html">Support</a></li>
+          <li><a href="privacy.html">Privacy Policy</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Pages</h4>
+        <ul>
+          <li><a href="workflow.html">Full Workflow Guide</a></li>
+          <li><a href="how-to-install-app.html">App Guide</a></li>
+          <li><a href="how-to-install-plugin.html">Trados Plugin Guide</a></li>
+        </ul>
+      </div>
+    </div>
+  </footer>
+
+  <div id="cookieNotice" class="cookie-notice">
+    <div class="cookie-content">
+      <span class="cookie-text">By clicking Accept, Search or Buy, you agree with the use of cookies according to the <a href="privacy.html" class="cookie-link">Privacy Policy</a></span>
+      <div class="cookie-actions">
+        <button id="acceptCookies" class="cookie-btn">Accept</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function switchTab(name) {
+      // Update buttons
+      document.querySelectorAll('.tab-btn').forEach(function(btn) {
+        btn.classList.toggle('active', btn.id === 'btn-' + name);
+        btn.setAttribute('aria-selected', btn.id === 'btn-' + name ? 'true' : 'false');
+      });
+      // Update panels
+      document.querySelectorAll('.tab-panel').forEach(function(panel) {
+        panel.classList.toggle('active', panel.id === 'tab-' + name);
+      });
+      // Update URL hash without scrolling
+      history.replaceState(null, '', '#' + name);
+    }
+
+    // Restore tab from URL hash on load
+    (function() {
+      var hash = window.location.hash.replace('#', '');
+      if (['web', 'app', 'trados'].indexOf(hash) !== -1) {
+        switchTab(hash);
+      }
+    })();
+  </script>
+
+<a href="support.html" class="support-fab" title="Contact support">
+  <svg xmlns="http://www.w3.org/2000/svg" height="22" viewBox="0 0 24 24" width="22" fill="#fff"><path d="M0 0h24v24H0z" fill="none"/><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></svg>
+</a>
+
+</body>
+</html>

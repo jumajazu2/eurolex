@@ -26,24 +26,45 @@
       margin: 0;
       font-family: var(--font-sans);
     }
-    
+
+    /* ── Header: matches site-header dark style ── */
     .search-page-header {
-      background: var(--color-surface);
-      border-bottom: 1px solid var(--color-border);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(14px);
+      background: rgba(15, 42, 68, 0.97);
+      border-bottom: 1px solid rgba(39, 123, 187, 0.35);
       padding: var(--space-m) 0;
       box-shadow: var(--shadow-sm);
     }
-    
     .search-page-header .container {
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-    
+    .search-page-header a,
+    .search-page-header .brand__text {
+      color: rgba(255, 255, 255, 0.88);
+    }
+    .search-page-header a:hover {
+      color: #F28C28;
+    }
+    .search-page-header .btn.ghost {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.3);
+      color: #fff;
+    }
+    .search-page-header .btn.ghost:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+
+    /* ── Content layout ── */
     .search-page-content {
       max-width: 1800px;
       margin: 0 auto;
-      padding: 0 2vw;
+      padding: var(--space-xl) 2vw;
     }
 
     .search-intro {
@@ -53,6 +74,7 @@
       padding: 2.5em 2vw;
       margin-bottom: 2em;
       text-align: center;
+      box-shadow: var(--shadow-sm);
     }
 
     .search-intro h1 {
@@ -66,6 +88,7 @@
       border-radius: var(--radius-l);
       padding: 2.5em 2vw;
       margin-bottom: 2em;
+      box-shadow: var(--shadow-sm);
     }
   </style>
 </head>
@@ -249,6 +272,9 @@
   </footer>
 
   <script src="script.js?v=20251216b"></script>
+<a href="support.html" class="support-fab" title="Contact support">
+  <svg xmlns="http://www.w3.org/2000/svg" height="22" viewBox="0 0 24 24" width="22" fill="#fff"><path d="M0 0h24v24H0z" fill="none"/><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></svg>
+</a>
 </body>
 <script>
 // Hide trial notice if passkey is set and not 'trial'

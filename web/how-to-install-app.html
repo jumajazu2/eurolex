@@ -7,38 +7,43 @@
   <link rel="icon" href="app_icon.ico" type="image/x-icon" />
   <link rel="stylesheet" href="styles.css" />
   <style>
-    body { margin: 0; background: #F5F7FA; color: #0F2A44; }
-    header, footer { background: #0F2A44; color: #fff; padding: 18px 0; text-align: center; }
     main { max-width: 800px; margin: 32px auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); padding: 32px; }
-    h1, h2 { color: #0F2A44; }
     ol, ul { margin-left: 1.5em; }
     .step { margin-bottom: 2em; }
     .important { background: #fff5e6; border-left: 4px solid #F28C28; padding: 12px; margin: 18px 0; border-radius: 6px; }
     .screenshot { display: block; margin: 16px auto; max-width: 100%; border: 1px solid #D1D5DB; border-radius: 6px; }
-    a { color: #277BBB; text-decoration: underline; }
     .button { background: #277BBB; color: #fff; padding: 10px 22px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block; margin: 10px 0; }
     .button:hover { background: #0F2A44; }
   </style>
 </head>
 <body>
+  <a class="skip-link" href="#main">Skip to main content</a>
   <header class="site-header">
     <div class="container flex between center-v gap-m">
-      <a class="brand" href="/"><img src="app_icon.ico" alt="LegisTracerEU icon" width="32" height="32" /><span class="brand__text">LegisTracerEU</span></a>
+      <a class="brand" href="/">
+        <span class="" aria-hidden="true"><img src="app_icon.ico" alt="LegisTracerEU logo" style="height:3.5em;vertical-align:middle;" /></span>
+        <span class="brand__text">LegisTracerEU</span>
+      </a>
       <nav class="primary-nav" aria-label="Main navigation">
         <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="navMenu">
-          <span class="nav-toggle__bar"></span><span class="sr-only">Toggle menu</span>
+          <span class="nav-toggle__bar"></span>
+          <span class="sr-only">Toggle menu</span>
         </button>
         <ul id="navMenu" class="nav-list">
-          <li><a href="/">Home</a></li>
+          <li><a href="index.html">Home</a></li>
           <li><a href="search.html">Search EU Law</a></li>
+          <li><a href="workflow.html">How It Works</a></li>
           <li><a href="how-to-install-app.html">App Guide</a></li>
           <li><a href="how-to-install-plugin.html">Trados Plugin</a></li>
-          <li><a href="/#pricing">Pricing</a></li>
+          <li><a href="index.html#pricing">Pricing</a></li>
         </ul>
       </nav>
+      <div class="header-cta">
+        <a class="btn primary small" href="index.html#pricing">Subscribe</a>
+      </div>
     </div>
   </header>
-  <main>
+  <main id="main">
     <h2>How to Install and Use the LegisTracerEU Windows App</h2>
     <div class="step">
       <h3>1. Download and Install the App</h3>
@@ -147,6 +152,7 @@
         <li>In the <b>Search</b> tab, use the <b>Search Index</b> dropdown (top right) to select your custom index (e.g., <b>feedback</b>).</li>
         <li>Try searching for various texts in your custom indices.</li>
       </ol>
+
     </div>
     <div class="step">
       <h3>9. Delete a Custom Index</h3>
@@ -166,9 +172,55 @@
       </ul>
     </div>
   </main>
-  <footer>
-    <div>© 2026 LegisTracerEU | <a href="mailto:juraj.kuban.sk@gmail.com" style="color:#fff;">Contact</a></div>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="footer-brand">
+        <div class="brand small">
+          <span class="" aria-hidden="true"><img src="app_icon.ico" alt="LegisTracerEU logo" style="height:3.5em;vertical-align:middle;" /></span>
+          <span class="brand__text">LegisTracerEU</span>
+        </div>
+        <p class="foot-note">EU Law Toolbox for linguists, translators, and legal professionals.</p>
+        <p class="foot-copy">© <span id="year"></span> LegisTracerEU. All rights reserved.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="index.html#features">Features</a></li>
+          <li><a href="index.html#pricing">Pricing</a></li>
+          <li><a href="index.html#demo">Try Demo</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Resources</h4>
+        <ul>
+          <li><a href="index.html#data-sources-faq">Data Sources</a></li>
+          <li><a href="support.html">Support</a></li>
+          <li><a href="privacy.html">Privacy Policy</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Pages</h4>
+        <ul>
+          <li><a href="workflow.html">How It Works</a></li>
+          <li><a href="how-to-install-plugin.html">Trados Plugin Guide</a></li>
+          <li><a href="search.html">EU Law Search</a></li>
+        </ul>
+      </div>
+    </div>
   </footer>
+
+  <div id="cookieNotice" class="cookie-notice">
+    <div class="cookie-content">
+      <span class="cookie-text">By clicking Accept, Search or Buy, you agree with the use of cookies according to the <a href="privacy.html" class="cookie-link">Privacy Policy</a></span>
+      <div class="cookie-actions">
+        <button id="acceptCookies" class="cookie-btn">Accept</button>
+      </div>
+    </div>
+  </div>
+<a href="support.html" class="support-fab" title="Contact support">
+  <svg xmlns="http://www.w3.org/2000/svg" height="22" viewBox="0 0 24 24" width="22" fill="#fff"><path d="M0 0h24v24H0z" fill="none"/><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></svg>
+</a>
 <script src="script.js?v=20251216b"></script>
 </body>
 </html>
