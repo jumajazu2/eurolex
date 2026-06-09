@@ -27,66 +27,39 @@
       font-family: var(--font-sans);
     }
 
-    /* ── Header: matches site-header dark style ── */
-    .search-page-header {
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      backdrop-filter: blur(14px);
-      background: rgba(15, 42, 68, 0.97);
-      border-bottom: 1px solid rgba(39, 123, 187, 0.35);
-      padding: var(--space-m) 0;
-      box-shadow: var(--shadow-sm);
+    /* ── Compact search page hero ── */
+    .search-page-hero {
+      background: linear-gradient(160deg, #0F2A44 0%, #277BBB 100%);
+      color: #fff;
+      padding: 20px 24px 18px;
+      text-align: center;
     }
-    .search-page-header .container {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .search-page-header a,
-    .search-page-header .brand__text {
-      color: rgba(255, 255, 255, 0.88);
-    }
-    .search-page-header a:hover {
-      color: #F28C28;
-    }
-    .search-page-header .btn.ghost {
-      background: rgba(255, 255, 255, 0.1);
-      border-color: rgba(255, 255, 255, 0.3);
+    .search-page-hero h1 {
+      font-size: 1.4em;
+      font-weight: 800;
+      margin: 0 0 0.2em;
+      line-height: 1.2;
       color: #fff;
     }
-    .search-page-header .btn.ghost:hover {
-      background: rgba(255, 255, 255, 0.2);
-      border-color: rgba(255, 255, 255, 0.5);
+    .search-page-hero p {
+      font-size: 0.92em;
+      color: #b8d4ee;
+      margin: 0;
+      line-height: 1.5;
     }
 
     /* ── Content layout ── */
     .search-page-content {
       max-width: 1800px;
       margin: 0 auto;
-      padding: var(--space-xl) 2vw;
-    }
-
-    .search-intro {
-      background: var(--color-surface);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-l);
-      padding: 2.5em 2vw;
-      margin-bottom: 2em;
-      text-align: center;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .search-intro h1 {
-      color: var(--color-accent-solid);
-      margin-bottom: 1em;
+      padding: var(--space-m) 2vw;
     }
 
     .full-search-demo {
       background: var(--color-surface);
       border: 1px solid var(--color-border);
       border-radius: var(--radius-l);
-      padding: 2.5em 2vw;
+      padding: 1.25em 2vw;
       margin-bottom: 2em;
       box-shadow: var(--shadow-sm);
     }
@@ -107,26 +80,40 @@
     <div id="accountStatusBar" class="account-status-bar" style="display:none">
       <span id="accountStatusText"></span>
       <button class="account-status-edit" onclick="showAccountPanel()" title="Edit email/passkey">Edit</button>
+      <button class="account-status-logout" id="logoutBtn" title="Log out">Log out</button>
     </div>
     <button id="openAccountPanel" class="account-panel-toggle" title="Account / Passkey" style="position:fixed;top:1em;right:1em;z-index:1001;display:none;">🔑</button>
-  <header class="search-page-header">
-    <div class="container">
+  <header class="site-header">
+    <div class="container flex between center-v gap-m">
       <a class="brand" href="index.html">
         <span class="" aria-hidden="true"><img src="app_icon.ico" alt="LegisTracerEU logo" style="height:3.5em;vertical-align:middle;" /></span>
         <span class="brand__text">LegisTracerEU</span>
       </a>
-      <nav>
-        <a href="index.html" class="btn ghost small">← Back to Home</a>
+      <nav class="primary-nav" aria-label="Main navigation">
+        <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="navMenu">
+          <span class="nav-toggle__bar"></span>
+          <span class="sr-only">Toggle menu</span>
+        </button>
+        <ul id="navMenu" class="nav-list">
+          <li><a href="index.html#features">Features</a></li>
+          <li><a href="index.html#use-cases">Use Cases</a></li>
+          <li><a href="workflow.html">Workflow</a></li>
+          <li><a href="index.html#pricing">Pricing</a></li>
+          <li><a href="index.html#faq">FAQ</a></li>
+        </ul>
       </nav>
+      <div class="header-cta">
+        <a class="btn primary small" href="index.html#pricing">Subscribe</a>
+      </div>
     </div>
   </header>
 
+  <div class="search-page-hero">
+    <h1>EU Law and Terminology Search</h1>
+    <p>Full-text search across EU regulations, directives, case-law and terminology entries.</p>
+  </div>
+
   <main class="search-page-content">
-    <div class="search-intro">
-      <h1>EU Law and Terminology Search</h1>
-      <p>Fast full-text search in the bulk of EU law. Search through tens of thousands of EU regulations, directives, case-law 
-        and terminology entries.</p>
-    </div>
 
     <div class="full-search-demo">
       <div class="demo-notice">

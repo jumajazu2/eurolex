@@ -18,6 +18,11 @@
   </script>
 </head>
 <body>
+  <div id="accountStatusBar" class="account-status-bar" style="display:none">
+    <span id="accountStatusText"></span>
+    <button class="account-status-edit" onclick="showAccountPanel()" title="Edit email/passkey">Edit</button>
+    <button class="account-status-logout" id="logoutBtn" title="Log out">Log out</button>
+  </div>
   <header class="site-header">
     <div class="container flex between center-v gap-m">
       <a class="brand" href="/">

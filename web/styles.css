@@ -31,6 +31,20 @@ mark {
   font-size: 13px;
   cursor: pointer;
 }
+.account-status-logout {
+  margin-left: 6px;
+  background: transparent;
+  border: 1px solid #bbb;
+  border-radius: 12px;
+  padding: 2px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #c0392b;
+}
+.account-status-logout:hover {
+  background: #fdecea;
+  border-color: #c0392b;
+}
 /* Floating Account Panel Styles */
 .account-panel {
   position: fixed;
@@ -169,9 +183,9 @@ mark {
     /* --color-accent: linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%); */
     --color-accent: linear-gradient(90deg, #F28C28 0%, #F28C28 100%);
     /* --color-accent-solid: #2563eb; */
-    --color-accent-solid: #277BBB;
+    --color-accent-solid: #F28C28;
     /* --color-focus: #3b82f6; */
-    --color-focus: #277BBB;
+    --color-focus: #F28C28;
     /* --shadow-glow: 0 0 0 3px rgba(37,99,235,.1); */
     --shadow-glow: 0 0 0 3px rgba(39,123,187,.1);
     /* --grad-accent: linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%); */
@@ -673,6 +687,55 @@ h4 { font-size: 1.25rem; text-transform: uppercase; letter-spacing: 0.06em; }
   letter-spacing: 0.5px;
 }
 
+.hero-trial-hint {
+  margin-top: 10px;
+  background: #fff;
+  border: 2px solid #F28C28;
+  border-radius: var(--radius-m);
+  padding: 12px 14px;
+  color: #0F2A44;
+}
+.hero-trial-hint__label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: #0F2A44;
+}
+.hero-trial-hint__row {
+  display: flex;
+  gap: 8px;
+}
+.hero-trial-hint__input {
+  flex: 1;
+  padding: 9px 12px;
+  border-radius: var(--radius-m);
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  color: #0F2A44;
+  font-size: 0.95rem;
+  min-width: 0;
+}
+.hero-trial-hint__input:focus {
+  outline: none;
+  border-color: #F28C28;
+  box-shadow: 0 0 0 2px rgba(242,140,40,0.25);
+}
+.hero-trial-hint__btn {
+  padding: 9px 16px;
+  border-radius: var(--radius-m);
+  background: #F28C28;
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition);
+}
+.hero-trial-hint__btn:hover {
+  background: #d97a20;
+}
 .hero-search-button:hover {
   /* background: #1d4ed8; */
   background: #0F2A44;

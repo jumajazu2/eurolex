@@ -22,7 +22,20 @@ function hideAccountPanel() {
 if (openAccountPanelBtn) openAccountPanelBtn.addEventListener('click', showAccountPanel);
 if (closeAccountPanelBtn) closeAccountPanelBtn.addEventListener('click', hideAccountPanel);
 
+const logoutBtn = document.getElementById('logoutBtn');
+if (logoutBtn) {
+  logoutBtn.addEventListener('click', () => {
+    localStorage.removeItem('lt_email');
+    localStorage.removeItem('lt_passkey');
+    updateAccountStatusBar();
+    if (typeof updateHeroTrialHint === 'function') updateHeroTrialHint();
+    // updateHeroTrialHint is defined inside DOMContentLoaded, so call via event
+    document.dispatchEvent(new Event('lt:logout'));
+  });
+}
+
 function updateAccountStatusBar() {
+  if (!accountStatusBar) return;
   const email = localStorage.getItem('lt_email');
   const passkey = localStorage.getItem('lt_passkey');
   if (email && passkey) {
@@ -60,15 +73,9 @@ if (accountForm) {
 const OPENSEARCH_URL = 'https://search.pts-translation.sk';
 const DEFAULT_INDEX = '_all';
 let apiKey = 'trial';
-let userIP = 'N/A';
 let userFingerprint = 'N/A';
 let searchCount = 0;
 
-// Newsletter config (email destination and optional backend endpoint)
-const NEWSLETTER_TO = 'juraj.kuban.sk@gmail.com';
-// If you add a serverless endpoint (e.g., Formspree/Netlify Function), set it here.
-// Example: const NEWSLETTER_ENDPOINT = 'https://formspree.io/f/xxxxxx';
-const NEWSLETTER_ENDPOINT = '';
 
 document.addEventListener('DOMContentLoaded', () => {
   const yearEl = document.getElementById('year');
@@ -99,6 +106,38 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // Trial email hint on hero — show only when no email is stored
+  const heroTrialHint = document.getElementById('heroTrialHint');
+  const heroTrialEmailInput = document.getElementById('heroTrialEmail');
+  const heroTrialSaveBtn = document.getElementById('heroTrialSave');
+
+  function updateHeroTrialHint() {
+    if (!heroTrialHint) return;
+    const saved = localStorage.getItem('lt_email');
+    heroTrialHint.style.display = (saved && saved.includes('@')) ? 'none' : 'block';
+  }
+  updateHeroTrialHint();
+
+  // Re-run hint update on logout (fired from outside DOMContentLoaded)
+  document.addEventListener('lt:logout', updateHeroTrialHint);
+
+  if (heroTrialSaveBtn && heroTrialEmailInput) {
+    heroTrialSaveBtn.addEventListener('click', () => {
+      const email = heroTrialEmailInput.value.trim();
+      if (!email || !email.includes('@')) {
+        heroTrialEmailInput.focus();
+        return;
+      }
+      localStorage.setItem('lt_email', email);
+      localStorage.setItem('lt_passkey', 'trial');
+      heroTrialHint.style.display = 'none';
+      updateAccountStatusBar();
+    });
+    heroTrialEmailInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); heroTrialSaveBtn.click(); }
+    });
+  }
+
   // Hero search form
   const heroForm = document.getElementById('heroSearchForm');
   if (heroForm) {
@@ -106,7 +145,14 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       const query = new FormData(heroForm).get('q')?.toString().trim();
       if (!query) return;
-      
+      // Save email from hint strip if the user filled it but didn't click Save yet
+      if (heroTrialEmailInput) {
+        const email = heroTrialEmailInput.value.trim();
+        if (email && email.includes('@') && !localStorage.getItem('lt_email')) {
+          localStorage.setItem('lt_email', email);
+          localStorage.setItem('lt_passkey', 'trial');
+        }
+      }
       // Redirect to search page with query
       window.location.href = `search.html?q=${encodeURIComponent(query)}`;
     });
@@ -118,39 +164,50 @@ document.addEventListener('DOMContentLoaded', () => {
   // Handle URL search parameter for search page
   handleURLSearchParam();
 
-  // Newsletter form
+  // Newsletter form — submitted as a support request
   const newsletterForm = document.getElementById('newsletterForm');
   if (newsletterForm) {
     newsletterForm.addEventListener('submit', async e => {
       e.preventDefault();
-      const email = newsletterForm.querySelector('input[type="email"]')?.value;
+      const email = newsletterForm.querySelector('input[type="email"]')?.value?.trim();
+      const btn = document.getElementById('newsletterSubmitBtn');
+      const status = document.getElementById('newsletterStatus');
       if (!email) return;
+      btn.disabled = true;
+      btn.textContent = 'Sending…';
+      if (status) status.style.display = 'none';
       try {
-        const subject = 'Newsletter signup for LegisTracerEU';
-        const body = `Please add me to the newsletter.\n\nEmail: ${email}`;
-
-        // Always open the user's email client with a prefilled message
-        window.location.href = `mailto:${encodeURIComponent(NEWSLETTER_TO)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-
-        // If an endpoint is configured, also submit in the background without blocking or alerting
-        if (NEWSLETTER_ENDPOINT) {
-          try {
-            fetch(NEWSLETTER_ENDPOINT, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email }),
-              keepalive: true
-            });
-          } catch (bgErr) {
-            console.warn('Background newsletter submission failed:', bgErr);
+        const res = await fetch('https://search.pts-translation.sk/support', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            subject: 'Newsletter subscription',
+            message: 'Please add me to the newsletter.'
+          })
+        });
+        const data = await res.json();
+        if (status) {
+          if (res.ok && data.success) {
+            status.textContent = 'You are subscribed! We will keep you updated.';
+            status.style.color = '#2a7a2a';
+            newsletterForm.reset();
+          } else {
+            status.textContent = 'Could not subscribe. Please try again later.';
+            status.style.color = '#c0392b';
           }
+          status.style.display = 'block';
         }
       } catch (err) {
-        alert('Could not submit your request. Please try again later.');
+        if (status) {
+          status.textContent = 'Network error. Please try again.';
+          status.style.color = '#c0392b';
+          status.style.display = 'block';
+        }
         console.error('Newsletter submission failed:', err);
-      } finally {
-        newsletterForm.reset();
       }
+      btn.disabled = false;
+      btn.textContent = 'Subscribe for News';
     });
   }
 
@@ -274,7 +331,6 @@ async function doSearch(mode) {
       'x-email': localEmail || '',
       'x-client-context': JSON.stringify({
         client: 'web',
-        ip: userIP,
         fingerprint: userFingerprint,
         timestamp: new Date().toISOString()
       })
@@ -545,16 +601,8 @@ function updateQuotaDisplay() {
   }
 }
 
-async function initializeUserInfo() {
+function initializeUserInfo() {
   userFingerprint = generateFingerprint();
-  
-  try {
-    const response = await fetch('https://api.ipify.org?format=json');
-    const data = await response.json();
-    userIP = data.ip;
-  } catch (e) {
-    console.error('Could not fetch IP address.', e);
-  }
 }
 
 function generateFingerprint() {
