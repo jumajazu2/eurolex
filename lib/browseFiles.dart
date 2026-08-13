@@ -546,6 +546,9 @@ class _CelexYearsWidgetState extends State<CelexYearsWidget> {
   // Track which sector is expanded to show progress
   String? _expandedSectorKey;
 
+  bool _useAlignment = false;
+  bool _overrideExisting = false;
+
   @override
   void initState() {
     super.initState();
@@ -760,6 +763,41 @@ class _CelexYearsWidgetState extends State<CelexYearsWidget> {
                 tooltip: 'Refresh progress from disk',
               ),
               const SizedBox(width: 8),
+              Tooltip(
+                message:
+                    'Run experimental CSS-class + anchor alignment before uploading (see ALIGNMENT_OPTIONS.md)',
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Checkbox(
+                      value: _useAlignment,
+                      onChanged:
+                          (v) => setState(() => _useAlignment = v ?? false),
+                    ),
+                    const Text('Use Alignment'),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Tooltip(
+                message:
+                    'Delete existing documents before uploading — forces re-upload even if already in the index',
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Checkbox(
+                      value: _overrideExisting,
+                      onChanged:
+                          (v) => setState(() => _overrideExisting = v ?? false),
+                    ),
+                    const Text(
+                      'Override existing',
+                      style: TextStyle(color: Colors.orange),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
               ElevatedButton.icon(
                 onPressed: saving ? null : _addNewYear,
                 icon: const Icon(Icons.add),
@@ -926,6 +964,8 @@ class _CelexYearsWidgetState extends State<CelexYearsWidget> {
             _save();
           }
         },
+        useAlignment: _useAlignment,
+        overrideExisting: _overrideExisting,
       );
 
       // Mark as uploaded when complete

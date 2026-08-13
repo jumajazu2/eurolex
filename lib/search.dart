@@ -3256,6 +3256,19 @@ class _SearchTabWidgetState extends State<SearchTabWidget>
                                             ),
                                           ),
                                         ),
+                                        if (!jsonSettings['display_meta'] &&
+                                            metaCelex.length > index)
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                              right: 8,
+                                            ),
+                                            child: SelectableText(
+                                              metaCelex[index],
+                                              style: const TextStyle(
+                                                fontSize: 12.0,
+                                              ),
+                                            ),
+                                          ),
                                         IconButton(
                                           icon: const Icon(
                                             Icons.refresh,

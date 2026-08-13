@@ -488,9 +488,29 @@ class _HarvestProgressWidgetState extends State<HarvestProgressWidget> {
               ),
           ],
         ),
-        subtitle: Text(
-          '${progress.languages.values.where((s) => s == LangStatus.completed).length}/${progress.languages.length} languages completed',
-          style: TextStyle(fontSize: 11),
+        subtitle: Builder(
+          builder: (context) {
+            final skippedCount =
+                progress.languages.values
+                    .where((s) => s == LangStatus.skipped)
+                    .length;
+            final completedCount =
+                progress.languages.values
+                    .where((s) => s == LangStatus.completed)
+                    .length;
+            final allSkipped = skippedCount == progress.languages.length;
+            if (allSkipped) {
+              return Text(
+                '⏭️ Already in index — tick "Override existing" to re-upload',
+                style: TextStyle(fontSize: 11, color: Colors.orange.shade800),
+              );
+            }
+            return Text(
+              '$completedCount/${progress.languages.length} languages completed'
+              '${skippedCount > 0 ? ' · $skippedCount skipped' : ''}',
+              style: TextStyle(fontSize: 11),
+            );
+          },
         ),
         children: [
           Padding(

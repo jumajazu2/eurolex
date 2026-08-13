@@ -876,6 +876,8 @@ class _manualCelexListState extends State<manualCelexList> {
   bool simulateUpload = false;
   bool debugMode = false;
   bool _useWorkingLanguagesOnly = false;
+  bool _useAlignment = false;
+  bool _overrideExisting = false;
 
   // Progress tracking
   HarvestSession? _harvestSession;
@@ -1048,11 +1050,15 @@ class _manualCelexListState extends State<manualCelexList> {
 
       // Check if exists (deduplication)
       final exists = await celexExistsInIndex(indexName, celex);
-      if (exists) {
+      if (exists && !_overrideExisting) {
         print('⏭️ Skipping $celex (already exists)');
         progress.languages['ALL'] = LangStatus.skipped;
         progress.completedAt = DateTime.now();
       } else {
+        if (exists && _overrideExisting) {
+          print('🔄 Override: deleting existing documents for $celex');
+          await deleteCelexFromIndex(indexName, celex);
+        }
         try {
           // Remove the placeholder 'ALL' and prepare for actual languages
           progress.languages.clear();
@@ -1090,6 +1096,8 @@ class _manualCelexListState extends State<manualCelexList> {
             debugMode,
             simulateUpload,
             _getSelectedWorkingLanguages(), // Pass selected languages
+            _useAlignment,
+            _overrideExisting,
           );
 
           progress.completedAt = DateTime.now();
@@ -1430,6 +1438,55 @@ class _manualCelexListState extends State<manualCelexList> {
                                                   : null,
                                         ),
                                         const Text('Debug Mode'),
+                                      ],
+                                    ),
+                                  ),
+                                  Tooltip(
+                                    message:
+                                        'Run experimental CSS-class + anchor alignment before uploading (see ALIGNMENT_OPTIONS.md)',
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Checkbox(
+                                          value: _useAlignment,
+                                          onChanged:
+                                              step2Complete
+                                                  ? (v) {
+                                                    setState(() {
+                                                      _useAlignment =
+                                                          v ?? false;
+                                                    });
+                                                  }
+                                                  : null,
+                                        ),
+                                        const Text('Use Alignment'),
+                                      ],
+                                    ),
+                                  ),
+                                  Tooltip(
+                                    message:
+                                        'Delete existing documents for each CELEX before uploading — forces re-upload even if already in the index',
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Checkbox(
+                                          value: _overrideExisting,
+                                          onChanged:
+                                              step2Complete
+                                                  ? (v) {
+                                                    setState(() {
+                                                      _overrideExisting =
+                                                          v ?? false;
+                                                    });
+                                                  }
+                                                  : null,
+                                        ),
+                                        const Text(
+                                          'Override existing',
+                                          style: TextStyle(
+                                            color: Colors.orange,
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),

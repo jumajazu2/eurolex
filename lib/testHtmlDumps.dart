@@ -442,6 +442,8 @@ Future<HarvestSession> uploadTestSparqlSectorYearWithProgress(
   Function(HarvestSession)? onProgressUpdate,
   Function(String sessionId)? onSessionCreated,
   bool skipExisting = true,
+  bool useAlignment = false,
+  bool overrideExisting = false,
 }) async {
   // Create session ID
   final timestamp = DateTime.now().toIso8601String().replaceAll(
@@ -516,7 +518,7 @@ Future<HarvestSession> uploadTestSparqlSectorYearWithProgress(
     session.currentPointer = i;
 
     // Check if exists in index (deduplication across sessions)
-    if (skipExisting) {
+    if (skipExisting && !overrideExisting) {
       final exists = await celexExistsInIndex(indexName, celex);
       if (exists) {
         print('⏭️ Skipping $celex (already exists in index)');
@@ -527,6 +529,14 @@ Future<HarvestSession> uploadTestSparqlSectorYearWithProgress(
         await session.save();
         onProgressUpdate?.call(session);
         continue;
+      }
+    } else if (overrideExisting) {
+      final exists = await celexExistsInIndex(indexName, celex);
+      if (exists) {
+        print(
+          '🔄 Override: deleting existing documents for $celex before reupload',
+        );
+        await deleteCelexFromIndex(indexName, celex);
       }
     }
 
@@ -581,6 +591,7 @@ Future<HarvestSession> uploadTestSparqlSectorYearWithProgress(
           false,
           i,
           logger,
+          useAlignment: useAlignment,
         );
 
         // Store HTTP status once for the entire document
@@ -872,6 +883,8 @@ Future<Map<String, int>> uploadSparqlForCelexWithProgress(
   bool simulateUpload = false,
   List<String>?
   filterLanguages, // null = all languages, or list of language codes
+  bool useAlignment = false,
+  bool overrideExisting = false,
 ]) async {
   final langUnitCounts = <String, int>{};
   final langHttpStatus = <String, int>{}; // Track HTTP status per language
@@ -903,6 +916,15 @@ Future<Map<String, int>> uploadSparqlForCelexWithProgress(
     final langMapForCelex = downloadLinks[currentCelex]!;
 
     print('Harvesting $pointer/${downloadLinks.length} — $currentCelex');
+
+    // Delete existing documents when overrideExisting is set
+    if (overrideExisting) {
+      final exists = await celexExistsInIndex(indexName, currentCelex);
+      if (exists) {
+        print('🔄 Override: deleting existing documents for $currentCelex');
+        await deleteCelexFromIndex(indexName, currentCelex);
+      }
+    }
 
     try {
       // Process each language individually for real-time progress
@@ -971,6 +993,7 @@ Future<Map<String, int>> uploadSparqlForCelexWithProgress(
           false,
           i,
           logger,
+          useAlignment: useAlignment,
         );
 
         // Report HTTP status once for the entire document

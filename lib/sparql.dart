@@ -691,3 +691,142 @@ ORDER BY ?celex
 
   return resultMap;
 }
+
+/// Converts a plain search string into a Virtuoso bif:contains expression.
+/// With [fuzzy]=true each word gets a trailing '*' for prefix/fuzzy matching,
+/// e.g. "data privacy" → `"data*" AND "privacy*"`.
+String _buildBifContains(String input, {bool fuzzy = true}) {
+  final words =
+      input.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+  if (words.isEmpty) return '""';
+  final parts = words.map((w) {
+    final escaped = w.replaceAll("'", r"\'");
+    return fuzzy ? '"$escaped*"' : '"$escaped"';
+  });
+  return parts.join(' AND ');
+}
+
+/// Search EUR-Lex legal acts by text across all available CDM text fields:
+/// title, EuroVoc thematic keyword labels, and subject-matter labels.
+///
+/// NOTE: The SPARQL/CDM triplestore does NOT contain full document body text —
+/// only metadata. For full-body content search use the OpenSearch index
+/// (see processQueryNew in search.dart). This function is the broadest
+/// text search possible via the EUR-Lex SPARQL endpoint.
+///
+/// - [langCode]: 3-letter language code, e.g. `'ENG'` (default), `'FRA'`, `'DEU'`, `'SLK'`.
+/// - [fuzzy]: when true, each word gets a trailing `*` wildcard so e.g.
+///   "protect" also matches "protection", "protecting", etc.
+/// - [limit]: max number of results (default 100).
+///
+/// Returns lines in the form `"CELEX\tTitle"`.
+Future<List<String>> fetchDocsByTextSearch(
+  String searchString, {
+  String langCode = 'ENG',
+  bool fuzzy = true,
+  int limit = 100,
+}) async {
+  const endpoint = 'https://publications.europa.eu/webapi/rdf/sparql';
+  final bifExpr = _buildBifContains(searchString, fuzzy: fuzzy);
+  // 2-letter lowercase lang code used for SKOS label language filtering
+  final twoLetter =
+      (langMap[langCode] ?? langCode.substring(0, 2)).toLowerCase();
+
+  final query = '''
+PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
+PREFIX purl: <http://purl.org/dc/elements/1.1/>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+
+SELECT DISTINCT ?celex ?title
+WHERE {
+  ?work a cdm:resource_legal ;
+        cdm:resource_legal_id_celex ?celex .
+
+  ?expr cdm:expression_belongs_to_work ?work ;
+        cdm:expression_uses_language <http://publications.europa.eu/resource/authority/language/$langCode> ;
+        cdm:expression_title ?title .
+
+  {
+    # 1. Search in document title
+    FILTER(bif:contains(?title, '$bifExpr'))
+  }
+  UNION
+  {
+    # 2. Search in EuroVoc thematic keyword labels linked to the document
+    ?work cdm:work_is_about_concept_eurovoc ?concept .
+    ?concept skos:prefLabel ?kw .
+    FILTER(LANG(?kw) = "$twoLetter")
+    FILTER(bif:contains(?kw, '$bifExpr'))
+  }
+  UNION
+  {
+    # 3. Search in subject-matter descriptor labels
+    ?work cdm:work_is_about_concept_subject-matter ?sm .
+    ?sm skos:prefLabel ?smLabel .
+    FILTER(bif:contains(?smLabel, '$bifExpr'))
+  }
+}
+ORDER BY ?celex
+LIMIT $limit
+''';
+
+  try {
+    http.Response resp;
+    String method = 'POST';
+    try {
+      resp = await http
+          .post(
+            Uri.parse(endpoint),
+            headers: addDeviceIdHeader({
+              'Accept': 'application/sparql-results+json',
+              'Content-Type':
+                  'application/x-www-form-urlencoded; charset=UTF-8',
+            }),
+            body: {'query': query},
+          )
+          .timeout(const Duration(seconds: 20));
+    } catch (_) {
+      final getUri = Uri.parse(
+        endpoint,
+      ).replace(queryParameters: {'query': query});
+      method = 'GET';
+      resp = await http
+          .get(
+            getUri,
+            headers: addDeviceIdHeader({
+              'Accept': 'application/sparql-results+json',
+            }),
+          )
+          .timeout(const Duration(seconds: 20));
+    }
+
+    _sparqlLog(
+      'text-search term=$searchString lang=$langCode fuzzy=$fuzzy'
+      ' method=$method status=${resp.statusCode} len=${resp.body.length}',
+    );
+
+    if (resp.statusCode != 200) {
+      _sparqlLog(
+        'text-search error term=$searchString status=${resp.statusCode}'
+        ' body=${resp.body.substring(0, resp.body.length > 300 ? 300 : resp.body.length)}',
+      );
+      return const [];
+    }
+
+    final decoded = jsonDecode(resp.body) as Map<String, dynamic>;
+    final bindings = (decoded['results']?['bindings'] as List?) ?? const [];
+
+    final lines = <String>[];
+    for (final row in bindings) {
+      final celex = row['celex']?['value'] as String? ?? '';
+      final title = row['title']?['value'] as String? ?? '';
+      if (celex.isNotEmpty) lines.add('$celex\t$title');
+    }
+    print('text-search "$searchString" → ${lines.length} results');
+    return lines;
+  } catch (e) {
+    print('SPARQL text-search error (term=$searchString): $e');
+    _sparqlLog('text-search exception term=$searchString err=$e');
+    return const [];
+  }
+}

@@ -12,6 +12,7 @@ import 'package:LegisTracerEU/preparehtml.dart';
 import 'dart:async'; // for TimeoutException
 import 'dart:io';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:LegisTracerEU/multilingual_aligner.dart';
 
 var dirPointer = 0; // Pointer for directory processing
 List<String> langsEU = [
@@ -219,6 +220,40 @@ List<Map<String, dynamic>> extractParagraphs(
 }
 
 String safePrefix(String s, int n) => s.length <= n ? s : s.substring(0, n);
+
+/// Writes source/target pairs to a JSON file when alignment quality is poor.
+void _writeAlignmentDebugFile(
+  String celex,
+  String lang,
+  List<List<String>> source,
+  List<List<String>> target,
+) {
+  try {
+    final dir = Directory('logs');
+    if (!dir.existsSync()) dir.createSync(recursive: true);
+    final stamp = DateTime.now().toIso8601String().replaceAll(':', '-');
+    final file = File(
+      '${dir.absolute.path}/align_debug_${celex}_${lang}_$stamp.json',
+    );
+    final pairs = List.generate(source.length, (i) {
+      final src = source[i][0];
+      final tgt = i < target.length ? target[i][0] : '';
+      return {
+        'seq': i,
+        'src': src,
+        'tgt': tgt,
+        'matched': tgt.isNotEmpty,
+        'src_class': source[i].length > 1 ? source[i][1] : '',
+        'tgt_class':
+            i < target.length && target[i].length > 1 ? target[i][1] : '',
+      };
+    });
+    file.writeAsStringSync(const JsonEncoder.withIndent('  ').convert(pairs));
+    print('📄 Alignment debug file: ${file.path}');
+  } catch (e) {
+    print('⚠️  Could not write alignment debug file for $celex/$lang: $e');
+  }
+}
 
 /*
 //Function to parse HTML content as String and return list<Element>
@@ -763,8 +798,91 @@ Future<int> processMultilingualMap(
   bool debug,
   bool paragraphsNotMatched,
   int pointer,
-  LogManager runLogger,
-) async {
+  LogManager runLogger, {
+  bool useAlignment = false,
+  AlignmentProgressCallback? onAlignmentProgress,
+}) async {
+  // Run alignment before zipping when lengths differ and flag is set
+  if (useAlignment) {
+    // Internal stats callback: logs per-language match rates and writes a
+    // debug file for any language below 60% match rate.
+    final alignStats = <String, String>{};
+    map = await alignMultilingualLines(
+      map,
+      onProgress: (
+        lang,
+        done,
+        total,
+        elapsed,
+        estimated,
+        refLen,
+        otherLen,
+        matched,
+        alignedRows, // actual aligned output — use this for debug, not original map
+      ) {
+        final pct = refLen > 0 ? (matched / refLen * 100) : 0.0;
+        final line =
+            'ALIGN $celex/$lang: ref=$refLen other=$otherLen '
+            'matched=$matched (${pct.toStringAsFixed(1)}%)';
+        runLogger.log(line);
+        print(line);
+        alignStats[lang] = '${pct.toStringAsFixed(1)}% ($matched/$refLen)';
+
+        // Write debug file — now uses the actual aligned result for accurate inspection
+        if (pct < 60.0 && refLen > 0) {
+          _writeAlignmentDebugFile(
+            celex,
+            lang,
+            map['EN'] ?? map.values.first,
+            alignedRows,
+          );
+        }
+
+        onAlignmentProgress?.call(
+          lang,
+          done,
+          total,
+          elapsed,
+          estimated,
+          refLen,
+          otherLen,
+          matched,
+          alignedRows,
+        );
+      },
+    );
+
+    // Summary log line listing all languages with their match rates
+    if (alignStats.isNotEmpty) {
+      final summary = alignStats.entries
+          .map((e) => '${e.key}:${e.value}')
+          .join('  ');
+      runLogger.log('ALIGN SUMMARY $celex: $summary');
+      print('ALIGN SUMMARY $celex: $summary');
+    }
+  }
+
+  // Warn about languages with suspiciously few lines before uploading
+  if (map.length > 1) {
+    final refLen = map.values
+        .map((v) => v.length)
+        .reduce((a, b) => a > b ? a : b);
+    for (final entry in map.entries) {
+      if (entry.value.isEmpty) {
+        runLogger.log(
+          '⚠️  $celex/${entry.key}: 0 lines — language will be absent from all documents',
+        );
+        print('⚠️  processMultilingualMap $celex/${entry.key}: 0 lines');
+      } else if (entry.value.length < refLen * 0.5) {
+        runLogger.log(
+          '⚠️  $celex/${entry.key}: only ${entry.value.length}/${refLen} lines (${(entry.value.length / refLen * 100).round()}%) — partial coverage',
+        );
+        print(
+          '⚠️  processMultilingualMap $celex/${entry.key}: ${entry.value.length}/${refLen} lines',
+        );
+      }
+    }
+  }
   List<Map<String, dynamic>> jsonData =
       []; //to store created json entry for file
 

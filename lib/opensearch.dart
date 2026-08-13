@@ -114,6 +114,62 @@ Future<bool> celexExistsInIndex(String indexName, String celex) async {
   return false;
 }
 
+/// Deletes all documents for [celex] from [indexName] using delete-by-query.
+/// Returns the number of documents deleted, or -1 on error.
+Future<int> deleteCelexFromIndex(String indexName, String celex) async {
+  try {
+    // refresh=wait_for: ensures deletion is visible before returning (prevents
+    // race with the subsequent bulk upload).
+    // conflicts=proceed: skip version conflicts instead of failing on 409.
+    final url = Uri.parse(
+      '$server/$indexName/_delete_by_query?refresh=true&conflicts=proceed',   );
+    final body = jsonEncode({
+      'conflicts': 'proceed',
+      'query': {
+        'bool': {
+          'should': [
+            {
+              'term': {'celex': celex},
+            },
+            {
+              'term': {'celex.keyword': celex},
+            },
+          ],
+          'minimum_should_match': 1,
+        },
+      },
+    });
+
+    print('🗑️  DELETE-BY-QUERY $indexName for CELEX $celex');
+    final resp = await http
+        .post(
+          url,
+          headers: addDeviceIdHeader({
+            'Content-Type': 'application/json',
+            'x-api-key': userPasskey,
+            'x-email': userEmail,
+          }),
+          body: body,
+        )
+        .timeout(const Duration(seconds: 60));
+
+    if (resp.statusCode == 200) {
+      final data = jsonDecode(resp.body);
+      final deleted = data['deleted'] as int? ?? 0;
+      print('🗑️  Deleted $deleted documents for $celex from $indexName');
+      return deleted;
+    } else {
+      print(
+        '⚠️  Delete failed for $celex: HTTP ${resp.statusCode} ${resp.body}',
+      );
+      return -1;
+    }
+  } catch (e) {
+    print('❌ Error deleting $celex from $indexName: $e');
+    return -1;
+  }
+}
+
 Future<bool> deleteOpenSearchIndex(index) async {
   try {
     var indicesBefore = await getListIndicesFull(server, isAdmin);
